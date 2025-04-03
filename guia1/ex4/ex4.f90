@@ -3,7 +3,7 @@
 ! Purpose: analisis of the Pullen-Edmonds Hamiltonian
 !
 !
-! Description:
+! Description:  Analises the convergence of the time the time step and the drift in energy due to the time evolution (do_convergence)calculate the dependence of the coordinates and momentums with time (do_trajectories) 
 !
 ! Input:
 !
