@@ -1,7 +1,5 @@
 !***************************************************************
 ! Program: ex2.f90
-! Purpose: 
-!
 !
 ! Description: Calculate the trajectories for different cases of the logistic equation.
 !   Calculate the FFT for a single initial conditions but different values of the logistic parameter.
