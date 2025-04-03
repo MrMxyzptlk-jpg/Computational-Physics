@@ -1,3 +1,4 @@
+# This might not be the proper compilation procedure 
 gfortran ./modulos/precision.f90\
         ./modulos/funciones.f90\
         ./modulos/subrutinas.f90\
