@@ -5,7 +5,7 @@
 !
 ! Description: calculates the trajectories of the pendulums (do_trajectories). Calculates the Poincare Calculated the Poincare sections for the conditions such that the angle of the first pendulum is 0 and its momentum is positive (do_poincare_lagrangian and do_poincare_hamiltonian but this last one is not debugged). Calculates the power spectrum with discrete Fourier transform (do_power_spectrum). Calculates the time it takes for a pendulum to flip, given different initial conditions as proposed by Heyl (do_hey). 
 !
-! Input: dt = time step. constants = constants for the non-dimensional formulation. bounds (:,i) = upper (i=2) or lower (i=1) bounds of the initial conditions, when used, j is used to specify amount of initial conditions to be used. initial_conditions can be used to specify manually the initial conditions.
+! Input: dt = time step; constants = constants for the non-dimensional formulation; bounds (:,i) = upper (i=2) or lower (i=1) bounds of the initial conditions, when used, j is used to specify amount of initial conditions to be used; initial_conditions can be used to specify manually the initial conditions
 !
 !
 ! Output: 
