@@ -10,5 +10,3 @@ gfortran ex2.f90 funciones.o subrutinas.o -o ex2.exe -lfftw3 -lfftw3_threads -ff
 
 
 ./ex2.exe             # Executable file
-
-#gnuplot plot.gp     # Plotting file
