@@ -1,4 +1,4 @@
-# This might not be the proper compilation procedure 
+# This might not be the proper compilation procedure but it works. See the other "run.sh" files in the other exercises of "/guia1" for better examples.
 gfortran ./modulos/precision.f90\
         ./modulos/funciones.f90\
         ./modulos/subrutinas.f90\
