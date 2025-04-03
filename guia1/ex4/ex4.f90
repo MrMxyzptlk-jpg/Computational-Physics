@@ -1,6 +1,6 @@
 !***************************************************************
 ! Program: ex4.f90
-! Purpose: 
+! Purpose: analisis of the Pullen-Edmonds Hamiltonian
 !
 !
 ! Description:
