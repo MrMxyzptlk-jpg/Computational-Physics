@@ -69,8 +69,8 @@ program ex3
     do_trajectories = .False.
     do_power_spectrum  = .False.
     do_poincare_lagrangian  = .False.
-    do_hey          = .True.
-    do_poincare_hamiltonian = .True. ! Not debugged
+    do_hey          = .False.
+    do_poincare_hamiltonian = .False. ! Not debugged
 
 !############################################################################################################## 
 
