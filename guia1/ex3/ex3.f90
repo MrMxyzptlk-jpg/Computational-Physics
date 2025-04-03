@@ -8,7 +8,7 @@
 ! Input: dt = time step; constants = constants for the non-dimensional formulation; bounds (:,i) = upper (i=2) or lower (i=1) bounds of the initial conditions, when used, j is used to specify amount of initial conditions to be used; initial_conditions can be used to specify manually the initial conditions
 !
 !
-! Output: 
+! Output: all files are saved in a "./datos" directory. All trajectories (angular and cartesian) are saved in that folder, with self explanatory names. For the calculated power spectrum, files are saved in a subfolder "./datos/FFTW" as FFTW is used in the calculations. For the calculated poincare sections, files are saved in a subfolder "./datos/poincare" with self explanatory names. The data for the Heyl plot, a file named "datos_ex3_Hey.out" is written in the "./datos" directory.
 !
 !
 !
