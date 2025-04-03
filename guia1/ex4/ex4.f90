@@ -5,7 +5,7 @@
 !
 ! Description:  Analises the convergence of the time the time step and the drift in energy due to the time evolution (do_convergence)calculate the dependence of the coordinates and momentums with time (do_trajectories). Calculates the power spectrum with discrete Fourier for each coordinate and momentum (do_power_spectrum). Calculated the Poincare sections for the conditions such that one coordinate is 0 and its momentum is positive.
 !
-! Input: h = time step. constants = constants of the hamiltonian. bounds (:,i) = upper (i=2) or lower (i=1) bounds of the initial conditions, when used, j is used to specify amount of initial conditions to be used.
+! Input: h = time step (not used for convergence). constants = constants of the hamiltonian. bounds (:,i) = upper (i=2) or lower (i=1) bounds of the initial conditions, when used, j is used to specify amount of initial conditions to be used.
 !
 !
 ! Output: 
