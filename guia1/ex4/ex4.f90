@@ -8,7 +8,7 @@
 ! Input: h = time step (not used for convergence). constants = constants of the hamiltonian. bounds (:,i) = upper (i=2) or lower (i=1) bounds of the initial conditions, when used, j is used to specify amount of initial conditions to be used.
 !
 !
-! Output: 
+! Output: all files are saved in a "./datos" directory. All trajectories (angular and cartesian) are saved in a subfolder named "trajectories" in the aforementioned directory, with self explanatory names. For the calculated power spectrum, files are saved in a subfolder "./datos/FFTW" as FFTW is used in the calculations. For the calculated poincare sections, files are saved in a subfolder "./datos/poincare" with self explanatory names. The data for the convergence of the time step is written in the "./datos" directory with prefix "conv_dt_" and suffix ".out".
 !
 !
 !
