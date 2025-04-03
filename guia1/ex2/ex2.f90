@@ -1,5 +1,6 @@
 !***************************************************************
 ! Program: ex2.f90
+! Purpose: analysis of the logistic equation. 
 !
 ! Description: Calculate the trajectories for different cases of the logistic equation.
 !   Calculate the FFT for a single initial conditions but different values of the logistic parameter.
@@ -9,8 +10,7 @@
 !
 ! Input: Number of steps, set of initial conditions, set of logistic parameters.
 !
-! Output: Set of files in their corresponding folders inside the './datos' folder, ready to graph using the 
-!   plot.gp gnuplot script. 
+! Output: Set of files in their corresponding folders inside the './datos' directory: "/FFTW" for the power spectrum (as FFTW is used for the calculation); "/lyapunov" for the Lyapunov exponent; "/orbits" for the bifurcation diagram; "/trajectories" for the time evolution of the variable. Finally, a file with prefix "histogram_data_param_" is written directly in the "./datos" directory which contains the information for the histogram of a trajectory given a single value of the logistic parameter r. 
 !
 !
 ! Room for improvement: The main subroutine utilized is the 'logistic map' which uses arrays for 
