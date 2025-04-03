@@ -70,7 +70,7 @@ program ex3
     do_power_spectrum  = .False.
     do_poincare_lagrangian  = .False.
     do_hey          = .False.
-    do_poincare_hamiltonian = .False. ! Not debugged
+    do_poincare_hamiltonian = .False. !! Not debugged !!
 
 !############################################################################################################## 
 
