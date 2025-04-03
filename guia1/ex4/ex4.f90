@@ -3,7 +3,7 @@
 ! Purpose: analisis of the Pullen-Edmonds Hamiltonian
 !
 !
-! Description:  Analises the convergence of the time the time step and the drift in energy due to the time evolution (do_convergence)calculate the dependence of the coordinates and momentums with time (do_trajectories) 
+! Description:  Analises the convergence of the time the time step and the drift in energy due to the time evolution (do_convergence)calculate the dependence of the coordinates and momentums with time (do_trajectories). Calculates the power spectrum with discrete Fourier for each coordinate and momentum (do_power_spectrum). Calculated the Poincare sections for the conditions such that one coordinate is 0 and its momentum is positive.
 !
 ! Input:
 !
