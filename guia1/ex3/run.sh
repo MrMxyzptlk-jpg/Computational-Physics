@@ -7,6 +7,4 @@ gfortran ./modulos/precision.f90\
          -lfftw3 -lfftw3_threads -ffpe-trap=invalid,overflow,zero -O -Wall -fcheck=all -g -fbacktrace  
 ./ex3.exe
 
-#gnuplot plot_poincare_section.gp
-
 echo
