@@ -1,6 +1,6 @@
 !***************************************************************
 ! Program: ex3.f90
-! Purpose: simulation of a double pendulum
+! Purpose: simulation of a double pendulum in the lagrangian formalism (hamiltonian formalism not currently implemented).
 !
 !
 ! Description: calculates the trajectories of the pendulums (do_trajectories). Calculates the Poincare Calculated the Poincare sections for the conditions such that the angle of the first pendulum is 0 and its momentum is positive (do_poincare_lagrangian and do_poincare_hamiltonian but this last one is not debugged). Calculates the power spectrum with discrete Fourier transform (do_power_spectrum). Calculates the time it takes for a pendulum to flip, given different initial conditions as proposed by Heyl (do_hey). 
@@ -14,7 +14,6 @@
 !
 ! Room for improvement: The subroutine Hey_chaos can be improved by cutting in half the  size of the arrays that save the initial
 !   conditions information. In this way the allocation should be even faster and we would use half the memory.  
-!                       The system should be adimensionalized so the time evolution is between 0 and 1. To be implemented.
 !
 !
 ! Author: Jerónimo Noé Acito Pino
