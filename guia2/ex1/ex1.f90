@@ -8,7 +8,7 @@
 ! Input: The input data must be specified in an input file named "input.xml" and an example is provided in this repository. All arguments have a default value, and all jobs are set to FALSE as default. The file contains three sections: "physical" which defines the physical parameters of the system, "calculation" which defines the calculations' parameters, and "tasks" which defines the methods that will be used (more than one can be chosen at once). 
 !
 !
-! Output: all data is written to a directory "./datos" under file names indicating the task done. 
+! Output: all data is written to a directory "./datos" under file names indicating the task done. The files contain the time, position and temperature in single precision the first two and double precision the last one, so as to do post-processing of the raw data with other programs when necesarry.
 !
 !
 !
