@@ -2,13 +2,12 @@
 ! Program: ex2.f90
 ! Purpose: numerical solution of the heat equation with null Neumann boundary condition
 !
-! Description: the input data must be specified in the metric system. The program solves the non-dimensional heat equation and transforms to the proper units using a conversion factor at the end. The jobs are selected with the logical type variables "do_forward_Euler", "do_backward_Euler" and "do_Crank_Nicolson", and all data is written to a directory "./datos" under file names "forward_euler.out", "backward_euler.out" and "crank_nicolson.out" respectively.
+! Description: the input data must be specified in the metric system. The program solves the non-dimensional heat equation and transforms to the proper units using a conversion factor at the end. The jobs are selected with the logical type variables "do_forward_Euler", "do_backward_Euler", "do_Crank_Nicolson", "do_analitical_sol" and "do_analitical_conv"
 !
-! Input: 
+! Input: The input data must be specified in an input file named "input.xml" and an example is provided in this repository. All arguments have a default value, and all jobs are set to FALSE as default. The file contains three sections: "physical" which defines the physical parameters of the system, "calculation" which defines the calculations' parameters, and "tasks" which defines the methods that will be used (more than one can be chosen at once). 
 !
 !
-! Output: 
-!
+! Output: all data is written to a directory "./datos" under file names indicating the task done. The files contain the time, position and temperature in single precision the first two and double precision the last one, so as to do post-processing of the raw data with other programs when necesarry.
 !
 !
 ! Room for improvement:   
