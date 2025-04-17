@@ -5,7 +5,7 @@
 !
 ! Description: the input data must be specified in the metric system. The program solves the non-dimensional heat equation and transforms to the proper units using a conversion factor at the end. The jobs are selected with the logical type variables "do_forward_Euler", "do_backward_Euler", "do_Crank_Nicolson", "do_analitical_sol" and "do_analitical_conv"
 !
-! Input: The input data must be specified in an input file named "input.xml" and an example is provided in this repository. All arguments have a default value, and all jobs are set to FALSE as default. 
+! Input: The input data must be specified in an input file named "input.xml" and an example is provided in this repository. All arguments have a default value, and all jobs are set to FALSE as default. The file contains three sections: "physical" which defines the physical parameters of the system, "calculation" which defines the calculations' parameters, and "tasks" which defines the methods that will be used (more than one can be chosen at once). 
 !
 !
 ! Output: all data is written to a directory "./datos" under file names indicating the task done. 
