@@ -1,11 +1,10 @@
 !***************************************************************
 ! Program: ex2.f90
-! Purpose:
+! Purpose: analyse the mean square displacement of random walk using different RNG's and evaluating the dependance on the number of walkers and steps. A simple calculation of the frequency with which a walker falls into a quadrant is also available for the 2D case.
 !
+! Description: this program implements a RNG which can be chosen from: "ran2", "MT" (Mersenne-Twister) or "MZ" (Marsaglia-Zaman). The mean square displacement is calculated with the standard formula. The quadrant frequency is implemented only in 2D and selects a random quadran in case a walker ends up at the origin.
 !
-! Description:
-!
-! Input:
+! Input: input values need to be specified in an "input.nml" file though default values are initialized in case the file is empty.
 !
 !
 ! Output:
