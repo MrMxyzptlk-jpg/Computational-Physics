@@ -24,7 +24,7 @@ MODULE subrutinas
 
         integral = 0._pr
         do i = 1, N_samples
-            rnd_num = grnd()
+            rnd_num = rmzran()
             x = lower_lim + rnd_num*(upper_lim - lower_lim)
             integral = integral + f(x, exponent)
         end do
@@ -50,7 +50,7 @@ MODULE subrutinas
 
         integral = 0._pr
         do i = 1, N_samples
-            rnd_num = grnd()
+            rnd_num = rmzran()
             x = lower_lim + rnd_num*(upper_lim - lower_lim)
             x = x**(1._pr/(K+1._pr))
             integral = integral + f(x, exponent)/((k + 1._pr)*x**k)
