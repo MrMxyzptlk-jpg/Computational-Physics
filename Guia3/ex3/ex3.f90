@@ -2,22 +2,16 @@
 ! Program: ex3.f90
 ! Purpose: study the effect of importance sampling in Monte Carlo integration
 !
-! Description: the program allows for the integration of any function of the form f(x)=x^n between an upper and lower bound. Regular sampling as well as two different importance samplings are calculated for different numbers of Monte Carlo iterations.
+! Description: the program allows for the integration of any function of the form f(x)=x^n between an upper and lower bound. Regular sampling as well as two different importance samplings are calculated for different numbers of Monte Carlo iterations. Only the RNG by Marsaglia-Zaman is currently implemented.
 !
 ! Input: the exponent as well as the upper and lower bounds need to be specified in an "input.nml" file, though default values are provided.
 !
 !
 ! Output: all files are saved in a "./datos" directory with self-explanatory names.
 !
-!
-!
-! Room for improvement: function used could be optimized for the case x^3 by using f(x) = x*x*x
-!
-!
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
 program ex3
-    use mtmod,    only: grnd    ! Mersenne -Twister RNG
     use precision
     use formats
     use subrutinas
