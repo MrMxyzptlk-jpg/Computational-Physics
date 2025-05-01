@@ -1,0 +1,8 @@
+&calculation
+    dim         = 5,
+    MC_samples  = 100000000,
+    do_MC       = .true.,
+    do_trap     = .true.,
+    compare_MC     = .false.
+
+/
