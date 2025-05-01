@@ -1,0 +1,7 @@
+&calculation
+    N_iterations = 1000000,
+    dim          = 2,
+    method       = "ran2",
+    do_msd       = .false.,
+    do_borders      = .true.,
+/
