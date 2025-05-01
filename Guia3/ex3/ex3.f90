@@ -8,7 +8,7 @@
 ! Input:
 !
 !
-! Output:
+! Output: all files are saved in a "./datos" directory with self-explanatory names.
 !
 !
 !
