@@ -1,7 +1,7 @@
 MODULE subrutinas
     USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY: int32, real64
     USE precision
-    use mtmod,    only: grnd    ! Mersenne -Twister RNG
+    use mzranmod
     implicit none
 
     contains
