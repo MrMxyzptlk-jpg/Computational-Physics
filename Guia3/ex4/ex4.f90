@@ -10,10 +10,6 @@
 ! Output: only if compare_MC is set to true, will the corresponding files be saved in a "./datos" directory with self-explanatory names.
 !
 !
-!
-! Room for improvement: function used could be optimized for the case x^3 by using f(x) = x*x*x
-!
-!
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
 program ex4
