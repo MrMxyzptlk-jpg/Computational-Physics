@@ -58,6 +58,8 @@ function_pointer => raise
 !   Start of the calculations
 !###################################################################################################
 
+    call mzran_init()
+    
     open(newunit=unitnum, file="./datos/MC_integral_regular_sampling.out")
     do i = 1, max_sample_exponent
         samples = 10*i
