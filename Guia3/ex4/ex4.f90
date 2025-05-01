@@ -1,12 +1,11 @@
 !***************************************************************
 ! Program: ex4.f90
-! Purpose: integrate the n-dimensional hypersphere using trapezium method (only available for 2, 3, 4, 5, 7 and 9 dimensions) and Monte Carlo integration with importance Gaussian sampling.
+! Purpose: integrate the n-dimensional hypersphere using trapezium method (only available for 2, 3, 4, 5, 7 and 9 dimensions) and Monte Carlo integration with Gaussian importance sampling.
 !
 !
-! Description:
+! Description: the program calculates the volume of an n-dimensional hypersphere with the analitical expresion, Monte Carlo integration (serial and parallelized versions) and with the generalized trapezium method with 2**24 equidistant points, and the results are shown on screen. A thorough analysis with montecarlo integration can be done if compare_MC is set to true. Two files will be saved, corresponding to the serial and parallelized calculations, with a first line explaining their contents.
 !
-! Input: 
-!
+! Input: the n-ball dimension, Monte Carlo samples, and the method of choice need to be specified in the "input.nml" file (every option is set to false as default).
 !
 ! Output: only if compare_MC is set to true, will the corresponding files be saved in a "./datos" directory with self-explanatory names.
 !
@@ -55,8 +54,8 @@ program ex4
     dim = 6     ! Dimension of the N-ball
     MC_samples = 4e7
 
-    do_MC   = .true.
-    do_trap = .true.
+    do_MC   = .false.
+    do_trap = .false.
     compare_MC = .false.
 
     ! Read from input file
