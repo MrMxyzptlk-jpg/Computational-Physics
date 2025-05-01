@@ -5,10 +5,10 @@
 !
 ! Description:
 !
-! Input:
+! Input: 
 !
 !
-! Output:
+! Output: only if compare_MC is set to true, will the corresponding files be saved in a "./datos" directory with self-explanatory names.
 !
 !
 !
