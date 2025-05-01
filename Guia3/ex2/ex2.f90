@@ -7,7 +7,7 @@
 ! Input: input values need to be specified in an "input.nml" file though default values are initialized in case the file is empty.
 !
 !
-! Output:
+! Output: all files are saved in a "./datos" directory with self-explanatory names.
 !
 !
 !
