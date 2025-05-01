@@ -3,7 +3,7 @@
 ! Purpose: integrate the n-dimensional hypersphere using trapezium method (only available for 2, 3, 4, 5, 7 and 9 dimensions) and Monte Carlo integration with Gaussian importance sampling.
 !
 !
-! Description: the program calculates the volume of an n-dimensional hypersphere with the analitical expresion, Monte Carlo integration (serial and parallelized versions) and with the generalized trapezium method with 2**24 equidistant points, and the results are shown on screen. A thorough analysis with montecarlo integration can be done if compare_MC is set to true. Two files will be saved, corresponding to the serial and parallelized calculations, with a first line explaining their contents.
+! Description: the program calculates the volume of an n-dimensional hypersphere with the analitical expresion, Monte Carlo integration (serial and parallelized versions) and with the generalized trapezium method with 2**24 equidistant points, and the results are shown on screen. A thorough analysis with montecarlo integration can be done if compare_MC is set to true. Two files will be saved, corresponding to the serial and parallelized calculations, with a first line explaining their contents. This program can be compiled in two ways: by executing the "compile.sh" bash script or with the "make" command.
 !
 ! Input: the n-ball dimension, Monte Carlo samples, and the method of choice need to be specified in the "input.nml" file (every option is set to false as default).
 !
