@@ -1,6 +1,6 @@
 !***************************************************************
 ! Program: ex4.f90
-! Purpose:
+! Purpose: integrate the n-dimensional hypersphere using trapezium method (only available for 2, 3, 4, 5, 7 and 9 dimensions) and Monte Carlo integration with importance Gaussian sampling.
 !
 !
 ! Description:
