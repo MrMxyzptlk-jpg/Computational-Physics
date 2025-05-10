@@ -3,7 +3,7 @@
 ! Purpose: Analysing the Ising model and different observables as a function of the dimentionaless temperature Kb*T/J.
 !
 !
-! Description:  The following abreviations for different variables' names is implementes: Sqr = square, avg = average, var = variance, inv = inverse
+! Description:  The following abreviations for different variables' names is implementes: Sqr = square, avg = average, var = variance, inv = inverse, tmp = temporary variable.
 !
 ! Input: The imput information is specified in an "input.nml" file. Defauls values are provided for every variable in the "Input settings" section, and an example input file is also provided.
 !
@@ -12,7 +12,7 @@
 !
 !
 !
-! Room for improvement: The correlation of the seeds chones must be studied for the reliability of the calculations. The seeds used are simply an example and by no means the best choise.
+! Room for improvement: The correlation of the seeds chones must be studied for the reliability of the calculations. The seeds used are simply an example and by no means the best choise. The files' prefix and sufix are created inside a loop in the parallel region, which should not be the case. Also, N_spinors (number of spinoes in the Ising system) should be a global variable defined in the subroutines module.
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
@@ -25,12 +25,13 @@ program ex1
     implicit none
     real(kind=pr)                   :: u_avg, uSqr_avg, u_var, u_error, m_avg, mSqr_avg, m_var, m_error
     real(kind=pr)                   :: energy_per_particle, magnetization_per_particle, real_MC_steps
-    real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magetization, N_spinors
+    real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magetization
+    real(kind=pr)                   :: Energy, magnetization
     real(kind=pr), allocatable      :: beta(:), KbT(:)
-    integer, allocatable            :: lattice(:,:)
+    integer, allocatable :: lattice(:,:)
     integer(int_small)              :: threadID
     integer                         :: i, j, unit_steps, unit_temperature, unitnum, nthreads, status
-    integer(int_large)              :: Energy, magnetization, MC_steps, transitory_steps, KbT_steps
+    integer(int_large)              :: MC_steps, transitory_steps, KbT_steps
     character(len=31)               :: file_temperature
     character(len=28)               :: file_steps
     character(len=8)                :: prefix
@@ -39,11 +40,10 @@ program ex1
     logical                         :: T_range, save_thermalization, use_abolute_magnetization
 
     abstract interface
-        subroutine update(E, M, N, u_avg, u_var, m_avg, m_var, EpP, MpP)
+        subroutine update(E, M, u_avg, u_var, m_avg, m_var, EpP, MpP)
             use precision
-            integer(int_large)      :: E, M
-            real(pr)                :: N
-            real(kind=pr)           :: u_avg, u_var, m_avg, m_var, EpP, MpP
+            real(pr)    :: E, M
+            real(pr)    :: u_avg, u_var, m_avg, m_var, EpP, MpP
         end subroutine update
     end interface
     procedure (update), pointer :: update_observables => null()
@@ -121,14 +121,12 @@ program ex1
     !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, &
     !$omp   magnetization_per_particle, energy_per_particle, unit_steps, file_steps, prefix, &
     !$omp   suffix, j, i, threadID) shared(KbT, nthreads, unit_temperature, format_style0, &
-    !$omp   format_style1, beta, states, seeds, real_MC_steps) schedule(dynamic)
+    !$omp   format_style1, beta, states, seeds, real_MC_steps, N_spinors) schedule(dynamic)
 
     do j = 1, size(KbT)
         ! This initialization should be done outside the loop but got "-Wuninitialized" variables
         prefix = "datos/T_"
         call create_suffix("_m0_", initial_magetization, ".out", suffix)
-    !    suffix = "_T0_zero.out"
-
 
         ! Initialize RNG states with unique seeds
         threadID = int(omp_get_thread_num() + 1, int_small)
@@ -165,7 +163,7 @@ program ex1
 
                     do i = transitory_steps + 1, MC_steps
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
-                        call update_observables(Energy, magnetization, N_spinors,u_avg, uSqr_avg, m_avg, mSqr_avg &
+                        call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg &
                         , energy_per_particle, magnetization_per_particle)
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                     end do
@@ -180,7 +178,7 @@ program ex1
 
                 do i = transitory_steps + 1, MC_steps
                     call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
-                    call update_observables(Energy, magnetization, N_spinors,u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
+                    call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
                     , magnetization_per_particle)
                 end do
         end select

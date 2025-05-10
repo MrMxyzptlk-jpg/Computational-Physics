@@ -8,6 +8,7 @@ implicit none
     integer(int_large)                  :: x_size, y_size
     type(MZRanState), allocatable       :: states(:)
     integer                             :: seeds(8,4)
+    real(pr)                            :: N_spinors
 
 
 contains
@@ -89,11 +90,11 @@ subroutine lattice_init(lattice, initial_magnetization)
 end subroutine lattice_init
 
 subroutine get_lattice_energy(lattice, Energy)
-    integer, intent(in), allocatable     :: lattice(:,:)
-    integer(int_large)                   :: Energy
-    integer(int_large)                   :: i, j, i_up, j_right !, j_left, i_down
+    integer, intent(in), allocatable :: lattice(:,:)
+    real(kind=pr)                               :: Energy
+    integer(int_large)                          :: i, j, i_up, j_right !, j_left, i_down
 
-    Energy = 0
+    Energy = 0._pr
 
     do i = 1, x_size
         do j = 1, y_size
@@ -103,17 +104,17 @@ subroutine get_lattice_energy(lattice, Energy)
             j_right = mod(j, y_size) + 1
             !j_left  = mod(j - 2 + y_size, y_size) + 1
 
-            Energy = Energy - int(lattice(i,j) * (lattice(i_up,j) + lattice(i,j_right)),int_large) !+ lattice(i,j_left)+ lattice(i_down,j) )
+            Energy = Energy - real(lattice(i,j) * (lattice(i_up,j) + lattice(i,j_right)),pr) !+ lattice(i,j_left)+ lattice(i_down,j) )
         end do
     end do
 
-    !Energy = Energy/2  ! If we overcount, E is even and thus the division has no remainder
+    !Energy = Energy/2._pr  ! If we overcount, E is even and thus the division has no remainder
 
 end subroutine get_lattice_energy
 
 subroutine get_lattice_energy_vectorized(lattice, Energy)
-    integer, intent(in), allocatable                :: lattice(:,:)
-    integer(int_large)                              :: Energy
+    integer, intent(in), allocatable     :: lattice(:,:)
+    real(kind=pr)                                   :: Energy
     integer(int_large)                              :: i
     integer(int_large), dimension(x_size,y_size)    :: shifted_right, shifted_left, shifted_up, shifted_down
 
@@ -123,19 +124,25 @@ subroutine get_lattice_energy_vectorized(lattice, Energy)
     shifted_up = lattice(:, mod((/(i, i=1,y_size)/), y_size) + 1)      ! Shift up
     shifted_down = lattice(:, mod((/(i-2+y_size, i=1,y_size)/), y_size) + 1)  ! Shift down
 
-    Energy = -SUM(int(lattice * (shifted_right + shifted_left + shifted_up + shifted_down),int_large)) /2 ! If we overcount, E is even and thus the division has no remainder
+    Energy = -SUM(real(lattice * (shifted_right + shifted_left + shifted_up + shifted_down),pr)) /2 ! If we overcount, E is even and thus the division has no remainder
 
 end subroutine get_lattice_energy_vectorized
 
 subroutine MonteCarlo_step(lattice, Energy, magnetization, beta)
     integer, intent(inout), allocatable  :: lattice(:,:)
-    integer(int_large)                   :: Energy, magnetization
+    real(kind=pr), intent(inout)         :: Energy, magnetization
+    real(kind=pr)                        :: Energy_tmp, magnetization_tmp, Energy_sum, magnetization_sum
     real(pr), intent(in)                 :: beta
     integer                              :: dE
-    real(kind=pr)                        :: rnd_num, threshold
+    real(kind=pr)                        :: threshold
     integer                              :: i, j, k, up, down, right, left
 
-    do k = 1, x_size*y_size
+    magnetization_tmp = magnetization
+    Energy_tmp = Energy
+    magnetization_sum = 0._pr
+    Energy_sum = 0._pr
+
+    do k = 1, int(N_spinors,int_large)
 
         ! Getting a random index within the bounds of the lattice indexes
         i = min(int(rmzran()*x_size + 1), x_size) ! Alternatively could use floor()
@@ -149,31 +156,43 @@ subroutine MonteCarlo_step(lattice, Energy, magnetization, beta)
         ! The energy difference will only depend on the nearest neightbours' interaction with the flipped spin as follows:
         dE = 2*lattice(i,j) * (lattice(up,j) + lattice(down,j) + lattice(i,right) + lattice(i,left))
 
-        rnd_num = rmzran()
         threshold = exp (-beta*real(dE,pr))
         if (dE<=0) then
             lattice(i,j) = -lattice(i,j)
-            magnetization = magnetization + int(2*lattice(i,j),int_large)
-            Energy = Energy + int(dE,int_large)
-        else if (dE>0 .and. (rnd_num < threshold)) then
+            magnetization_tmp = magnetization_tmp + real(2*lattice(i,j),pr)
+            Energy_tmp = Energy_tmp + real(dE,pr)
+        else if (rmzran() < threshold) then
             lattice(i,j) = -lattice(i,j)
-            magnetization = magnetization + int(2*lattice(i,j),int_large)
-            Energy = Energy + int(dE,int_large)
+            magnetization_tmp = magnetization_tmp + real(2*lattice(i,j),pr)
+            Energy_tmp = Energy_tmp + real(dE,pr)
         end if
+
+        magnetization_sum = magnetization_sum + magnetization_tmp
+        Energy_sum = Energy_sum + Energy_tmp
     end do
+
+    magnetization = magnetization_sum/N_spinors
+    Energy  = Energy_sum/N_spinors
 
 end subroutine MonteCarlo_step
 
 subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
     integer, intent(inout), allocatable  :: lattice(:,:)
-    integer(int_large)                   :: Energy, magnetization
+    real(kind=pr), intent(inout)         :: Energy, magnetization
+    real(kind=pr)                        :: Energy_tmp, magnetization_tmp, Energy_sum, magnetization_sum
     real(pr), intent(in)                 :: beta
     integer                              :: dE
-    real(kind=pr)                        :: rnd_num, threshold
+    real(kind=pr)                        :: threshold
     integer                              :: i, j, k, up, down, right, left
     type(MZRanState)                     :: state
 
-    do k = 1, x_size*y_size
+
+    magnetization_tmp = magnetization
+    Energy_tmp = Energy
+    magnetization_sum = 0._pr
+    Energy_sum = 0._pr
+
+    do k = 1, int(N_spinors,int_large)
 
         ! Getting a random index within the bounds of the lattice indexes
         i = min(int(rmzran_threadsafe(state)*x_size + 1), x_size) ! Alternatively could use floor()
@@ -187,29 +206,33 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
         ! The energy difference will only depend on the nearest neightbours' interaction with the flipped spin as follows:
         dE = 2*lattice(i,j) * (lattice(up,j) + lattice(down,j) + lattice(i,right) + lattice(i,left))
 
-        rnd_num = rmzran_threadsafe(state)
         threshold = exp (-beta*real(dE,pr))
         if (dE<=0) then
             lattice(i,j) = -lattice(i,j)
-            magnetization = magnetization + int(2*lattice(i,j),int_large)
-            Energy = Energy + int(dE,int_large)
-        else if (dE>0 .and. (rnd_num < threshold)) then
+            magnetization_tmp = magnetization_tmp + real(2*lattice(i,j),pr)
+            Energy_tmp = Energy_tmp + real(dE,pr)
+        else if (rmzran_threadsafe(state) < threshold) then
             lattice(i,j) = -lattice(i,j)
-            magnetization = magnetization + int(2*lattice(i,j),int_large)
-            Energy = Energy + int(dE,int_large)
+            magnetization_tmp = magnetization_tmp + real(2*lattice(i,j),pr)
+            Energy_tmp = Energy_tmp + real(dE,pr)
         end if
+
+        magnetization_sum = magnetization_sum + magnetization_tmp
+        Energy_sum = Energy_sum + Energy_tmp
     end do
+
+    magnetization = magnetization_sum/N_spinors
+    Energy  = Energy_sum/N_spinors
 
 end subroutine MonteCarlo_step_PARALLEL
 
-subroutine update_observables_absMagnetization(energy, magnetization, N_spinors,u_avg, u_var, m_avg, m_var, energy_per_particle &
+subroutine update_observables_absMagnetization(energy, magnetization, u_avg, u_var, m_avg, m_var, energy_per_particle &
 , magnetization_per_particle)
-    integer(int_large)      :: Energy, magnetization
-    real(pr)                :: N_spinors
+    real(kind=pr)           :: Energy, magnetization
     real(kind=pr)           :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
 
-    magnetization_per_particle = real(magnetization,pr)/N_spinors
-    energy_per_particle = real(energy,pr)/N_spinors
+    magnetization_per_particle = magnetization/N_spinors
+    energy_per_particle = Energy/N_spinors
     u_avg = u_avg + energy_per_particle
     u_var = u_var + energy_per_particle*energy_per_particle
     m_avg = m_avg + abs(magnetization_per_particle)
@@ -217,14 +240,13 @@ subroutine update_observables_absMagnetization(energy, magnetization, N_spinors,
 
 end subroutine update_observables_absMagnetization
 
-subroutine update_observables_normalMagnetization(energy, magnetization, N_spinors,u_avg, u_var, m_avg, m_var, energy_per_particle &
+subroutine update_observables_normalMagnetization(energy, magnetization, u_avg, u_var, m_avg, m_var, energy_per_particle &
 , magnetization_per_particle)
-    integer(int_large)      :: Energy, magnetization
-    real(pr)                :: N_spinors
+    real(kind=pr)           :: Energy, magnetization
     real(kind=pr)           :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
 
-    magnetization_per_particle = real(magnetization,pr)/N_spinors
-    energy_per_particle = real(energy,pr)/N_spinors
+    magnetization_per_particle = magnetization/N_spinors
+    energy_per_particle = energy/N_spinors
     u_avg = u_avg + energy_per_particle
     u_var = u_var + energy_per_particle*energy_per_particle
     m_avg = m_avg + abs(magnetization_per_particle)
