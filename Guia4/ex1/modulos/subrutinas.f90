@@ -90,7 +90,7 @@ end subroutine lattice_init
 
 subroutine get_lattice_energy(lattice, Energy)
     integer, intent(in), allocatable     :: lattice(:,:)
-    integer(int_large)                   :: Energy
+    real(pr)                             :: Energy
     integer(int_large)                   :: i, j, i_up, j_right !, j_left, i_down
 
     Energy = 0
@@ -103,7 +103,7 @@ subroutine get_lattice_energy(lattice, Energy)
             j_right = mod(j, y_size) + 1
             !j_left  = mod(j - 2 + y_size, y_size) + 1
 
-            Energy = Energy - int(lattice(i,j) * (lattice(i_up,j) + lattice(i,j_right)),int_large) !+ lattice(i,j_left)+ lattice(i_down,j) )
+            Energy = Energy - real(lattice(i,j) * (lattice(i_up,j) + lattice(i,j_right)),pr) !+ lattice(i,j_left)+ lattice(i_down,j) )
         end do
     end do
 
@@ -113,7 +113,7 @@ end subroutine get_lattice_energy
 
 subroutine get_lattice_energy_vectorized(lattice, Energy)
     integer, intent(in), allocatable                :: lattice(:,:)
-    integer(int_large)                              :: Energy
+    real(pr)                                        :: Energy
     integer(int_large)                              :: i
     integer(int_large), dimension(x_size,y_size)    :: shifted_right, shifted_left, shifted_up, shifted_down
 
@@ -129,10 +129,10 @@ end subroutine get_lattice_energy_vectorized
 
 subroutine MonteCarlo_step(lattice, Energy, magnetization, beta)
     integer, intent(inout), allocatable  :: lattice(:,:)
-    integer(int_large)                   :: Energy, magnetization
+    real(pr)                             :: Energy, magnetization
     real(pr), intent(in)                 :: beta
     integer                              :: dE
-    real(kind=pr)                        :: rnd_num, threshold
+    real(kind=pr)                        :: threshold
     integer                              :: i, j, k, up, down, right, left
 
     do k = 1, x_size*y_size
@@ -149,16 +149,15 @@ subroutine MonteCarlo_step(lattice, Energy, magnetization, beta)
         ! The energy difference will only depend on the nearest neightbours' interaction with the flipped spin as follows:
         dE = 2*lattice(i,j) * (lattice(up,j) + lattice(down,j) + lattice(i,right) + lattice(i,left))
 
-        rnd_num = rmzran()
         threshold = exp (-beta*real(dE,pr))
         if (dE<=0) then
             lattice(i,j) = -lattice(i,j)
-            magnetization = magnetization + int(2*lattice(i,j),int_large)
-            Energy = Energy + int(dE,int_large)
-        else if (dE>0 .and. (rnd_num < threshold)) then
+            magnetization = magnetization + real(2*lattice(i,j),pr)
+            Energy = Energy + real(dE,pr)
+        else if (rmzran() < threshold) then
             lattice(i,j) = -lattice(i,j)
-            magnetization = magnetization + int(2*lattice(i,j),int_large)
-            Energy = Energy + int(dE,int_large)
+            magnetization = magnetization + real(2*lattice(i,j),pr)
+            Energy = Energy + real(dE,pr)
         end if
     end do
 
@@ -166,10 +165,10 @@ end subroutine MonteCarlo_step
 
 subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
     integer, intent(inout), allocatable  :: lattice(:,:)
-    integer(int_large)                   :: Energy, magnetization
+    real(pr)                             :: Energy, magnetization
     real(pr), intent(in)                 :: beta
     integer                              :: dE
-    real(kind=pr)                        :: rnd_num, threshold
+    real(kind=pr)                        :: threshold
     integer                              :: i, j, k, up, down, right, left
     type(MZRanState)                     :: state
 
@@ -187,13 +186,12 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
         ! The energy difference will only depend on the nearest neightbours' interaction with the flipped spin as follows:
         dE = 2*lattice(i,j) * (lattice(up,j) + lattice(down,j) + lattice(i,right) + lattice(i,left))
 
-        rnd_num = rmzran_threadsafe(state)
         threshold = exp (-beta*real(dE,pr))
         if (dE<=0) then
             lattice(i,j) = -lattice(i,j)
             magnetization = magnetization + int(2*lattice(i,j),int_large)
             Energy = Energy + int(dE,int_large)
-        else if (dE>0 .and. (rnd_num < threshold)) then
+        else if (rmzran_threadsafe(state) < threshold) then
             lattice(i,j) = -lattice(i,j)
             magnetization = magnetization + int(2*lattice(i,j),int_large)
             Energy = Energy + int(dE,int_large)
@@ -204,12 +202,12 @@ end subroutine MonteCarlo_step_PARALLEL
 
 subroutine update_observables_absMagnetization(energy, magnetization, N_spinors,u_avg, u_var, m_avg, m_var, energy_per_particle &
 , magnetization_per_particle)
-    integer(int_large)      :: Energy, magnetization
+    real(pr)                :: Energy, magnetization
     real(pr)                :: N_spinors
     real(kind=pr)           :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
 
-    magnetization_per_particle = real(magnetization,pr)/N_spinors
-    energy_per_particle = real(energy,pr)/N_spinors
+    magnetization_per_particle = magnetization/N_spinors
+    energy_per_particle = Energy/N_spinors
     u_avg = u_avg + energy_per_particle
     u_var = u_var + energy_per_particle*energy_per_particle
     m_avg = m_avg + abs(magnetization_per_particle)
@@ -219,12 +217,12 @@ end subroutine update_observables_absMagnetization
 
 subroutine update_observables_normalMagnetization(energy, magnetization, N_spinors,u_avg, u_var, m_avg, m_var, energy_per_particle &
 , magnetization_per_particle)
-    integer(int_large)      :: Energy, magnetization
+    real(pr)                :: Energy, magnetization
     real(pr)                :: N_spinors
     real(kind=pr)           :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
 
-    magnetization_per_particle = real(magnetization,pr)/N_spinors
-    energy_per_particle = real(energy,pr)/N_spinors
+    magnetization_per_particle = magnetization/N_spinors
+    energy_per_particle = Energy/N_spinors
     u_avg = u_avg + energy_per_particle
     u_var = u_var + energy_per_particle*energy_per_particle
     m_avg = m_avg + abs(magnetization_per_particle)

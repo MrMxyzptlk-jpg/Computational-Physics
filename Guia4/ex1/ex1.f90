@@ -30,7 +30,8 @@ program ex1
     integer, allocatable            :: lattice(:,:)
     integer(int_small)              :: threadID
     integer                         :: i, j, unit_steps, unit_temperature, unitnum, nthreads, status
-    integer(int_large)              :: Energy, magnetization, MC_steps, transitory_steps, KbT_steps
+    real(pr)                        :: Energy, magnetization
+    integer(int_large)              :: MC_steps, transitory_steps, KbT_steps
     character(len=31)               :: file_temperature
     character(len=28)               :: file_steps
     character(len=8)                :: prefix
@@ -41,7 +42,7 @@ program ex1
     abstract interface
         subroutine update(E, M, N, u_avg, u_var, m_avg, m_var, EpP, MpP)
             use precision
-            integer(int_large)      :: E, M
+            real(pr)                :: E, M
             real(pr)                :: N
             real(kind=pr)           :: u_avg, u_var, m_avg, m_var, EpP, MpP
         end subroutine update

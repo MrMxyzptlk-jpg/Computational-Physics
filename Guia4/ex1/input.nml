@@ -4,14 +4,14 @@
     T_range     = .true.,
     KbT_min     = 2,
     KbT_max     = 2.5,
-    KbT_steps   = 200,
+    KbT_steps   = 50,
     x_size      = 20,
     y_size      = 20
 
 /
 
 &calculation
-    MC_steps = 40000,
+    MC_steps = 100000,
     transitory_steps = 5000,
     save_thermalization = .false., // False by default
     use_abolute_magnetization = .true.
