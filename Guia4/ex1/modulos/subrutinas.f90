@@ -8,6 +8,7 @@ implicit none
     integer(int_large)                  :: x_size, y_size
     type(MZRanState), allocatable       :: states(:)
     integer                             :: seeds(8,4)
+    real(pr)                            :: N_spinors
 
 
 contains
@@ -200,10 +201,9 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
 
 end subroutine MonteCarlo_step_PARALLEL
 
-subroutine update_observables_absMagnetization(energy, magnetization, N_spinors,u_avg, u_var, m_avg, m_var, energy_per_particle &
+subroutine update_observables_absMagnetization(energy, magnetization, u_avg, u_var, m_avg, m_var, energy_per_particle &
 , magnetization_per_particle)
     real(pr)                :: Energy, magnetization
-    real(pr)                :: N_spinors
     real(kind=pr)           :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
 
     magnetization_per_particle = magnetization/N_spinors
@@ -215,10 +215,9 @@ subroutine update_observables_absMagnetization(energy, magnetization, N_spinors,
 
 end subroutine update_observables_absMagnetization
 
-subroutine update_observables_normalMagnetization(energy, magnetization, N_spinors,u_avg, u_var, m_avg, m_var, energy_per_particle &
+subroutine update_observables_normalMagnetization(energy, magnetization, u_avg, u_var, m_avg, m_var, energy_per_particle &
 , magnetization_per_particle)
     real(pr)                :: Energy, magnetization
-    real(pr)                :: N_spinors
     real(kind=pr)           :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
 
     magnetization_per_particle = magnetization/N_spinors
