@@ -3,7 +3,7 @@
 ! Purpose:
 !
 !
-! Description:
+! Description: Sqr = square, avg = average, var = variance, inv = inverse
 !
 ! Input:
 !
@@ -12,8 +12,7 @@
 !
 !
 !
-! Room for improvement: We can modify the program to calculate in parallel different thermal baths (KbT) and initial conditions
-!   by increasing in 1 the dimension of the arrays and scalars used.
+! Room for improvement:
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
@@ -24,7 +23,8 @@ program ex1
     use mzranmod_threadsafe
     use mzranmod
     implicit none
-    real(kind=pr)                   :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle, real_MC_steps
+    real(kind=pr)                   :: u_avg, uSqr_avg, u_var, u_error, m_avg, mSqr_avg, m_var, m_error
+    real(kind=pr)                   :: energy_per_particle, magnetization_per_particle, real_MC_steps
     real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magetization, N_spinors
     real(kind=pr), allocatable      :: beta(:), KbT(:)
     integer, allocatable            :: lattice(:,:)
@@ -36,7 +36,17 @@ program ex1
     character(len=8)                :: prefix
     character(len=14)               :: suffix
     character(len=140)              :: command
-    logical                         :: T_range, save_thermalization
+    logical                         :: T_range, save_thermalization, use_abolute_magnetization
+
+    abstract interface
+        subroutine update(E, M, N, u_avg, u_var, m_avg, m_var, EpP, MpP)
+            use precision
+            integer(int_large)      :: E, M
+            real(pr)                :: N
+            real(kind=pr)           :: u_avg, u_var, m_avg, m_var, EpP, MpP
+        end subroutine update
+    end interface
+    procedure (update), pointer :: update_observables => null()
 
 !##################################################################################################
 !       Input settings
@@ -44,7 +54,7 @@ program ex1
 
     ! Namelist blocks
     namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magetization, x_size, y_size
-    namelist /calculation/ MC_steps, transitory_steps, save_thermalization
+    namelist /calculation/ MC_steps, transitory_steps, save_thermalization, use_abolute_magnetization
 
     ! DEFAULT SETTINGS
         ! Physical problems' characteristics
@@ -57,11 +67,11 @@ program ex1
             y_size      = 40
             initial_magetization = 1._pr
 
-
         !Calculation settings
             MC_steps = 1000000
             transitory_steps = MC_steps/2
             save_thermalization = .false.
+            use_abolute_magnetization = .true.
 
     ! Read from input file
     open(newunit=unitnum, file="input.nml", status="old", action="read")
@@ -75,17 +85,27 @@ program ex1
 
     call MZRanState_init() ! Initialize the "states" array for the parallelization
     nthreads = size(states)
+
     allocate(lattice(x_size,y_size))
     N_spinors = real(x_size*y_size,pr)
-    if (T_range) then
-        allocate(KbT(KbT_steps))
-        KbT = (/(Kbt_min + real(i,pr)*(KbT_max - KbT_min)/real(KbT_steps-1,pr), i=0, KbT_steps-1)/)
-    else
-        allocate(KbT(1))
-        KbT = KbT_user
-    end if
+
+    select case (T_range)
+        case(.true.)
+            allocate(KbT(KbT_steps))
+            KbT = (/(Kbt_min + real(i,pr)*(KbT_max - KbT_min)/real(KbT_steps-1,pr), i=0, KbT_steps-1)/)
+        case(.false.)
+            allocate(KbT(1))
+            KbT = KbT_user
+    end select
     beta = 1._pr/KbT
     real_MC_steps = real(MC_steps - transitory_steps,pr)
+
+    select case (use_abolute_magnetization)
+        case(.true.)
+            update_observables => update_observables_absMagnetization
+        case(.false.)
+            update_observables => update_observables_normalMagnetization
+    end select
 
     file_temperature = "datos/temperature_functions.out"
 
@@ -97,12 +117,13 @@ program ex1
     open(newunit=unit_temperature, file=file_temperature, status='unknown')
     write(unit_temperature,*) "##     KbT      | Thread ID |       <m>          | susceptibility |      <u>     | capacity"
 
-    !$omp parallel do private(Energy, magnetization, lattice, u_avg, u_var, m_avg, m_var, &
+    !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, &
     !$omp   magnetization_per_particle, energy_per_particle, unit_steps, file_steps, prefix, &
     !$omp   suffix, j, i, threadID) shared(KbT, nthreads, unit_temperature, format_style0, &
     !$omp   format_style1, beta, states, seeds, real_MC_steps) schedule(dynamic)
 
     do j = 1, size(KbT)
+        ! This initialization should be done outside the loop but got "-Wuninitialized" variables
         prefix = "datos/T_"
         call create_suffix("_m0_", initial_magetization, ".out", suffix)
     !    suffix = "_T0_zero.out"
@@ -116,9 +137,9 @@ program ex1
         call get_lattice_energy_vectorized(lattice, Energy)
         magnetization = sum(int(lattice,int_large))
         u_avg = 0._pr
-        u_var = 0._pr
+        uSqr_avg = 0._pr
         m_avg = 0._pr
-        m_var = 0._pr
+        mSqr_avg = 0._pr
 
 
 
@@ -142,8 +163,8 @@ program ex1
 
                     do i = transitory_steps + 1, MC_steps
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
-                        call update_observables(Energy, magnetization, N_spinors,u_avg, u_var, m_avg, m_var, energy_per_particle&
-                        , magnetization_per_particle)
+                        call update_observables(Energy, magnetization, N_spinors,u_avg, uSqr_avg, m_avg, mSqr_avg &
+                        , energy_per_particle, magnetization_per_particle)
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                     end do
                 close(unit_steps)
@@ -157,17 +178,24 @@ program ex1
 
                 do i = transitory_steps + 1, MC_steps
                     call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
-                    call update_observables(Energy, magnetization, N_spinors,u_avg, u_var, m_avg, m_var, energy_per_particle&
+                    call update_observables(Energy, magnetization, N_spinors,u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
                     , magnetization_per_particle)
                 end do
         end select
 
         u_avg = u_avg / real_MC_steps
-        u_var = u_var / real_MC_steps
+        uSqr_avg = uSqr_avg / real_MC_steps
+        u_var = uSqr_avg - u_avg*u_avg
+
         m_avg = m_avg / real_MC_steps
-        m_var = m_var / real_MC_steps
-        susceptibility = (m_var - m_avg*m_avg)*beta(j)
-        capacity = (u_var - u_avg*u_avg)*beta(j)*beta(j)
+        mSqr_avg = mSqr_avg / real_MC_steps
+        m_var = mSqr_avg - m_avg*m_avg
+
+        capacity = u_var*beta(j)*beta(j)
+        susceptibility = m_var*beta(j)
+
+        m_error = sqrt(m_var/(real_MC_steps-1_pr))
+        u_error = sqrt(u_var/(real_MC_steps-1_pr))
 
         !$omp critical
             write(unit_temperature,format_style2) KbT(j), threadID, m_avg, susceptibility, u_avg, capacity
