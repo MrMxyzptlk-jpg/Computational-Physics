@@ -136,7 +136,7 @@ subroutine MonteCarlo_step(lattice, Energy, magnetization, beta)
     real(kind=pr)                        :: threshold
     integer                              :: i, j, k, up, down, right, left
 
-    do k = 1, x_size*y_size
+    do k = 1, int(N_spinors, int_large)
 
         ! Getting a random index within the bounds of the lattice indexes
         i = min(int(rmzran()*x_size + 1), x_size) ! Alternatively could use floor()
@@ -173,7 +173,7 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
     integer                              :: i, j, k, up, down, right, left
     type(MZRanState)                     :: state
 
-    do k = 1, x_size*y_size
+    do k = 1, int(N_spinors, int_large)
 
         ! Getting a random index within the bounds of the lattice indexes
         i = min(int(rmzran_threadsafe(state)*x_size + 1), x_size) ! Alternatively could use floor()

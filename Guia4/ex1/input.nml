@@ -11,7 +11,7 @@
 /
 
 &calculation
-    MC_steps = 10000,
+    MC_steps = 40000,
     transitory_steps = 5000,
     save_thermalization = .true., // False by default
     use_abolute_magnetization = .true.

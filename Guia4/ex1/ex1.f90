@@ -133,13 +133,11 @@ program ex1
 
         call lattice_init(lattice, initial_magetization)
         call get_lattice_energy_vectorized(lattice, Energy)
-        magnetization = sum(int(lattice,int_large))
+        magnetization = sum(real(lattice,pr))
         u_avg = 0._pr
         uSqr_avg = 0._pr
         m_avg = 0._pr
         mSqr_avg = 0._pr
-
-
 
         select case (save_thermalization)
             case(.true.)
@@ -147,16 +145,16 @@ program ex1
                 print*, "Calculating KbT = ",  KbT(j), "Filename:  ", file_steps, " ThreadID:", threadID
                 open(newunit=unit_steps, file=file_steps, status='replace')
 
-                    magnetization_per_particle = real(magnetization,pr)/N_spinors
-                    energy_per_particle = real(energy,pr)/N_spinors
+                    magnetization_per_particle = magnetization/N_spinors
+                    energy_per_particle = energy/N_spinors
                     write(unit_steps,*) "## Thread ID = ", threadID
                     write(unit_steps,*) "## MC steps | energy per particle | magnetization per particle"
                     write(unit_steps,format_style1) 0, energy_per_particle, magnetization_per_particle
 
                     do i = 1, transitory_steps
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
-                        magnetization_per_particle = real(magnetization,pr)/N_spinors
-                        energy_per_particle = real(energy,pr)/N_spinors
+                        magnetization_per_particle = magnetization/N_spinors
+                        energy_per_particle = Energy/N_spinors
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                     end do
 
