@@ -1,18 +1,18 @@
 !***************************************************************
 ! Program: ex1.f90
-! Purpose:
+! Purpose: Analysing the Ising model and different observables as a function of the dimentionaless temperature Kb*T/J.
 !
 !
-! Description: Sqr = square, avg = average, var = variance, inv = inverse
+! Description:  The following abreviations for different variables' names is implementes: Sqr = square, avg = average, var = variance, inv = inverse
 !
-! Input:
-!
-!
-! Output:
+! Input: The imput information is specified in an "input.nml" file. Defauls values are provided for every variable in the "Input settings" section, and an example input file is also provided.
 !
 !
+! Output: all output data is written to a "datos" folder which MUST exist berofe the calculations. Every file has the suffix ".out". Observables and errors are printed in "datos/temperature_functions.out" as they are calculated, and ordered in "datos/temperature_functions_sorted.out" after the calculations have finished. The thermalization data is saved (if specified in the input.nml) to files specifying the temperature used and the initial magnetization chosen.
 !
-! Room for improvement:
+!
+!
+! Room for improvement: The correlation of the seeds chones must be studied for the reliability of the calculations. The seeds used are simply an example and by no means the best choise.
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
@@ -115,7 +115,8 @@ program ex1
 !##################################################################################
 
     open(newunit=unit_temperature, file=file_temperature, status='unknown')
-    write(unit_temperature,*) "##     KbT      | Thread ID |       <m>          | susceptibility |      <u>     | capacity"
+    write(unit_temperature,*) "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
+    "      <u>      |    u Error     |    capacity"
 
     !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, &
     !$omp   magnetization_per_particle, energy_per_particle, unit_steps, file_steps, prefix, &
@@ -151,7 +152,8 @@ program ex1
 
                     magnetization_per_particle = real(magnetization,pr)/N_spinors
                     energy_per_particle = real(energy,pr)/N_spinors
-                    write(unit_steps,*) "## Thread ID = ", threadID," | MC steps | energy per particle | magnetization_per_particle"
+                    write(unit_steps,*) "## Thread ID = ", threadID
+                    write(unit_steps,*) "## MC steps | energy per particle | magnetization per particle"
                     write(unit_steps,format_style1) 0, energy_per_particle, magnetization_per_particle
 
                     do i = 1, transitory_steps
@@ -194,11 +196,11 @@ program ex1
         capacity = u_var*beta(j)*beta(j)
         susceptibility = m_var*beta(j)
 
-        m_error = sqrt(m_var/(real_MC_steps-1_pr))
         u_error = sqrt(u_var/(real_MC_steps-1_pr))
+        m_error = sqrt(m_var/(real_MC_steps-1_pr))
 
         !$omp critical
-            write(unit_temperature,format_style2) KbT(j), threadID, m_avg, susceptibility, u_avg, capacity
+            write(unit_temperature,format_style2) KbT(j), threadID, m_avg, m_error, susceptibility, u_avg, capacity, u_error
             call flush(unit_temperature)
         !$omp end critical
 
