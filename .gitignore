@@ -45,6 +45,7 @@
 *.eps
 *.mp4
 *.pdf
+*/*.pdf
 
 # Data files
 *.dat
