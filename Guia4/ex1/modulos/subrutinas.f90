@@ -30,6 +30,24 @@ subroutine create_file_name(prefix, num, suffix, filename)
 
 end subroutine create_file_name
 
+subroutine create_suffix(prefix, num, suffix, suffix_out)
+    character(len=8)                :: fmt  ! Format descriptor
+    character(len=12)               :: x1   ! Temporary string for formatted real
+    character(len=*), intent(in)    :: prefix, suffix
+    character(len=*)                :: suffix_out
+    real(kind=pr), intent(in)       :: num  ! Input real number
+
+    fmt = '(F6.4)'  ! Adjust as needed
+    write(x1, fmt) num  ! Convert real to string
+
+    ! Trim spaces in formatted number
+    x1 = adjustl(trim(x1))
+
+    ! Concatenate strings
+    suffix_out = prefix // trim(x1) // suffix
+
+end subroutine create_suffix
+
 subroutine MZRanState_init()
     integer      :: nthreads
     ! Determine number of threads and allocate state array

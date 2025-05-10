@@ -24,7 +24,7 @@ program ex1
     use mzranmod_threadsafe
     use mzranmod
     implicit none
-    real(kind=pr)                   :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
+    real(kind=pr)                   :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle, real_MC_steps
     real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magetization, N_spinors
     real(kind=pr), allocatable      :: beta(:), KbT(:)
     integer, allocatable            :: lattice(:,:)
@@ -32,9 +32,9 @@ program ex1
     integer                         :: i, j, unit_steps, unit_temperature, unitnum, nthreads, status
     integer(int_large)              :: Energy, magnetization, MC_steps, transitory_steps, KbT_steps
     character(len=31)               :: file_temperature
-    character(len=26)               :: file_steps
+    character(len=28)               :: file_steps
     character(len=8)                :: prefix
-    character(len=12)               :: suffix
+    character(len=14)               :: suffix
     character(len=140)              :: command
     logical                         :: T_range, save_thermalization
 
@@ -55,7 +55,7 @@ program ex1
             KbT_steps   = 33
             x_size      = 40
             y_size      = 40
-            initial_magetization = 1
+            initial_magetization = 1._pr
 
 
         !Calculation settings
@@ -85,8 +85,10 @@ program ex1
         KbT = KbT_user
     end if
     beta = 1._pr/KbT
+    real_MC_steps = real(MC_steps - transitory_steps,pr)
 
     file_temperature = "datos/temperature_functions.out"
+
 
 !##################################################################################
 !    Begin and save calculations for all T specified in the KbT array
@@ -95,15 +97,17 @@ program ex1
     open(newunit=unit_temperature, file=file_temperature, status='unknown')
     write(unit_temperature,*) "##     KbT      | Thread ID |       <m>          | susceptibility |      <u>     | capacity"
 
-
     !$omp parallel do private(Energy, magnetization, lattice, u_avg, u_var, m_avg, m_var, &
     !$omp   magnetization_per_particle, energy_per_particle, unit_steps, file_steps, prefix, &
     !$omp   suffix, j, i, threadID) shared(KbT, nthreads, unit_temperature, format_style0, &
-    !$omp   format_style1, beta, states, seeds) schedule(dynamic)
+    !$omp   format_style1, beta, states, seeds, real_MC_steps) schedule(dynamic)
 
     do j = 1, size(KbT)
         prefix = "datos/T_"
-        suffix = "_T0_zero.out"
+        call create_suffix("_m0_", initial_magetization, ".out", suffix)
+    !    suffix = "_T0_zero.out"
+
+
         ! Initialize RNG states with unique seeds
         threadID = int(omp_get_thread_num() + 1, int_small)
         call init_mzran_threadsafe(states(threadID), seeds(threadID,1), seeds(threadID,2), seeds(threadID,3), seeds(threadID,4))
@@ -158,10 +162,10 @@ program ex1
                 end do
         end select
 
-        u_avg = u_avg / real(MC_steps - transitory_steps,pr)
-        u_var = u_var / real(MC_steps - transitory_steps,pr)
-        m_avg = m_avg / real(MC_steps - transitory_steps,pr)
-        m_var = m_var / real(MC_steps - transitory_steps,pr)
+        u_avg = u_avg / real_MC_steps
+        u_var = u_var / real_MC_steps
+        m_avg = m_avg / real_MC_steps
+        m_var = m_var / real_MC_steps
         susceptibility = (m_var - m_avg*m_avg)*beta(j)
         capacity = (u_var - u_avg*u_avg)*beta(j)*beta(j)
 
