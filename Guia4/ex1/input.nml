@@ -1,0 +1,17 @@
+&physical
+    KbT_user    = 0.2267600E+01,
+    initial_magetization = 1,
+    T_range     = .true.,
+    KbT_min     = 2,
+    KbT_max     = 2.5,
+    KbT_steps   = 200,
+    x_size      = 20,
+    y_size      = 20
+
+/
+
+&calculation
+    MC_steps = 400000,
+    transitory_steps = 50000,
+    save_thermalization = .false. // False by default
+/
