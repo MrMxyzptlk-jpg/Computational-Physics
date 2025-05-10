@@ -4,14 +4,14 @@
     T_range     = .true.,
     KbT_min     = 2,
     KbT_max     = 2.5,
-    KbT_steps   = 200,
+    KbT_steps   = 20,
     x_size      = 20,
     y_size      = 20
 
 /
 
 &calculation
-    MC_steps = 400000,
-    transitory_steps = 50000,
+    MC_steps = 1000,
+    transitory_steps = 500,
     save_thermalization = .false. // False by default
 /
