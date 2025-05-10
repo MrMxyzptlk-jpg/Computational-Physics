@@ -130,7 +130,7 @@ end subroutine get_lattice_energy_vectorized
 
 subroutine MonteCarlo_step(lattice, Energy, magnetization, beta)
     integer, intent(inout), allocatable  :: lattice(:,:)
-    real(pr)                             :: Energy, magnetization
+    real(pr), intent(inout)              :: Energy, magnetization
     real(pr), intent(in)                 :: beta
     integer                              :: dE
     real(kind=pr)                        :: threshold
@@ -166,7 +166,7 @@ end subroutine MonteCarlo_step
 
 subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
     integer, intent(inout), allocatable  :: lattice(:,:)
-    real(pr)                             :: Energy, magnetization
+    real(pr), intent(inout)              :: Energy, magnetization
     real(pr), intent(in)                 :: beta
     integer                              :: dE
     real(kind=pr)                        :: threshold
@@ -190,12 +190,12 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
         threshold = exp (-beta*real(dE,pr))
         if (dE<=0) then
             lattice(i,j) = -lattice(i,j)
-            magnetization = magnetization + int(2*lattice(i,j),int_large)
-            Energy = Energy + int(dE,int_large)
+            magnetization = magnetization + real(2*lattice(i,j),pr)
+            Energy = Energy + real(dE,pr)
         else if (rmzran_threadsafe(state) < threshold) then
             lattice(i,j) = -lattice(i,j)
-            magnetization = magnetization + int(2*lattice(i,j),int_large)
-            Energy = Energy + int(dE,int_large)
+            magnetization = magnetization + real(2*lattice(i,j),pr)
+            Energy = Energy + real(dE,pr)
         end if
     end do
 
