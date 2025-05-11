@@ -155,7 +155,7 @@ subroutine MonteCarlo_step(lattice, Energy, magnetization, beta)
             lattice(i,j) = -lattice(i,j)
             magnetization = magnetization + real(2*lattice(i,j),pr)
             Energy = Energy + real(dE,pr)
-        else if (rmzran() < threshold) then
+        else if (rmzran() < threshold) then ! Note that this way avoid extra unnecessary calculations
             lattice(i,j) = -lattice(i,j)
             magnetization = magnetization + real(2*lattice(i,j),pr)
             Energy = Energy + real(dE,pr)
@@ -164,11 +164,11 @@ subroutine MonteCarlo_step(lattice, Energy, magnetization, beta)
 
 end subroutine MonteCarlo_step
 
-subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
+subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, state)
     integer, intent(inout), allocatable  :: lattice(:,:)
     real(pr), intent(inout)              :: Energy, magnetization
-    real(pr), intent(in)                 :: beta
-    integer                              :: dE
+    real(pr), intent(in)                 :: transition_probability(-2:2)
+    integer                              :: quarter_dE
     real(kind=pr)                        :: threshold
     integer                              :: i, j, k, up, down, right, left
     type(MZRanState)                     :: state
@@ -185,17 +185,17 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta, state)
         left  = mod(j - 2 + y_size, y_size) + 1
 
         ! The energy difference will only depend on the nearest neightbours' interaction with the flipped spin as follows:
-        dE = 2*lattice(i,j) * (lattice(up,j) + lattice(down,j) + lattice(i,right) + lattice(i,left))
+        quarter_dE = lattice(i,j) * (lattice(up,j) + lattice(down,j) + lattice(i,right) + lattice(i,left))/2
 
-        threshold = exp (-beta*real(dE,pr))
-        if (dE<=0) then
+
+        if (quarter_dE<=0) then
             lattice(i,j) = -lattice(i,j)
             magnetization = magnetization + real(2*lattice(i,j),pr)
-            Energy = Energy + real(dE,pr)
-        else if (rmzran_threadsafe(state) < threshold) then
+            Energy = Energy + real(4*quarter_dE,pr)
+        else if (rmzran_threadsafe(state) < transition_probability(quarter_dE)) then ! Note that this way avoid extra unnecessary calculations
             lattice(i,j) = -lattice(i,j)
             magnetization = magnetization + real(2*lattice(i,j),pr)
-            Energy = Energy + real(dE,pr)
+            Energy = Energy + real(4*quarter_dE,pr)
         end if
     end do
 

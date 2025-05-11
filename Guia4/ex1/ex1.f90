@@ -8,7 +8,7 @@
 ! Input: The imput information is specified in an "input.nml" file. Defauls values are provided for every variable in the "Input settings" section, and an example input file is also provided.
 !
 !
-! Output: all output data is written to a "datos" folder which MUST exist berofe the calculations. Every file has the suffix ".out". Observables and errors are printed in "datos/temperature_functions.out" as they are calculated, and ordered in "datos/temperature_functions_sorted.out" after the calculations have finished. The thermalization data is saved (if specified in the input.nml) to files specifying the temperature used and the initial magnetization chosen.
+! Output: all output data is written to a "datos" folder which MUST exist berofe the calculations. Every file has the suffix ".out". Observables and errors are printed in "datos/temperature_functions.out" as they are calculated, and ordered in "datos/temperature_functions_sorted.out" after the calculations have finished. Furthermore, the associated errors are also stored, but not the standard deviations, as a simple multiplication by sqrt(N-1) suffices to calculate it if necessary in post processing. The thermalization data is saved (if specified in the input.nml) to files specifying the temperature used and the initial magnetization chosen.
 !
 !
 !
@@ -27,11 +27,12 @@ program ex1
     real(kind=pr)                   :: energy_per_particle, magnetization_per_particle, real_MC_steps
     real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magetization
     real(kind=pr), allocatable      :: beta(:), KbT(:)
+    real(pr)                        :: transition_probability(-2:2)
     integer, allocatable            :: lattice(:,:)
     integer(int_small)              :: threadID
-    integer                         :: i, j, unit_steps, unit_temperature, unitnum, nthreads, status
+    integer                         :: i, j, k, l, unit_steps, unit_temperature, unitnum, nthreads, status
     real(pr)                        :: Energy, magnetization
-    integer(int_large)              :: MC_steps, transitory_steps, KbT_steps
+    integer(int_large)              :: MC_steps, averaging_step, measuring_step, transitory_steps, KbT_steps
     character(len=31)               :: file_temperature
     character(len=28)               :: file_steps
     character(len=8)                :: prefix
@@ -54,7 +55,8 @@ program ex1
 
     ! Namelist blocks
     namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magetization, x_size, y_size
-    namelist /calculation/ MC_steps, transitory_steps, save_thermalization, use_abolute_magnetization
+    namelist /calculation/ MC_steps, averaging_step, measuring_step, transitory_steps, save_thermalization&
+        , use_abolute_magnetization
 
     ! DEFAULT SETTINGS
         ! Physical problems' characteristics
@@ -69,6 +71,8 @@ program ex1
 
         !Calculation settings
             MC_steps = 1000000
+            averaging_step = MC_steps/4
+            measuring_step = MC_steps/4
             transitory_steps = MC_steps/2
             save_thermalization = .false.
             use_abolute_magnetization = .true.
@@ -98,7 +102,7 @@ program ex1
             KbT = KbT_user
     end select
     beta = 1._pr/KbT
-    real_MC_steps = real(MC_steps - transitory_steps,pr)
+    real_MC_steps = real(((MC_steps - transitory_steps)/measuring_step),pr)
 
     select case (use_abolute_magnetization)
         case(.true.)
@@ -122,8 +126,9 @@ program ex1
 
     !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, &
     !$omp   magnetization_per_particle, energy_per_particle, unit_steps, file_steps, &
-    !$omp   j, i, threadID) shared(KbT, nthreads, unit_temperature, format_style0, &
-    !$omp   format_style1, beta, states, seeds, real_MC_steps, prefix, suffix, N_spinors) schedule(dynamic)
+    !$omp   j, i, k, l, threadID, transition_probability) shared(KbT, nthreads, unit_temperature, format_style0, &
+    !$omp   format_style1, beta, states, seeds, real_MC_steps, prefix, suffix, N_spinors,averaging_step, measuring_step) &
+    !$omp   schedule(dynamic)
 
     do j = 1, size(KbT)
 
@@ -138,6 +143,7 @@ program ex1
         uSqr_avg = 0._pr
         m_avg = 0._pr
         mSqr_avg = 0._pr
+        transition_probability = (/(exp (-beta(j)*real(4*i,pr)), i=-2,2)/)
 
         select case (save_thermalization)
             case(.true.)
@@ -152,14 +158,14 @@ program ex1
                     write(unit_steps,format_style1) 0, energy_per_particle, magnetization_per_particle
 
                     do i = 1, transitory_steps
-                        call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
+                        call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                         magnetization_per_particle = magnetization/N_spinors
                         energy_per_particle = Energy/N_spinors
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                     end do
 
                     do i = transitory_steps + 1, MC_steps
-                        call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
+                        call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                         call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg &
                         , energy_per_particle, magnetization_per_particle)
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
@@ -170,13 +176,17 @@ program ex1
                 print*, "Calculating KbT = ",  KbT(j), " ThreadID:", threadID
 
                 do i = 1, transitory_steps
-                    call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
+                    call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                 end do
 
-                do i = transitory_steps + 1, MC_steps
-                    call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, beta(j), states(threadID))
-                    call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
-                    , magnetization_per_particle)
+                do i = 1, (MC_steps - transitory_steps)/measuring_step
+                    !do l = 1, averaging_step
+                        do k = 1, measuring_step
+                            call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
+                        end do
+                        call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
+                        , magnetization_per_particle)
+                    !end do
                 end do
         end select
 
