@@ -21,7 +21,6 @@ program ex1
     use subrutinas
     use omp_lib
     use mzranmod_threadsafe
-    use mzranmod
     implicit none
     real(kind=pr)                   :: u_avg, uSqr_avg, u_var, u_error, m_avg, mSqr_avg, m_var, m_error
     real(kind=pr)                   :: energy_per_particle, magnetization_per_particle, real_MC_steps
@@ -32,7 +31,7 @@ program ex1
     integer(int_small)              :: threadID
     integer                         :: i, j, k, l, unit_steps, unit_temperature, unitnum, nthreads, status
     real(pr)                        :: Energy, magnetization
-    integer(int_large)              :: MC_steps, averaging_step, measuring_step, transitory_steps, KbT_steps
+    integer(int_large)              :: MC_steps, step_jump, transitory_steps, KbT_steps
     character(len=31)               :: file_temperature
     character(len=28)               :: file_steps
     character(len=8)                :: prefix
@@ -55,7 +54,7 @@ program ex1
 
     ! Namelist blocks
     namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magetization, x_size, y_size
-    namelist /calculation/ MC_steps, averaging_step, measuring_step, transitory_steps, save_thermalization&
+    namelist /calculation/ MC_steps, step_jump, transitory_steps, save_thermalization&
         , use_abolute_magnetization
 
     ! DEFAULT SETTINGS
@@ -71,8 +70,7 @@ program ex1
 
         !Calculation settings
             MC_steps = 1000000
-            averaging_step = MC_steps/4
-            measuring_step = MC_steps/4
+            step_jump = 1
             transitory_steps = MC_steps/2
             save_thermalization = .false.
             use_abolute_magnetization = .true.
@@ -87,12 +85,15 @@ program ex1
 !   Initializing other relevant parameters
 !###################################################################################################
 
-    call MZRanState_init() ! Initialize the "states" array for the parallelization
+    ! Random number generator
+    call MZRanState_init()
     nthreads = size(states)
 
+    ! Cell parameters
     allocate(lattice(x_size,y_size))
     N_spinors = real(x_size*y_size,pr)
 
+    ! Temperatures to examine
     select case (T_range)
         case(.true.)
             allocate(KbT(KbT_steps))
@@ -102,7 +103,9 @@ program ex1
             KbT = KbT_user
     end select
     beta = 1._pr/KbT
-    real_MC_steps = real(((MC_steps - transitory_steps)/measuring_step),pr)
+
+    ! Net MC steps
+    real_MC_steps = real(((MC_steps - transitory_steps)/step_jump),pr)
 
     ! Select wether the absolute value of the magnetization is to be averaged
     select case (use_abolute_magnetization)
@@ -112,6 +115,7 @@ program ex1
             update_observables => update_observables_normalMagnetization
     end select
 
+    ! Files' names and parts
     prefix = "datos/T_"
     call create_suffix("_m0_", initial_magetization, ".out", suffix)
     file_temperature = "datos/temperature_functions.out"
@@ -122,13 +126,14 @@ program ex1
 !##################################################################################
 
     open(newunit=unit_temperature, file=file_temperature, status='unknown')
+    write(unit_temperature,*) "##  Cell dimensions: ", x_size,"x",y_size
     write(unit_temperature,*) "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
     "      <u>      |    u Error     |    capacity"
 
     !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, &
     !$omp   magnetization_per_particle, energy_per_particle, unit_steps, file_steps, &
     !$omp   j, i, k, l, threadID, transition_probability) shared(KbT, nthreads, unit_temperature, format_style0, &
-    !$omp   format_style1, beta, states, seeds, real_MC_steps, prefix, suffix, N_spinors,averaging_step, measuring_step) &
+    !$omp   format_style1, beta, states, seeds, real_MC_steps, prefix, suffix, N_spinors, step_jump) &
     !$omp   schedule(dynamic)
 
     do j = 1, size(KbT)
@@ -138,7 +143,7 @@ program ex1
         call init_mzran_threadsafe(states(threadID), seeds(threadID,1), seeds(threadID,2), seeds(threadID,3), seeds(threadID,4))
 
         ! Initialize system and variables
-        call lattice_init(lattice, initial_magetization)
+        call lattice_init(lattice, initial_magetization, states(threadID))
         call get_lattice_energy_vectorized(lattice, Energy)
         magnetization = sum(real(lattice,pr))
         u_avg = 0._pr
@@ -153,6 +158,7 @@ program ex1
                 call create_file_name(prefix, KbT(j), suffix, file_steps)
                 print*, "Calculating KbT = ",  KbT(j), "Filename:  ", file_steps, " ThreadID:", threadID
                 open(newunit=unit_steps, file=file_steps, status='replace')
+                    write(unit_temperature,*) "##  Cell dimensions: ", x_size,"x",y_size
 
                     magnetization_per_particle = magnetization/N_spinors
                     energy_per_particle = energy/N_spinors
@@ -169,8 +175,8 @@ program ex1
                     end do
 
                     ! Important steps
-                do i = 1, (MC_steps - transitory_steps)/measuring_step
-                        do k = 1, measuring_step
+                    do i = transitory_steps + 1, MC_steps , step_jump
+                        do k = 1, step_jump
                             call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                         end do
                         call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg &
@@ -188,26 +194,24 @@ program ex1
                 end do
 
                 ! Important steps
-                do i = 1, (MC_steps - transitory_steps)/measuring_step
-                    !do l = 1, averaging_step
-                        do k = 1, measuring_step
-                            call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
-                        end do
-                        call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
+                do i = 1, (MC_steps - transitory_steps)/step_jump
+                    do k = 1, step_jump
+                        call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
+                    end do
+                    call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
                         , magnetization_per_particle)
-                    !end do
                 end do
         end select
 
         ! Calculate statistics for u and m
         u_avg = u_avg / real_MC_steps
         uSqr_avg = uSqr_avg / real_MC_steps
-        u_var = uSqr_avg - u_avg*u_avg
+        u_var = (uSqr_avg - u_avg*u_avg)/real_MC_steps
         u_error = sqrt(u_var/(real_MC_steps-1_pr))
 
         m_avg = m_avg / real_MC_steps
         mSqr_avg = mSqr_avg / real_MC_steps
-        m_var = mSqr_avg - m_avg*m_avg
+        m_var = (mSqr_avg - m_avg*m_avg)/real_MC_steps
         m_error = sqrt(m_var/(real_MC_steps-1_pr))
 
         ! Calculate other observables
@@ -216,7 +220,7 @@ program ex1
 
 
         !$omp critical
-            write(unit_temperature,format_style2) KbT(j), threadID, m_avg, m_error, susceptibility, u_avg, capacity, u_error
+            write(unit_temperature,format_style2) KbT(j), threadID, m_avg, m_error, susceptibility, u_avg, u_error, capacity
             call flush(unit_temperature)
         !$omp end critical
 

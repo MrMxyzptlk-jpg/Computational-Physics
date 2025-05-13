@@ -10,10 +10,4 @@ gfortran ./modulos/precision.f90\
 
 #./ex1.exe
 
-# Sort the output file for the observables:
-# (head -n 1 datos/temperature_functions.out && tail -n +2 datos/temperature_functions.out | sort -g) > datos/temperature_functions_sorted.out
-
-#Plot observables
-#gnuplot plot_observables.gp
-
 echo

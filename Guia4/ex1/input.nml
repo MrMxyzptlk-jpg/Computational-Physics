@@ -5,16 +5,15 @@
     KbT_min     = 2,
     KbT_max     = 2.5,
     KbT_steps   = 50,
-    x_size      = 20,
-    y_size      = 20
+    x_size      = 50,
+    y_size      = 50
 
 /
 
 &calculation
-    MC_steps = 80000,
-    measuring_step = 50,
-    averaging_step = 100,
-    transitory_steps = 5000,
-    save_thermalization = .false. , // False by default
+    MC_steps  = 9000,
+    step_jump = 1,
+    transitory_steps = 2000,
+    save_thermalization = .false. , ! False by default
     use_abolute_magnetization = .true.
 /

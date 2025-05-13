@@ -2,7 +2,6 @@ MODULE subrutinas
 use precision
 use formats
 use omp_lib
-use mzranmod
 use mzranmod_threadsafe
 implicit none
     integer(int_large)                  :: x_size, y_size
@@ -70,18 +69,17 @@ subroutine MZRanState_init()
 
 end subroutine MZRanState_init
 
-subroutine lattice_init(lattice, initial_magnetization)
+subroutine lattice_init(lattice, initial_magnetization, state)
     integer, intent(out)     :: lattice(:,:)
-    real(pr), intent(in)                :: initial_magnetization
-    real(kind=pr)                       :: rnd_num
-    integer(int_large)                  :: i, j
+    real(pr), intent(in)     :: initial_magnetization
+    type(MZRanState)         :: state
+    integer(int_large)       :: i, j
 
     do i = 1, x_size
         do j = 1, y_size
-            rnd_num = rmzran()
-            if (rnd_num <= initial_magnetization) then
+            if (rmzran_threadsafe(state) <= initial_magnetization) then
                 lattice(i,j) = 1
-            elseif (rnd_num > initial_magnetization) then
+            else
                 lattice(i,j) = -1
             end if
         end do
@@ -164,31 +162,33 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_p
 
 end subroutine MonteCarlo_step_PARALLEL
 
-subroutine update_observables_absMagnetization(energy, magnetization, u_avg, u_var, m_avg, m_var, energy_per_particle &
-, magnetization_per_particle)
+subroutine update_observables_absMagnetization(energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle &
+    , magnetization_per_particle)
     real(pr)                :: Energy, magnetization
-    real(kind=pr)           :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
+    real(kind=pr)           :: u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle, magnetization_per_particle
 
-    magnetization_per_particle = magnetization/N_spinors
     energy_per_particle = Energy/N_spinors
+    magnetization_per_particle = magnetization/N_spinors
+
     u_avg = u_avg + energy_per_particle
-    u_var = u_var + energy_per_particle*energy_per_particle
+    uSqr_avg = uSqr_avg + energy_per_particle*energy_per_particle
+
     m_avg = m_avg + abs(magnetization_per_particle)
-    m_var = m_var + magnetization_per_particle*magnetization_per_particle
+    mSqr_avg = mSqr_avg + magnetization_per_particle*magnetization_per_particle
 
 end subroutine update_observables_absMagnetization
 
-subroutine update_observables_normalMagnetization(energy, magnetization, u_avg, u_var, m_avg, m_var, energy_per_particle &
+subroutine update_observables_normalMagnetization(energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle &
 , magnetization_per_particle)
     real(pr)                :: Energy, magnetization
-    real(kind=pr)           :: u_avg, u_var, m_avg, m_var, energy_per_particle, magnetization_per_particle
+    real(kind=pr)           :: u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle, magnetization_per_particle
 
     magnetization_per_particle = magnetization/N_spinors
     energy_per_particle = Energy/N_spinors
     u_avg = u_avg + energy_per_particle
-    u_var = u_var + energy_per_particle*energy_per_particle
-    m_avg = m_avg + abs(magnetization_per_particle)
-    m_var = m_var + magnetization_per_particle*magnetization_per_particle
+    uSqr_avg = uSqr_avg + energy_per_particle*energy_per_particle
+    m_avg = m_avg + magnetization_per_particle
+    mSqr_avg = mSqr_avg + magnetization_per_particle*magnetization_per_particle
 
 end subroutine update_observables_normalMagnetization
 
