@@ -173,12 +173,12 @@ subroutine update_observables_absMagnetization(energy, magnetization, u_avg, uSq
     real(kind=pr)           :: u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle, magnetization_per_particle
 
     energy_per_particle = Energy/N_spinors
-    magnetization_per_particle = magnetization/N_spinors
+    magnetization_per_particle = abs(magnetization)/N_spinors
 
     u_avg = u_avg + energy_per_particle
     uSqr_avg = uSqr_avg + energy_per_particle*energy_per_particle
 
-    m_avg = m_avg + abs(magnetization_per_particle)
+    m_avg = m_avg + magnetization_per_particle
     mSqr_avg = mSqr_avg + magnetization_per_particle*magnetization_per_particle
 
 end subroutine update_observables_absMagnetization
@@ -228,5 +228,26 @@ subroutine update_autocorrelation_contributions(magnetization_per_particle, ener
         end do
     end if
 end subroutine update_autocorrelation_contributions
+
+subroutine save_autocorrelation(energy_autocorr, magnetization_autocorr, KbT, threadID)
+    real(pr), intent(in)    :: energy_autocorr(0:autocorrelation_len_max)
+    real(pr), intent(in)    :: magnetization_autocorr(0:autocorrelation_len_max)
+    integer(int_small)      :: threadID
+    integer                 :: unit_autocorrelation, i
+    character(len=34)       :: file_autocorrelation
+    real(pr)                :: KbT
+
+    call create_file_name("datos/autocorrelation_T_", KbT, ".out", file_autocorrelation)
+    open(newunit=unit_autocorrelation, file=file_autocorrelation, status='replace')
+        write(unit_autocorrelation,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
+        write(unit_autocorrelation,format_style_header) "## Thread ID = ", threadID
+        write(unit_autocorrelation,'(a)') "## autocorrelation length | energy autocorrelation | magnetization "// &
+            "autocorrelation"
+        do i = 0, autocorrelation_len_max
+            write(unit_autocorrelation,format_style1) i, energy_autocorr(i), magnetization_autocorr(i)
+        end do
+    close(unit_autocorrelation)
+
+end subroutine save_autocorrelation
 
 END MODULE

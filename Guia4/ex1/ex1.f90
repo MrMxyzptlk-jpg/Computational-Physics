@@ -30,12 +30,11 @@ program ex1
     real(pr)                        :: transition_probability(-2:2)
     integer, allocatable            :: lattice(:,:)
     integer(int_small)              :: threadID
-    integer                         :: i, j, k, l, unit_steps, unit_temperature, unit_autocorrelation, unitnum, nthreads, status
+    integer                         :: i, j, k, l, unit_steps, unit_temperature, unitnum, nthreads, status
     real(pr)                        :: Energy, magnetization
     integer(int_large)              :: MC_steps, step_jump, transitory_steps, KbT_steps, num_measurements, autocorr_count
     character(len=31)               :: file_temperature
     character(len=28)               :: file_steps
-    character(len=34)               :: file_autocorrelation
     character(len=8)                :: prefix
     character(len=14)               :: suffix
     character(len=140)              :: command
@@ -254,21 +253,13 @@ program ex1
 
         if (do_autocorrelation) then
             ! Subtract mean and divide by variance and normalize to get autocorrelation A(k) for energy and magnetization per particle
-            energy_autocorr = energy_autocorr / real(autocorr_count-autocorrelation_len_max, pr)
-            magnetization_autocorr = magnetization_autocorr / real(autocorr_count-autocorrelation_len_max, pr)
-            energy_autocorr = (energy_autocorr - uSqr_avg) / u_var
-            magnetization_autocorr = (magnetization_autocorr - mSqr_avg) / m_var
+            energy_autocorr = energy_autocorr / real(autocorr_count + 1 - autocorrelation_len_max, pr)
+            magnetization_autocorr = magnetization_autocorr / real(autocorr_count + 1 - autocorrelation_len_max, pr)
+            energy_autocorr = (energy_autocorr - u_avg*u_avg) / u_var
+            magnetization_autocorr = (magnetization_autocorr - m_avg*m_avg) / m_var
 
-            call create_file_name("datos/autocorrelation_T_", KbT(j), ".out", file_autocorrelation)
-            open(newunit=unit_autocorrelation, file=file_autocorrelation, status='replace')
-                write(unit_autocorrelation,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
-                write(unit_autocorrelation,format_style_header) "## Thread ID = ", threadID
-                write(unit_autocorrelation,'(a)') "## autocorrelation length | energy autocorrelation | magnetization "// &
-                    "autocorrelation"
-                do i = 1, autocorrelation_len_max
-                    write(unit_autocorrelation,format_style1) i, energy_autocorr(i), magnetization_autocorr(i)
-                end do
-            close(unit_autocorrelation)
+            call save_autocorrelation(energy_autocorr, magnetization_autocorr, KbT(j), threadID)
+
         end if
 
     end do
