@@ -2,18 +2,20 @@
     KbT_user    = 0.2267600E+01,
     initial_magetization = 1,
     T_range     = .true.,
-    KbT_min     = 2,
-    KbT_max     = 2.5,
+    KbT_min     = 1.8,
+    KbT_max     = 3,
     KbT_steps   = 50,
-    x_size      = 50,
-    y_size      = 50
+    x_size      = 100,
+    y_size      = 100
 
 /
 
 &calculation
-    MC_steps  = 9000,
-    step_jump = 1,
+    MC_steps  = 10000,
+    step_jump = 10,
     transitory_steps = 2000,
     save_thermalization = .false. , ! False by default
-    use_abolute_magnetization = .true.
+    use_abolute_magnetization = .false.,
+    autocorrelation_len_max = 100,
+    do_autocorrelation = .true.
 /

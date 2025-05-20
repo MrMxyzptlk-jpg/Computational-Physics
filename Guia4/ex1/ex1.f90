@@ -22,6 +22,7 @@ program ex1
     use omp_lib
     use mzranmod_threadsafe
     implicit none
+
     real(kind=pr)                   :: u_avg, uSqr_avg, u_var, u_error, m_avg, mSqr_avg, m_var, m_error
     real(kind=pr)                   :: energy_per_particle, magnetization_per_particle, real_MC_steps
     real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magetization
@@ -29,15 +30,16 @@ program ex1
     real(pr)                        :: transition_probability(-2:2)
     integer, allocatable            :: lattice(:,:)
     integer(int_small)              :: threadID
-    integer                         :: i, j, k, l, unit_steps, unit_temperature, unitnum, nthreads, status
+    integer                         :: i, j, k, l, unit_steps, unit_temperature, unit_autocorrelation, unitnum, nthreads, status
     real(pr)                        :: Energy, magnetization
-    integer(int_large)              :: MC_steps, step_jump, transitory_steps, KbT_steps
+    integer(int_large)              :: MC_steps, step_jump, transitory_steps, KbT_steps, num_measurements, autocorr_count
     character(len=31)               :: file_temperature
     character(len=28)               :: file_steps
+    character(len=34)               :: file_autocorrelation
     character(len=8)                :: prefix
     character(len=14)               :: suffix
     character(len=140)              :: command
-    logical                         :: T_range, save_thermalization, use_abolute_magnetization
+    logical                         :: T_range, save_thermalization, use_abolute_magnetization, do_autocorrelation
 
     abstract interface
         subroutine update(E, M, u_avg, u_var, m_avg, m_var, EpP, MpP)
@@ -55,7 +57,7 @@ program ex1
     ! Namelist blocks
     namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magetization, x_size, y_size
     namelist /calculation/ MC_steps, step_jump, transitory_steps, save_thermalization&
-        , use_abolute_magnetization
+        , use_abolute_magnetization, autocorrelation_len_max, do_autocorrelation
 
     ! DEFAULT SETTINGS
         ! Physical problems' characteristics
@@ -74,6 +76,8 @@ program ex1
             transitory_steps = MC_steps/2
             save_thermalization = .false.
             use_abolute_magnetization = .true.
+            autocorrelation_len_max = 100
+            do_autocorrelation = .false.
 
     ! Read from input file
     open(newunit=unitnum, file="input.nml", status="old", action="read")
@@ -105,7 +109,8 @@ program ex1
     beta = 1._pr/KbT
 
     ! Net MC steps
-    real_MC_steps = real(((MC_steps - transitory_steps)/step_jump),pr)
+    num_measurements = (MC_steps - transitory_steps) / step_jump
+    real_MC_steps = real(num_measurements, pr)
 
     ! Select wether the absolute value of the magnetization is to be averaged
     select case (use_abolute_magnetization)
@@ -119,22 +124,24 @@ program ex1
     prefix = "datos/T_"
     call create_suffix("_m0_", initial_magetization, ".out", suffix)
     file_temperature = "datos/temperature_functions.out"
-
+    if (do_autocorrelation)  call init_autocorr()
 
 !##################################################################################
 !    Begin and save calculations for all T specified in the KbT array
 !##################################################################################
 
     open(newunit=unit_temperature, file=file_temperature, status='unknown')
-    write(unit_temperature,*) "##  Cell dimensions: ", x_size,"x",y_size
-    write(unit_temperature,*) "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
+    write(unit_temperature,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
+    write(unit_temperature,'(a)') "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
     "      <u>      |    u Error     |    capacity"
 
-    !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, &
-    !$omp   magnetization_per_particle, energy_per_particle, unit_steps, file_steps, &
-    !$omp   j, i, k, l, threadID, transition_probability) shared(KbT, nthreads, unit_temperature, format_style0, &
-    !$omp   format_style1, beta, states, seeds, real_MC_steps, prefix, suffix, N_spinors, step_jump) &
+    !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, threadID, transition_probability &
+    !$omp   , j, i, k, l, magnetization_per_particle, energy_per_particle, unit_steps, file_steps &
+    !$omp   , energy_buffer, magnetization_buffer, autocorr_count, i_last, i_next, energy_autocorr, magnetization_autocorr) &
+    !$omp shared(KbT, nthreads, unit_temperature, format_style0, format_style1, format_style_header, beta &
+    !$omp   , states, seeds, real_MC_steps, prefix, suffix, N_spinors, step_jump, autocorrelation_len_max) &
     !$omp   schedule(dynamic)
+
 
     do j = 1, size(KbT)
 
@@ -158,12 +165,12 @@ program ex1
                 call create_file_name(prefix, KbT(j), suffix, file_steps)
                 print*, "Calculating KbT = ",  KbT(j), "Filename:  ", file_steps, " ThreadID:", threadID
                 open(newunit=unit_steps, file=file_steps, status='replace')
-                    write(unit_temperature,*) "##  Cell dimensions: ", x_size,"x",y_size
+                    write(unit_temperature,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
 
                     magnetization_per_particle = magnetization/N_spinors
                     energy_per_particle = energy/N_spinors
-                    write(unit_steps,*) "## Thread ID = ", threadID
-                    write(unit_steps,*) "## MC steps | energy per particle | magnetization per particle"
+                    write(unit_steps,format_style_header) "## Thread ID = ", threadID
+                    write(unit_steps,'(a)') "## MC steps | energy per particle | magnetization per particle"
                     write(unit_steps,format_style1) 0, energy_per_particle, magnetization_per_particle
 
                     ! Transitory steps
@@ -174,15 +181,26 @@ program ex1
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                     end do
 
+                    ! Initialize autocorrelation variables
+                    if (do_autocorrelation)  then
+                        energy_buffer = 0.0_pr
+                        magnetization_buffer = 0.0_pr
+                        energy_autocorr = 0.0_pr
+                        magnetization_autocorr = 0.0_pr
+                        autocorr_count = 0
+                    end if
+
                     ! Important steps
-                    do i = transitory_steps + 1, MC_steps , step_jump
-                        do k = 1, step_jump
+                    do i = 1, num_measurements
+                        do k = 1, step_jump-1
                             call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                         end do
                         call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg &
                         , energy_per_particle, magnetization_per_particle)
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
-                    end do
+                        if (do_autocorrelation)  call update_autocorrelation_contributions(magnetization_per_particle &
+                            , energy_per_particle, energy_autocorr, magnetization_autocorr, autocorr_count)
+                end do
                 close(unit_steps)
 
             case(.false.)
@@ -193,36 +211,65 @@ program ex1
                     call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                 end do
 
+                ! Initialize autocorrelation variables
+                if (do_autocorrelation)  then
+                    energy_buffer = 0.0_pr
+                    magnetization_buffer = 0.0_pr
+                    energy_autocorr = 0.0_pr
+                    magnetization_autocorr = 0.0_pr
+                    autocorr_count = 0
+                end if
+
                 ! Important steps
-                do i = 1, (MC_steps - transitory_steps)/step_jump
-                    do k = 1, step_jump
+                do i = 1, num_measurements
+                    do k = 1, step_jump-1
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                     end do
                     call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
                         , magnetization_per_particle)
+                    if (do_autocorrelation)  call update_autocorrelation_contributions(magnetization_per_particle &
+                        , energy_per_particle, energy_autocorr, magnetization_autocorr, autocorr_count)
                 end do
         end select
 
         ! Calculate statistics for u and m
         u_avg = u_avg / real_MC_steps
         uSqr_avg = uSqr_avg / real_MC_steps
-        u_var = (uSqr_avg - u_avg*u_avg)/real_MC_steps
+        u_var = (uSqr_avg - u_avg*u_avg)
         u_error = sqrt(u_var/(real_MC_steps-1_pr))
 
         m_avg = m_avg / real_MC_steps
         mSqr_avg = mSqr_avg / real_MC_steps
-        m_var = (mSqr_avg - m_avg*m_avg)/real_MC_steps
+        m_var = (mSqr_avg - m_avg*m_avg)
         m_error = sqrt(m_var/(real_MC_steps-1_pr))
 
         ! Calculate other observables
-        capacity = u_var*beta(j)*beta(j)
-        susceptibility = m_var*beta(j)
-
+        capacity = N_spinors*u_var*beta(j)*beta(j)
+        susceptibility = N_spinors*m_var*beta(j)
 
         !$omp critical
             write(unit_temperature,format_style2) KbT(j), threadID, m_avg, m_error, susceptibility, u_avg, u_error, capacity
             call flush(unit_temperature)
         !$omp end critical
+
+        if (do_autocorrelation) then
+            ! Subtract mean and divide by variance and normalize to get autocorrelation A(k) for energy and magnetization per particle
+            energy_autocorr = energy_autocorr / real(autocorr_count-autocorrelation_len_max, pr)
+            magnetization_autocorr = magnetization_autocorr / real(autocorr_count-autocorrelation_len_max, pr)
+            energy_autocorr = (energy_autocorr - uSqr_avg) / u_var
+            magnetization_autocorr = (magnetization_autocorr - mSqr_avg) / m_var
+
+            call create_file_name("datos/autocorrelation_T_", KbT(j), ".out", file_autocorrelation)
+            open(newunit=unit_autocorrelation, file=file_autocorrelation, status='replace')
+                write(unit_autocorrelation,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
+                write(unit_autocorrelation,format_style_header) "## Thread ID = ", threadID
+                write(unit_autocorrelation,'(a)') "## autocorrelation length | energy autocorrelation | magnetization "// &
+                    "autocorrelation"
+                do i = 1, autocorrelation_len_max
+                    write(unit_autocorrelation,format_style1) i, energy_autocorr(i), magnetization_autocorr(i)
+                end do
+            close(unit_autocorrelation)
+        end if
 
     end do
 

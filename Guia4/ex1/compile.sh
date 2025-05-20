@@ -1,6 +1,5 @@
 gfortran ./modulos/precision.f90\
         ./modulos/formats.f90\
-        ./modulos/mzranmod.f90\
         ./modulos/mzranmod_threadsafe.f90\
         ./modulos/subrutinas.f90\
         ex1.f90 -o ex1.exe  \

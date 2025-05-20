@@ -8,6 +8,11 @@ implicit none
     type(MZRanState), allocatable       :: states(:)
     integer                             :: seeds(8,4)
     real(pr)                            :: N_spinors
+    integer                             :: autocorrelation_len_max
+    integer                             :: i_last, i_next
+    real(pr), allocatable               :: energy_buffer(:), magnetization_buffer(:)
+    real(pr), allocatable               :: energy_autocorr(:)
+    real(pr), allocatable               :: magnetization_autocorr(:)
 
 
 contains
@@ -191,5 +196,37 @@ subroutine update_observables_normalMagnetization(energy, magnetization, u_avg, 
     mSqr_avg = mSqr_avg + magnetization_per_particle*magnetization_per_particle
 
 end subroutine update_observables_normalMagnetization
+
+subroutine init_autocorr()
+    allocate(energy_buffer(0:autocorrelation_len_max))
+    allocate(magnetization_buffer(0:autocorrelation_len_max))
+    allocate(energy_autocorr(0:autocorrelation_len_max))
+    allocate(magnetization_autocorr(0:autocorrelation_len_max))
+    energy_buffer = 0.0_pr
+    magnetization_buffer = 0.0_pr
+    energy_autocorr = 0.0_pr
+    magnetization_autocorr = 0.0_pr
+end subroutine init_autocorr
+
+subroutine update_autocorrelation_contributions(magnetization_per_particle, energy_per_particle, energy_autocorr &
+    , magnetization_autocorr, autocorr_count)
+    real(pr), intent(in)       :: magnetization_per_particle, energy_per_particle
+    real(pr), intent(inout)    :: energy_autocorr(0:autocorrelation_len_max)
+    real(pr), intent(inout)    :: magnetization_autocorr(0:autocorrelation_len_max)
+    integer                    :: j
+    integer, intent(inout)     :: autocorr_count
+
+    autocorr_count = autocorr_count + 1
+    i_last = mod(autocorr_count, autocorrelation_len_max) + 1
+    energy_buffer(i_last) = energy_per_particle
+    magnetization_buffer(i_last) = magnetization_per_particle
+    if (autocorr_count >= autocorrelation_len_max) then
+        do j = 0, autocorrelation_len_max
+            i_next = mod(autocorr_count - j, autocorrelation_len_max) + 1
+            energy_autocorr(j) = energy_autocorr(j) + energy_buffer(i_last) * energy_buffer(i_next)
+            magnetization_autocorr(j) = magnetization_autocorr(j) + magnetization_buffer(i_last)*magnetization_buffer(i_next)
+        end do
+    end if
+end subroutine update_autocorrelation_contributions
 
 END MODULE
