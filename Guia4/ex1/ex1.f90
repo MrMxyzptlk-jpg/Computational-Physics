@@ -20,25 +20,26 @@ program ex1
     use precision
     use subrutinas
     use omp_lib
+    use parsing
     use mzranmod_threadsafe
     implicit none
 
     real(kind=pr)                   :: u_avg, uSqr_avg, u_var, u_error, m_avg, mSqr_avg, m_var, m_error
     real(kind=pr)                   :: energy_per_particle, magnetization_per_particle, real_MC_steps
-    real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magnetization
+    real(kind=pr)                   :: susceptibility, capacity
     real(kind=pr), allocatable      :: beta(:), KbT(:)
     real(pr)                        :: transition_probability(-2:2)
     integer, allocatable            :: lattice(:,:)
     integer(int_small)              :: threadID
-    integer                         :: i, j, k, l, unit_steps, unit_temperature, unitnum, nthreads, status
+    integer                         :: i, j, k, l, unit_steps, unit_temperature, nthreads, status
     real(pr)                        :: Energy, magnetization
-    integer(int_large)              :: MC_steps, step_jump, transitory_steps, KbT_steps, num_measurements, autocorr_count
+    integer(int_large)              :: num_measurements, autocorr_count
     character(len=31)               :: file_temperature
     character(len=28)               :: file_steps
     character(len=8)                :: prefix
     character(len=14)               :: suffix
-    character(len=140)              :: command
-    logical                         :: T_range, save_thermalization, use_absolute_magnetization, do_autocorrelation
+    character(len=140)              :: sort_command
+
 
     abstract interface
         subroutine update(E, M, u_avg, u_var, m_avg, m_var, EpP, MpP)
@@ -49,40 +50,12 @@ program ex1
     end interface
     procedure (update), pointer :: update_observables => null()
 
-!##################################################################################################
-!       Input settings
-!##################################################################################################
+!###################################################################################################
+!   Set default values and parse input file
+!###################################################################################################
 
-    ! Namelist blocks
-    namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magnetization, x_size, y_size
-    namelist /calculation/ MC_steps, step_jump, transitory_steps, save_thermalization&
-        , use_absolute_magnetization, autocorrelation_len_max, do_autocorrelation
-
-    ! DEFAULT SETTINGS
-        ! Physical problems' characteristics
-            KbT_user    = 2.2676_pr
-            T_range     = .false.
-            KbT_min     = 0.1_pr
-            KbT_max     = 3.5
-            KbT_steps   = 33
-            x_size      = 40
-            y_size      = 40
-            initial_magnetization = 1._pr
-
-        !Calculation settings
-            MC_steps = 1000000
-            step_jump = 1
-            transitory_steps = MC_steps/2
-            save_thermalization = .false.
-            use_absolute_magnetization = .true.
-            autocorrelation_len_max = 100
-            do_autocorrelation = .false.
-
-    ! Read from input file
-    open(newunit=unitnum, file="input.nml", status="old", action="read")
-        read(unitnum, nml=physical)
-        read(unitnum, nml=calculation)
-    close(unitnum)
+    call set_defaults()
+    call parse_input()
 
 !###################################################################################################
 !   Initializing other relevant parameters
@@ -267,9 +240,9 @@ program ex1
 
     !$omp end parallel do
 
-    command = "(head -n 1 datos/temperature_functions.out && tail -n +2 datos/temperature_functions.out | sort -g) "//&
+    sort_command = "(head -n 1 datos/temperature_functions.out && tail -n +2 datos/temperature_functions.out | sort -g) "//&
    "> datos/temperature_functions_sorted.out"
-    call execute_command_line(command, wait=.true., exitstat=status)
+    call execute_command_line(sort_command, wait=.true., exitstat=status)
     close(unit_temperature)
     deallocate(KbT)
 
