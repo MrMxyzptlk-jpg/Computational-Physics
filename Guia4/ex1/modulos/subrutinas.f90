@@ -7,7 +7,7 @@ implicit none
     integer(int_large)                  :: x_size, y_size
     type(MZRanState), allocatable       :: states(:)
     integer                             :: seeds(8,4)
-    real(pr)                            :: N_spinors
+    real(pr)                            :: N_spins
     integer                             :: autocorrelation_len_max
     integer                             :: i_last, i_next
     real(pr), allocatable               :: energy_buffer(:), magnetization_buffer(:)
@@ -139,7 +139,7 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_p
     integer                              :: i, j, k, up, down, right, left
     type(MZRanState)                     :: state
 
-    do k = 1, int(N_spinors, int_large)
+    do k = 1, int(N_spins, int_large)
 
         ! Getting a random index within the bounds of the lattice indexes
         i = min(int(rmzran_threadsafe(state)*x_size + 1), x_size) ! Alternatively could use floor()
@@ -172,8 +172,8 @@ subroutine update_observables_absMagnetization(energy, magnetization, u_avg, uSq
     real(pr)                :: Energy, magnetization
     real(kind=pr)           :: u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle, magnetization_per_particle
 
-    energy_per_particle = Energy/N_spinors
-    magnetization_per_particle = abs(magnetization)/N_spinors
+    energy_per_particle = Energy/N_spins
+    magnetization_per_particle = abs(magnetization)/N_spins
 
     u_avg = u_avg + energy_per_particle
     uSqr_avg = uSqr_avg + energy_per_particle*energy_per_particle
@@ -188,8 +188,8 @@ subroutine update_observables_normalMagnetization(energy, magnetization, u_avg, 
     real(pr)                :: Energy, magnetization
     real(kind=pr)           :: u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle, magnetization_per_particle
 
-    magnetization_per_particle = magnetization/N_spinors
-    energy_per_particle = Energy/N_spinors
+    magnetization_per_particle = magnetization/N_spins
+    energy_per_particle = Energy/N_spins
     u_avg = u_avg + energy_per_particle
     uSqr_avg = uSqr_avg + energy_per_particle*energy_per_particle
     m_avg = m_avg + magnetization_per_particle

@@ -1,14 +1,14 @@
 !***************************************************************
 ! Program: ex1.f90
-! Purpose: Analysing the Ising model and different observables as a function of the dimentionaless temperature Kb*T/J.
+! Purpose: Analyzing the Ising model and different observables as a function of the dimensionless temperature Kb*T/J.
 !
 !
-! Description:  The following abreviations for different variables' names is implementes: Sqr = square, avg = average, var = variance, inv = inverse
+! Description:  The following abbreviations for different variables' names is implements: Sqr = square, avg = average, var = variance, inv = inverse
 !
-! Input: The imput information is specified in an "input.nml" file. Defauls values are provided for every variable in the "Input settings" section, and an example input file is also provided.
+! Input: The input information is specified in an "input.nml" file. Default values are provided for every variable in the "Input settings" section, and an example input file is also provided.
 !
 !
-! Output: all output data is written to a "datos" folder which MUST exist berofe the calculations. Every file has the suffix ".out". Observables and errors are printed in "datos/temperature_functions.out" as they are calculated, and ordered in "datos/temperature_functions_sorted.out" after the calculations have finished. Furthermore, the associated errors are also stored, but not the standard deviations, as a simple multiplication by sqrt(N-1) suffices to calculate it if necessary in post processing. The thermalization data is saved (if specified in the input.nml) to files specifying the temperature used and the initial magnetization chosen.
+! Output: all output data is written to a "datos" folder which MUST exist before the calculations. Every file has the suffix ".out". Observables and errors are printed in "datos/temperature_functions.out" as they are calculated, and ordered in "datos/temperature_functions_sorted.out" after the calculations have finished. Furthermore, the associated errors are also stored, but not the standard deviations, as a simple multiplication by sqrt(N-1) suffices to calculate it if necessary in post processing. The thermalization data is saved (if specified in the input.nml) to files specifying the temperature used and the initial magnetization chosen.
 !
 !
 !
@@ -25,7 +25,7 @@ program ex1
 
     real(kind=pr)                   :: u_avg, uSqr_avg, u_var, u_error, m_avg, mSqr_avg, m_var, m_error
     real(kind=pr)                   :: energy_per_particle, magnetization_per_particle, real_MC_steps
-    real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magetization
+    real(kind=pr)                   :: susceptibility, capacity, KbT_min, KbT_max, KbT_user, initial_magnetization
     real(kind=pr), allocatable      :: beta(:), KbT(:)
     real(pr)                        :: transition_probability(-2:2)
     integer, allocatable            :: lattice(:,:)
@@ -38,7 +38,7 @@ program ex1
     character(len=8)                :: prefix
     character(len=14)               :: suffix
     character(len=140)              :: command
-    logical                         :: T_range, save_thermalization, use_abolute_magnetization, do_autocorrelation
+    logical                         :: T_range, save_thermalization, use_absolute_magnetization, do_autocorrelation
 
     abstract interface
         subroutine update(E, M, u_avg, u_var, m_avg, m_var, EpP, MpP)
@@ -54,9 +54,9 @@ program ex1
 !##################################################################################################
 
     ! Namelist blocks
-    namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magetization, x_size, y_size
+    namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magnetization, x_size, y_size
     namelist /calculation/ MC_steps, step_jump, transitory_steps, save_thermalization&
-        , use_abolute_magnetization, autocorrelation_len_max, do_autocorrelation
+        , use_absolute_magnetization, autocorrelation_len_max, do_autocorrelation
 
     ! DEFAULT SETTINGS
         ! Physical problems' characteristics
@@ -67,14 +67,14 @@ program ex1
             KbT_steps   = 33
             x_size      = 40
             y_size      = 40
-            initial_magetization = 1._pr
+            initial_magnetization = 1._pr
 
         !Calculation settings
             MC_steps = 1000000
             step_jump = 1
             transitory_steps = MC_steps/2
             save_thermalization = .false.
-            use_abolute_magnetization = .true.
+            use_absolute_magnetization = .true.
             autocorrelation_len_max = 100
             do_autocorrelation = .false.
 
@@ -94,7 +94,7 @@ program ex1
 
     ! Cell parameters
     allocate(lattice(x_size,y_size))
-    N_spinors = real(x_size*y_size,pr)
+    N_spins = real(x_size*y_size,pr)
 
     ! Temperatures to examine
     select case (T_range)
@@ -112,7 +112,7 @@ program ex1
     real_MC_steps = real(num_measurements, pr)
 
     ! Select wether the absolute value of the magnetization is to be averaged
-    select case (use_abolute_magnetization)
+    select case (use_absolute_magnetization)
         case(.true.)
             update_observables => update_observables_absMagnetization
         case(.false.)
@@ -121,7 +121,7 @@ program ex1
 
     ! Files' names and parts
     prefix = "datos/T_"
-    call create_suffix("_m0_", initial_magetization, ".out", suffix)
+    call create_suffix("_m0_", initial_magnetization, ".out", suffix)
     file_temperature = "datos/temperature_functions.out"
     if (do_autocorrelation)  call init_autocorr()
 
@@ -131,6 +131,7 @@ program ex1
 
     open(newunit=unit_temperature, file=file_temperature, status='unknown')
     write(unit_temperature,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
+    write(unit_temperature,format_style_header) "##  Effective Monte Carlo steps:", num_measurements
     write(unit_temperature,'(a)') "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
     "      <u>      |    u Error     |    capacity"
 
@@ -138,7 +139,7 @@ program ex1
     !$omp   , j, i, k, l, magnetization_per_particle, energy_per_particle, unit_steps, file_steps &
     !$omp   , energy_buffer, magnetization_buffer, autocorr_count, i_last, i_next, energy_autocorr, magnetization_autocorr) &
     !$omp shared(KbT, nthreads, unit_temperature, format_style0, format_style1, format_style_header, beta &
-    !$omp   , states, seeds, real_MC_steps, prefix, suffix, N_spinors, step_jump, autocorrelation_len_max) &
+    !$omp   , states, seeds, real_MC_steps, prefix, suffix, N_spins, step_jump, autocorrelation_len_max) &
     !$omp   schedule(dynamic)
 
 
@@ -149,7 +150,7 @@ program ex1
         call init_mzran_threadsafe(states(threadID), seeds(threadID,1), seeds(threadID,2), seeds(threadID,3), seeds(threadID,4))
 
         ! Initialize system and variables
-        call lattice_init(lattice, initial_magetization, states(threadID))
+        call lattice_init(lattice, initial_magnetization, states(threadID))
         call get_lattice_energy_vectorized(lattice, Energy)
         magnetization = sum(real(lattice,pr))
         u_avg = 0._pr
@@ -166,8 +167,8 @@ program ex1
                 open(newunit=unit_steps, file=file_steps, status='replace')
                     write(unit_temperature,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
 
-                    magnetization_per_particle = magnetization/N_spinors
-                    energy_per_particle = energy/N_spinors
+                    magnetization_per_particle = magnetization/N_spins
+                    energy_per_particle = energy/N_spins
                     write(unit_steps,format_style_header) "## Thread ID = ", threadID
                     write(unit_steps,'(a)') "## MC steps | energy per particle | magnetization per particle"
                     write(unit_steps,format_style1) 0, energy_per_particle, magnetization_per_particle
@@ -175,8 +176,8 @@ program ex1
                     ! Transitory steps
                     do i = 1, transitory_steps
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
-                        magnetization_per_particle = magnetization/N_spinors
-                        energy_per_particle = Energy/N_spinors
+                        magnetization_per_particle = magnetization/N_spins
+                        energy_per_particle = Energy/N_spins
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                     end do
 
@@ -243,8 +244,8 @@ program ex1
         m_error = sqrt(m_var/(real_MC_steps-1_pr))
 
         ! Calculate other observables
-        capacity = N_spinors*u_var*beta(j)*beta(j)
-        susceptibility = N_spinors*m_var*beta(j)
+        capacity = N_spins*u_var*beta(j)*beta(j)
+        susceptibility = N_spins*m_var*beta(j)
 
         !$omp critical
             write(unit_temperature,format_style2) KbT(j), threadID, m_avg, m_error, susceptibility, u_avg, u_error, capacity
