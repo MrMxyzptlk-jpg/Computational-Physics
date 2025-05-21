@@ -131,7 +131,7 @@ program ex1
 
     open(newunit=unit_temperature, file=file_temperature, status='unknown')
     write(unit_temperature,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
-    write(unit_temperature,format_style_header) "##  Effective Monte Carlo steps:", num_measurements
+    write(unit_temperature,'(a,I7)') "##  Effective Monte Carlo steps:", num_measurements
     write(unit_temperature,'(a)') "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
     "      <u>      |    u Error     |    capacity"
 
@@ -192,7 +192,7 @@ program ex1
 
                     ! Important steps
                     do i = 1, num_measurements
-                        do k = 1, step_jump-1
+                        do k = 1, step_jump
                             call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                         end do
                         call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg &
@@ -222,7 +222,7 @@ program ex1
 
                 ! Important steps
                 do i = 1, num_measurements
-                    do k = 1, step_jump-1
+                    do k = 1, step_jump
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                     end do
                     call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&

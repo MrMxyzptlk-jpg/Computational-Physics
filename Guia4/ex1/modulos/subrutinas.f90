@@ -241,10 +241,10 @@ subroutine save_autocorrelation(energy_autocorr, magnetization_autocorr, KbT, th
     open(newunit=unit_autocorrelation, file=file_autocorrelation, status='replace')
         write(unit_autocorrelation,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
         write(unit_autocorrelation,format_style_header) "## Thread ID = ", threadID
-        write(unit_autocorrelation,'(a)') "## autocorrelation length | energy autocorrelation | magnetization "// &
+        write(unit_autocorrelation,'(a)') "## autocorrelation length | magnetization autocorrelation | energy "// &
             "autocorrelation"
         do i = 0, autocorrelation_len_max
-            write(unit_autocorrelation,format_style1) i, energy_autocorr(i), magnetization_autocorr(i)
+            write(unit_autocorrelation,format_style1) i, magnetization_autocorr(i), energy_autocorr(i)
         end do
     close(unit_autocorrelation)
 
