@@ -55,7 +55,7 @@ module mzranmod
       IMPLICIT NONE
       INTEGER(K4B), intent(in), optional :: n,is,js,ks
       INTEGER(K4B),PARAMETER ::hg=huge(1_K4B),hgm=-hg,hgng=hgm-1
-      INTEGER(K4B)::new,j,hgt,nl
+      INTEGER(K4B)::hgt,nl
         hgt=hg
 !           The following lines check that kind value K4B is in fact a 
 !           32-bit integer with the usual properties that we expect it 

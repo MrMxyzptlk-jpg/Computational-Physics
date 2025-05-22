@@ -5,6 +5,8 @@ use formats
 use funciones
 use mzranmod
 implicit none
+    integer(int_medium)      :: cell_dim(3)
+    integer(int_huge)        :: num_atoms
 
 contains
 
@@ -12,7 +14,7 @@ subroutine create_file_name(prefix, num, suffix, filename)
     character(len=8)                        :: fmt  ! Format descriptor
     character(len=12)                       :: x1   ! Temporary string for formatted real
     character(len=:), allocatable           :: prefix, suffix, filename
-    integer(kind=int_huge), intent(in)    :: num  ! Input real number
+    integer(int_huge), intent(in)    :: num  ! Input real number
 
     fmt = '(I10)'  ! Format integer
     write(x1, fmt) num  ! Convert real to string
@@ -26,9 +28,9 @@ subroutine create_file_name(prefix, num, suffix, filename)
 end subroutine create_file_name
 
 subroutine write_to_file(Y, time, dx, conversion_factors, unitnum)
-    real (kind=pr), dimension (:), intent (in)  :: Y, conversion_factors
-    real (kind=pr), intent (in)                 :: dx, time
-    integer (kind=int_medium)                   :: unitnum
+    real (pr), dimension (:), intent (in)  :: Y, conversion_factors
+    real (pr), intent (in)                 :: dx, time
+    integer (int_medium)                   :: unitnum
     integer                                     :: i
 
     do i = 1, size(Y)
@@ -38,13 +40,12 @@ subroutine write_to_file(Y, time, dx, conversion_factors, unitnum)
 
 end subroutine write_to_file
 
-subroutine initialize_positions_FCC(positions, passed_num_atoms, cell_dim)
-    real(kind=pr), dimension(:,:), allocatable, intent(out) :: positions
-    integer(kind=int_medium), dimension(:), intent(in)      :: cell_dim
-    integer(kind=int_huge), intent(in)                      :: passed_num_atoms
-    integer(kind=int_huge)                                  :: atom_id, num_atoms
-    integer(kind=int_medium)                                :: h,k,l,b
-    integer(kind=int_small)                                 :: i
+subroutine initialize_positions_FCC(positions, passed_num_atoms)
+    real(pr), dimension(:,:), allocatable, intent(out) :: positions
+    integer(int_huge), intent(in)                      :: passed_num_atoms
+    integer(int_huge)                                  :: atom_id
+    integer(int_medium)                                :: h,k,l,b
+    integer(int_small)                                 :: i
 
     ! FCC as simple cubic with a basis:
     real(pr), parameter         :: basis(3,4) = reshape([ &
@@ -55,7 +56,7 @@ subroutine initialize_positions_FCC(positions, passed_num_atoms, cell_dim)
     ], [3,4])
 
     num_atoms = 4
-    do i = 1, size(cell_dim)
+    do i = 1_int_small, size(cell_dim)
         num_atoms = num_atoms * cell_dim(i)
     end do
     if (passed_num_atoms/=num_atoms .and. passed_num_atoms/=0) then
@@ -77,13 +78,12 @@ subroutine initialize_positions_FCC(positions, passed_num_atoms, cell_dim)
 
 end subroutine initialize_positions_FCC
 
-subroutine initialize_positions_BCC(positions, passed_num_atoms, cell_dim)
-    real(kind=pr), dimension(:,:), allocatable, intent(out) :: positions
-    integer(kind=int_medium), dimension(:), intent(in)      :: cell_dim
-    integer(kind=int_huge), intent(in)                      :: passed_num_atoms
-    integer(kind=int_huge)                                  :: atom_id, num_atoms
-    integer(kind=int_medium)                                :: h,k,l,b
-    integer(kind=int_small)                                 :: i
+subroutine initialize_positions_BCC(positions, passed_num_atoms)
+    real(pr), dimension(:,:), allocatable, intent(out) :: positions
+    integer(int_huge), intent(in)                      :: passed_num_atoms
+    integer(int_huge)                                  :: atom_id, num_atoms
+    integer(int_medium)                                :: h,k,l,b
+    integer(int_small)                                 :: i
 
     ! BCC as simple cubic with a basis:
     real(pr), parameter         :: basis(3,2) = reshape([ &
@@ -92,7 +92,7 @@ subroutine initialize_positions_BCC(positions, passed_num_atoms, cell_dim)
     ], [3,2])
 
     num_atoms = 2
-    do i = 1, size(cell_dim)
+    do i = 1_int_small, size(cell_dim)
         num_atoms = num_atoms * cell_dim(i)
     end do
     if (passed_num_atoms/=num_atoms .and. passed_num_atoms/=0) then
@@ -115,10 +115,10 @@ subroutine initialize_positions_BCC(positions, passed_num_atoms, cell_dim)
 end subroutine initialize_positions_BCC
 
 subroutine initialize_velocities(velocities, initial_Temp)
-    real(kind=pr), dimension(:,:), allocatable, intent(out) :: velocities
-    real(kind=pr), intent(in)                               :: initial_Temp
-    real(kind=pr), dimension(size(velocities,1))            :: velocity_average, velocity_variance, scaling_factor
-    integer(kind=int_small)                                 :: i
+    real(pr), allocatable, intent(out)          :: velocities(:,:)
+    real(pr), intent(in)                        :: initial_Temp
+    real(pr), dimension(size(velocities,1))     :: velocity_average, velocity_variance, scaling_factor
+    integer                                     :: i
 
     velocities = reshape( [ (rmzran() - 0.5_pr, i = 1, size(velocities)) ], shape(velocities) )
 
@@ -135,12 +135,11 @@ subroutine initialize_velocities(velocities, initial_Temp)
 
 end subroutine initialize_velocities
 
-subroutine initialize_positions_random(positions, passed_num_atoms, cell_dim)
-    real(kind=pr), dimension(:,:), allocatable, intent(out) :: positions
-    integer(kind=int_medium), dimension(:), intent(in)      :: cell_dim
-    integer(kind=int_huge), intent(in)                      :: passed_num_atoms
-    integer(kind=int_huge)                                  :: num_atoms
-    integer(kind=int_small)                                 :: i
+subroutine initialize_positions_random(positions, passed_num_atoms)
+    real(pr), allocatable, intent(out) :: positions(:,:)
+    integer(int_huge), intent(in)      :: passed_num_atoms
+    integer(int_huge)                  :: num_atoms
+    integer                            :: i
 
     num_atoms = passed_num_atoms
     do i = 1, size(cell_dim)
@@ -152,22 +151,22 @@ subroutine initialize_positions_random(positions, passed_num_atoms, cell_dim)
 end subroutine initialize_positions_random
 
 subroutine get_forces(positions, forces, potential, E_potential, pressure_virial, radius_cutoff, periodicity)
-    real(kind=pr), dimension(:,:), intent(out)  :: positions, forces
-    real(kind=pr), dimension(3), intent(in)     :: periodicity
-    real(kind=pr), intent(in)                   :: radius_cutoff
-    real(kind=pr), intent(out)                  :: E_potential, pressure_virial
-    real(kind=pr), dimension(3)                 :: particle1_position, particle2_position, particle_separation
-    real(kind=pr)                               :: particle_distance_squared, radius_cutoff_squared, force_contribution
-    real(kind=pr)                               :: potential_cutoff
-    integer(kind=int_huge)                      :: i, j
+    real(pr), dimension(:,:), intent(out)  :: positions, forces
+    real(pr), dimension(3), intent(in)     :: periodicity
+    real(pr), intent(in)                   :: radius_cutoff
+    real(pr), intent(out)                  :: E_potential, pressure_virial
+    real(pr), dimension(3)                 :: particle1_position, particle2_position, particle_separation
+    real(pr)                               :: particle_distance_squared, radius_cutoff_squared, force_contribution
+    real(pr)                               :: potential_cutoff
+    integer(int_huge)                      :: i, j
 
     interface
     subroutine potential(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
         use precision
-        real(kind=pr), intent(in)               :: particle_distance_squared
-        real(kind=pr), intent(out)              :: force_contribution
-        real(kind=pr), intent(inout)            :: E_potential, pressure_virial
-        real(kind=pr), intent(in)               :: potential_cutoff
+        real(pr), intent(in)               :: particle_distance_squared
+        real(pr), intent(out)              :: force_contribution
+        real(pr), intent(inout)            :: E_potential, pressure_virial
+        real(pr), intent(in)               :: potential_cutoff
     end subroutine potential
     end interface
 
@@ -194,19 +193,19 @@ subroutine get_forces(positions, forces, potential, E_potential, pressure_virial
 end subroutine get_forces
 
 subroutine get_E_kinetic(velocities, E_kinetic)
-    real(kind=pr), dimension(:,:), intent(in)   :: velocities
-    real(kind=pr), intent(out)                  :: E_kinetic
+    real(pr), dimension(:,:), intent(in)   :: velocities
+    real(pr), intent(out)                  :: E_kinetic
 
     E_kinetic = 0.5_pr*sum(velocities*velocities)
 
 end subroutine get_E_kinetic
 
 subroutine Lennard_Jones(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
-    real(kind=pr), intent(in)               :: particle_distance_squared
-    real(kind=pr), intent(out)              :: force_contribution
-    real(kind=pr), intent(inout)            :: E_potential, pressure_virial
-    real(kind=pr), intent(in)               :: potential_cutoff
-    real(kind=pr)                           :: r2inv, r6inv
+    real(pr), intent(in)               :: particle_distance_squared
+    real(pr), intent(out)              :: force_contribution
+    real(pr), intent(inout)            :: E_potential, pressure_virial
+    real(pr), intent(in)               :: potential_cutoff
+    real(pr)                           :: r2inv, r6inv
 
     r2inv = 1._pr/particle_distance_squared
     r6inv = r2inv*r2inv*r2inv
@@ -218,32 +217,32 @@ subroutine Lennard_Jones(particle_distance_squared, force_contribution, E_potent
 end subroutine Lennard_Jones
 
 subroutine update_positions_velVer(positions, velocities, forces, dt, periodicity)
-    real(kind=pr), dimension(:,:), intent(inout)    :: positions, velocities, forces
-    real(kind=pr), dimension(3), intent(in)         :: periodicity
-    real(kind=pr), intent(in)                       :: dt
-    real(kind=pr)                                   :: dtdt
+    real(pr), dimension(:,:), intent(inout)    :: positions, velocities, forces
+    real(pr), dimension(3), intent(in)         :: periodicity
+    real(pr), intent(in)                       :: dt
+    real(pr)                                   :: dtdt
 
-    dtdt = dt*dt
+    dtdt = dt*dt ! Should be defined globally as well as dt
     positions = positions + velocities*dt + forces*dtdt*0.5_pr
 
     ! Apply periodic boundary conditions
-    positions = mod(positions, spread(periodicity, dim=2, ncopies=size(positions,2)))
+    !positions = mod(positions, spread(periodicity, dim=2, ncopies=size(positions,2)))
+    positions(1,:) = mod(positions(1,:), periodicity(1))
 
 end subroutine update_positions_velVer
 
 subroutine update_velocities_velVer(velocities, forces, previous_forces, dt)
-    real(kind=pr), dimension(:,:), intent(inout)    :: velocities, forces, previous_forces
-    real(kind=pr), intent(in)                       :: dt
+    real(pr), dimension(:,:), intent(inout)    :: velocities, forces, previous_forces
+    real(pr), intent(in)                       :: dt
 
     velocities = velocities + dt * 0.5_pr*(previous_forces + forces)
 
 end subroutine update_velocities_velVer
 
-subroutine create_maps(cell_dim)
-    integer(kind=int_medium), dimension(3), intent(in)  :: cell_dim
-    integer(kind=int_large)                             :: ix, iy, iz
-    integer(kind=int_large)                             :: imap
-    integer(kind=int_large), dimension(1:13*cell_dim(1)*cell_dim(2)*cell_dim(3)) :: map
+subroutine create_maps()
+    integer(int_large)                             :: ix, iy, iz
+    integer(int_large)                             :: imap
+    integer(int_large), dimension(1:13*cell_dim(1)*cell_dim(2)*cell_dim(3)) :: map
 
     do ix=1, cell_dim(1)
         do iy=1, cell_dim(2)
@@ -267,19 +266,18 @@ subroutine create_maps(cell_dim)
     enddo
 end subroutine create_maps
 
-subroutine create_links(positions, HEAD, LIST, cell_dim, side_length)
-    integer(kind=int_small), dimension(3), intent(in)   :: cell_dim
-    real(kind=pr), intent(in)                           :: side_length
-    real(kind=pr), dimension(:,:), intent(in)           :: positions
+subroutine create_links(positions, HEAD, LIST, side_length)
+    real(pr), intent(in)                                :: side_length
+    real(pr), intent(in)                                :: positions(:,:)
     integer, dimension(product(cell_dim)), intent(out)  :: head
     integer, dimension(size(positions,2)), intent(out)  :: list
     integer                                             :: i, icell
-    integer(kind=int_medium), dimension(3)              :: position_index
-    real(kind=pr), dimension(3)                         :: cell_length_inv
+    integer(int_medium), dimension(3)                   :: position_index
+    real(pr), dimension(3)                              :: cell_length_inv
 
     ! Initialize
     HEAD = 0
-    cell_length_inv = real(cell_dim, kind=pr)/side_length  ! Inverse cell size
+    cell_length_inv = real(cell_dim, pr)/side_length  ! Inverse cell size
 
     do i = 1, size(list)
         ! Get cell indices (0-based) and then periodic boundary correction (modulo M)
