@@ -12,8 +12,9 @@ MODULE parsing
 
     ! Namelist blocks
     namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magnetization, x_size, y_size
-    namelist /calculation/ MC_steps, step_jump, transitory_steps, save_thermalization, lattice_frames, do_binder &
-        , use_absolute_magnetization, autocorrelation_len_max, do_autocorrelation, save_lattice_evolution, save_transitory
+    namelist /calculation/ MC_steps, step_jump, transitory_steps, use_absolute_magnetization
+    namelist /tasks/ save_thermalization, lattice_frames, do_binder , autocorrelation_len_max, do_autocorrelation &
+        , save_lattice_evolution, save_transitory
 
     CONTAINS
 
@@ -28,13 +29,15 @@ subroutine set_defaults()
         y_size      = 40
         initial_magnetization = 1._pr
 
-    !Calculation settings
+    ! Calculation settings
         MC_steps = 1000000
         step_jump = 1
         transitory_steps = MC_steps/2
+        use_absolute_magnetization = .true.
+
+    ! Tasks
         save_transitory = .false.
         save_thermalization = .false.
-        use_absolute_magnetization = .true.
         autocorrelation_len_max = 100
         do_autocorrelation = .false.
         save_lattice_evolution = .false.
@@ -48,6 +51,7 @@ subroutine parse_input()
     open(newunit=unit_input, file="input.nml", status="old", action="read")
         read(unit_input, nml=physical)
         read(unit_input, nml=calculation)
+        read(unit_input, nml=tasks)
     close(unit_input)
 
 end subroutine parse_input

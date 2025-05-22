@@ -14,16 +14,18 @@
     MC_steps  = 100000
     step_jump = 1
     transitory_steps = 2000,  ! Will be subtracted from MC_steps
+    use_absolute_magnetization = .false.
+/
 
-    save_transitory = .false.
+&tasks
+    save_transitory     = .false.
     save_thermalization = .false. ! False by default
 
-    use_absolute_magnetization = .false.
     do_binder = .true.
 
-    do_autocorrelation = .false.
+    do_autocorrelation      = .false.
     autocorrelation_len_max = 500
 
-    save_lattice_evolution = .false.
-    lattice_frames = 300
+    save_lattice_evolution  = .false.
+    lattice_frames          = 300
 /
