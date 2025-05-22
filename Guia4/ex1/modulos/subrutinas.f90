@@ -61,7 +61,7 @@ subroutine MZRanState_init()
     nthreads = omp_get_num_threads()
     !$omp end single
     !$omp end parallel
-    allocate(states(nthreads))
+    if (.not. allocated(states)) allocate(states(nthreads))
 
     seeds(1,:) = (/521288629, 362436069, 16163801, 1131199299/)
     seeds(2,:) = (/521288629, 362436069, 16163801, 1131199299/)
@@ -85,9 +85,9 @@ subroutine lattice_init(lattice, initial_magnetization, state)
     do i = 1, x_size
         do j = 1, y_size
             if (rmzran_threadsafe(state) <= threshold) then
-                lattice(i,j) = -1
-            else
                 lattice(i,j) = 1
+            else
+                lattice(i,j) = -1
             end if
         end do
     end do

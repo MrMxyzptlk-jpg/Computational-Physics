@@ -3,12 +3,12 @@
 ! Purpose: Analyzing the Ising model and different observables as a function of the dimensionless temperature Kb*T/J.
 !
 !
-! Description:  The following abbreviations for different variables' names is implements: Sqr = square, avg = average, var = variance, inv = inverse
+! Description: This program simulates the Ising model in 2D for an NxM system of spins. The program allows for the calculation of the magnetization, energy, errors, heat capacity, susceptibility, autocorrelation functions and Binder Cumulants. An additional feature allows the saving of the lattice states (only if 1 temperature is being calculated). The program is parallelized in so much as each thread calculates a different temperature (to avoid correlations of the results). The following abbreviations for different variables' names is implements: Sqr = square, avg = average, var = variance, inv = inverse.
 !
 ! Input: The input information is specified in an "input.nml" file. Default values are provided for every variable in the "Input settings" section, and an example input file is also provided.
 !
 !
-! Output: all output data is written to a "datos" folder which MUST exist before the calculations. Every file has the suffix ".out". Observables and errors are printed in "datos/temperature_functions.out" as they are calculated, and ordered in "datos/temperature_functions_sorted.out" after the calculations have finished. Furthermore, the associated errors are also stored, but not the standard deviations, as a simple multiplication by sqrt(N-1) suffices to calculate it if necessary in post processing. The thermalization data is saved (if specified in the input.nml) to files specifying the temperature used and the initial magnetization chosen.
+! Output: all output data is written to a "datos" folder which MUST exist before the calculations. Every file has the suffix ".out". Observables and errors are printed in "datos/temperature_functions.out" as they are calculated, and ordered in "datos/temperature_functions_sorted.out" after the calculations have finished. Furthermore, the associated errors are also stored, but not the standard deviations, as a simple multiplication by sqrt(N-1) suffices to calculate it if necessary in post processing. Additionally, Binder Cumulants can be calculated if specified. The thermalization and transitory steps data is saved (if specified in the input.nml) in file with a name specifying the temperature used and the initial magnetization chosen. The autocorrelation function can be calculated if desired. The lattice states can be saved for the first N frames (with N specified in the input), but it is done so to a binary file to reduce sizes.
 !
 !
 !
@@ -129,6 +129,7 @@ program ex1
 
 
     do j = 1, size(KbT)
+        call MZRanState_init()
 
         ! Initialize RNG states with unique seeds
         threadID = int(omp_get_thread_num() + 1, int_small)
@@ -142,6 +143,7 @@ program ex1
         uSqr_avg = 0._pr
         m_avg = 0._pr
         mSqr_avg = 0._pr
+        if (do_binder) Binder = 0._pr
         transition_probability = (/(exp (-beta(j)*real(4*i,pr)), i=-2,2)/)
 
         ! Select wether to save the steps to files or not
@@ -156,7 +158,7 @@ program ex1
                     energy_per_particle = energy/N_spins
                     write(unit_steps,format_style_header) "## Thread ID = ", threadID
                     write(unit_steps,'(a)') "## MC steps | energy per particle | magnetization per particle"
-                    write(unit_steps,format_style1) 0, energy_per_particle, magnetization_per_particle
+                    if (save_transitory) write(unit_steps,format_style1) 0, energy_per_particle, magnetization_per_particle
 
                     ! Transitory steps
                     do i = 1, transitory_steps
@@ -184,7 +186,7 @@ program ex1
                     end if
 
                     ! Important steps
-                    do i = 1, num_measurements
+                    do i = transitory_steps + 1, transitory_steps + num_measurements
                         do k = 1, step_jump
                             call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                         end do
@@ -230,7 +232,7 @@ program ex1
                 end if
 
                 ! Important steps
-                do i = 1, num_measurements
+                do i = transitory_steps + 1, transitory_steps + num_measurements
                     do k = 1, step_jump
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                     end do

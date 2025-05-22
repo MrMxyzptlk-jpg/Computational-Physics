@@ -3,7 +3,6 @@ MODULE parsing
     use subrutinas
     implicit none
 
-    integer                 :: unit_input
     real(kind=pr)           :: KbT_min, KbT_max, KbT_user, initial_magnetization
     integer(int_large)      :: MC_steps, step_jump, transitory_steps, KbT_steps, lattice_frames
     logical                 :: T_range, save_thermalization, use_absolute_magnetization, do_autocorrelation &
@@ -47,6 +46,7 @@ subroutine set_defaults()
 end subroutine set_defaults
 
 subroutine parse_input()
+    integer                 :: unit_input
     ! Read from input file
     open(newunit=unit_input, file="input.nml", status="old", action="read")
         read(unit_input, nml=physical)
