@@ -155,7 +155,7 @@ program ex1
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                         magnetization_per_particle = magnetization/N_spins
                         energy_per_particle = Energy/N_spins
-                        write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
+                        if (save_transitory) write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                     end do
 
                     ! Initialize autocorrelation variables

@@ -77,15 +77,17 @@ end subroutine MZRanState_init
 subroutine lattice_init(lattice, initial_magnetization, state)
     integer, intent(out)     :: lattice(:,:)
     real(pr), intent(in)     :: initial_magnetization
+    real(pr)                 :: threshold
     type(MZRanState)         :: state
     integer(int_large)       :: i, j
 
+    threshold = (initial_magnetization + 1._pr)*0.5_pr
     do i = 1, x_size
         do j = 1, y_size
-            if (rmzran_threadsafe(state) <= initial_magnetization) then
-                lattice(i,j) = 1
-            else
+            if (rmzran_threadsafe(state) <= threshold) then
                 lattice(i,j) = -1
+            else
+                lattice(i,j) = 1
             end if
         end do
     end do
