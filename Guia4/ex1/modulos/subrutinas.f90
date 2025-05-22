@@ -220,13 +220,15 @@ subroutine update_autocorrelation_contributions(magnetization_per_particle, ener
     i_last = mod(autocorr_count, autocorrelation_len_max) + 1
     energy_buffer(i_last) = energy_per_particle
     magnetization_buffer(i_last) = magnetization_per_particle
-    if (autocorr_count >= autocorrelation_len_max) then
-        do j = 0, autocorrelation_len_max
+
+    !if (autocorr_count >= autocorrelation_len_max) then
+        do j = 0, min(autocorrelation_len_max , autocorr_count-1)
             i_next = mod(autocorr_count - j, autocorrelation_len_max) + 1
             energy_autocorr(j) = energy_autocorr(j) + energy_buffer(i_last) * energy_buffer(i_next)
             magnetization_autocorr(j) = magnetization_autocorr(j) + magnetization_buffer(i_last)*magnetization_buffer(i_next)
         end do
-    end if
+   ! end if
+
 end subroutine update_autocorrelation_contributions
 
 subroutine save_autocorrelation(energy_autocorr, magnetization_autocorr, KbT, threadID)
@@ -249,5 +251,36 @@ subroutine save_autocorrelation(energy_autocorr, magnetization_autocorr, KbT, th
     close(unit_autocorrelation)
 
 end subroutine save_autocorrelation
+
+subroutine append_lattice_binary(filename, lattice)
+    character(len=*), intent(in)    :: filename
+    integer, intent(in)             :: lattice(:,:)
+    integer                         :: i, j, k, bit_index
+    integer                         :: unit
+    integer(kind=1), allocatable    :: byte_array(:)
+    integer                         :: num_bits, num_bytes
+
+    num_bits = x_size * y_size
+    num_bytes = (num_bits + 7) / 8  ! Ensure to get the right number of bytes
+    allocate(byte_array(num_bytes))
+    byte_array = 0
+
+    k = 1
+    bit_index = 0
+    do j = 1, y_size
+        do i = 1, x_size
+            if (lattice(i, j) == 1) then
+                byte_array(k) = ibset(byte_array(k), mod(bit_index, 8))   ! flip the corresponding bit to 1
+            end if
+            bit_index = bit_index + 1
+            if (mod(bit_index, 8) == 0) k = k + 1
+        end do
+    end do
+
+    open(newunit=unit, file=filename, form='unformatted', access='stream', &
+         status='old', action='write', position='append')
+    write(unit) byte_array
+    close(unit)
+end subroutine
 
 END MODULE

@@ -11,11 +11,13 @@
 /
 
 &calculation
-    MC_steps  = 100000,
-    step_jump = 10,
+    MC_steps  = 10000,
+    step_jump = 1,
     transitory_steps = 2000,  ! Will be subtracted from MC_steps
     save_thermalization = .false. , ! False by default
     use_absolute_magnetization = .false.,
     autocorrelation_len_max = 500,
-    do_autocorrelation = .true.
+    do_autocorrelation = .false.
+    save_lattice_evolution = .false.
+    lattice_frames = 300
 /

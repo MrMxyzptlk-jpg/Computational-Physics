@@ -5,14 +5,15 @@ MODULE parsing
 
     integer                 :: unit_input
     real(kind=pr)           :: KbT_min, KbT_max, KbT_user, initial_magnetization
-    integer(int_large)      :: MC_steps, step_jump, transitory_steps, KbT_steps
-    logical                 :: T_range, save_thermalization, use_absolute_magnetization, do_autocorrelation
+    integer(int_large)      :: MC_steps, step_jump, transitory_steps, KbT_steps, lattice_frames
+    logical                 :: T_range, save_thermalization, use_absolute_magnetization, do_autocorrelation &
+        , save_lattice_evolution = .false.
 
 
     ! Namelist blocks
     namelist /physical/ KbT_min, KbT_max, KbT_steps, T_range, KbT_user, initial_magnetization, x_size, y_size
-    namelist /calculation/ MC_steps, step_jump, transitory_steps, save_thermalization&
-        , use_absolute_magnetization, autocorrelation_len_max, do_autocorrelation
+    namelist /calculation/ MC_steps, step_jump, transitory_steps, save_thermalization, lattice_frames &
+        , use_absolute_magnetization, autocorrelation_len_max, do_autocorrelation, save_lattice_evolution
 
     CONTAINS
 
@@ -35,6 +36,8 @@ subroutine set_defaults()
         use_absolute_magnetization = .true.
         autocorrelation_len_max = 100
         do_autocorrelation = .false.
+        save_lattice_evolution = .false.
+        lattice_frames = 100
 
 end subroutine set_defaults
 

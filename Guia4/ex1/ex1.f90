@@ -12,7 +12,7 @@
 !
 !
 !
-! Room for improvement: The correlation of the seeds chones must be studied for the reliability of the calculations. The seeds used are simply an example and by no means the best choise.
+! Room for improvement: The correlation of the seeds chosen must be studied for the reliability of the calculations. The seeds used are simply an example and by no means the best choice.
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
@@ -31,11 +31,11 @@ program ex1
     real(pr)                        :: transition_probability(-2:2)
     integer, allocatable            :: lattice(:,:)
     integer(int_small)              :: threadID
-    integer                         :: i, j, k, l, unit_steps, unit_temperature, nthreads, status
+    integer                         :: i, j, k, l, unit_steps, unit_temperature, nthreads, status, frame
     real(pr)                        :: Energy, magnetization
     integer(int_large)              :: num_measurements, autocorr_count
     character(len=31)               :: file_temperature
-    character(len=28)               :: file_steps
+    character(len=28)               :: file_steps, file_lattice
     character(len=8)                :: prefix
     character(len=14)               :: suffix
     character(len=140)              :: sort_command
@@ -84,13 +84,16 @@ program ex1
     num_measurements = (MC_steps - transitory_steps) / step_jump
     real_MC_steps = real(num_measurements, pr)
 
-    ! Select wether the absolute value of the magnetization is to be averaged
+    ! Select whether the absolute value of the magnetization is to be averaged
     select case (use_absolute_magnetization)
         case(.true.)
             update_observables => update_observables_absMagnetization
         case(.false.)
             update_observables => update_observables_normalMagnetization
     end select
+
+    ! Only save lattice frames if one temperature is being inspected
+    if (T_range) save_lattice_evolution = .false.
 
     ! Files' names and parts
     prefix = "datos/T_"
@@ -109,10 +112,11 @@ program ex1
     "      <u>      |    u Error     |    capacity"
 
     !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, threadID, transition_probability &
-    !$omp   , j, i, k, l, magnetization_per_particle, energy_per_particle, unit_steps, file_steps &
-    !$omp   , energy_buffer, magnetization_buffer, autocorr_count, i_last, i_next, energy_autocorr, magnetization_autocorr) &
+    !$omp   , j, i, k, l, magnetization_per_particle, energy_per_particle, unit_steps, file_steps, energy_buffer &
+    !$omp   , magnetization_buffer, autocorr_count, i_last, i_next, energy_autocorr, magnetization_autocorr, file_lattice, frame) &
     !$omp shared(KbT, nthreads, unit_temperature, format_style0, format_style1, format_style_header, beta &
-    !$omp   , states, seeds, real_MC_steps, prefix, suffix, N_spins, step_jump, autocorrelation_len_max) &
+    !$omp   , states, seeds, real_MC_steps, prefix, suffix, N_spins, step_jump, autocorrelation_len_max &
+    !$omp   , save_lattice_evolution, lattice_frames) &
     !$omp   schedule(dynamic)
 
 
@@ -163,16 +167,32 @@ program ex1
                         autocorr_count = 0
                     end if
 
+                    ! Create file to save lattice states and initialize frame counter
+                    if (save_lattice_evolution) then
+                        call create_file_name("datos/lattice_T_", KbT(j), ".bin", file_lattice)
+                        open(newunit=i, file=file_lattice, status="replace", action="write")
+                        close(i)
+                        frame = 0
+                    end if
+
                     ! Important steps
                     do i = 1, num_measurements
                         do k = 1, step_jump
                             call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                         end do
+
                         call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg &
                         , energy_per_particle, magnetization_per_particle)
+
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                         if (do_autocorrelation)  call update_autocorrelation_contributions(magnetization_per_particle &
                             , energy_per_particle, energy_autocorr, magnetization_autocorr, autocorr_count)
+
+                        if (save_lattice_evolution) then
+                            call append_lattice_binary(file_lattice, lattice)
+                            frame = frame + 1
+                            if (frame == lattice_frames) save_lattice_evolution = .false.
+                        end if
                 end do
                 close(unit_steps)
 
@@ -193,15 +213,31 @@ program ex1
                     autocorr_count = 0
                 end if
 
+                ! Create file to save lattice states and initialize frame counter
+                if (save_lattice_evolution) then
+                    call create_file_name("datos/lattice_T_", KbT(j), ".bin", file_lattice)
+                    open(newunit=i, file=file_lattice, status="replace", action="write")
+                    close(i)
+                    frame = 0
+                end if
+
                 ! Important steps
                 do i = 1, num_measurements
                     do k = 1, step_jump
                         call MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_probability, states(threadID))
                     end do
+
                     call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
                         , magnetization_per_particle)
+
                     if (do_autocorrelation)  call update_autocorrelation_contributions(magnetization_per_particle &
                         , energy_per_particle, energy_autocorr, magnetization_autocorr, autocorr_count)
+
+                    if (save_lattice_evolution) then
+                        call append_lattice_binary(file_lattice, lattice)
+                        frame = frame + 1
+                        if (frame == lattice_frames) save_lattice_evolution = .false.
+                    end if
                 end do
         end select
 
@@ -227,8 +263,10 @@ program ex1
 
         if (do_autocorrelation) then
             ! Subtract mean and divide by variance and normalize to get autocorrelation A(k) for energy and magnetization per particle
-            energy_autocorr = energy_autocorr / real(autocorr_count + 1 - autocorrelation_len_max, pr)
-            magnetization_autocorr = magnetization_autocorr / real(autocorr_count + 1 - autocorrelation_len_max, pr)
+            energy_autocorr = (/(energy_autocorr(i) / real(autocorr_count + 1 - i, pr), i=0 &
+                , autocorrelation_len_max)/)
+            magnetization_autocorr = (/(magnetization_autocorr(i) / real(autocorr_count + 1 - i, pr), i=0 &
+                , autocorrelation_len_max)/)
             energy_autocorr = (energy_autocorr - u_avg*u_avg) / u_var
             magnetization_autocorr = (magnetization_autocorr - m_avg*m_avg) / m_var
 
