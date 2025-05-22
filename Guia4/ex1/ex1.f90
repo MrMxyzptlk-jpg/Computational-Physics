@@ -19,12 +19,13 @@
 program ex1
     use precision
     use subrutinas
+    use observables
     use omp_lib
     use parsing
     use mzranmod_threadsafe
     implicit none
 
-    real(kind=pr)                   :: u_avg, uSqr_avg, u_var, u_error, m_avg, mSqr_avg, m_var, m_error
+    real(kind=pr)                   :: u_avg, uSqr_avg, u_var, u_error, m_avg, mSqr_avg, m_var, m_error, Binder
     real(kind=pr)                   :: energy_per_particle, magnetization_per_particle, real_MC_steps
     real(kind=pr)                   :: susceptibility, capacity
     real(kind=pr), allocatable      :: beta(:), KbT(:)
@@ -42,10 +43,10 @@ program ex1
 
 
     abstract interface
-        subroutine update(E, M, u_avg, u_var, m_avg, m_var, EpP, MpP)
+        subroutine update(E, M, u_avg, u_var, m_avg, m_var, EpP, MpP, Binder)
             use precision
-            real(pr)                :: E, M
-            real(kind=pr)           :: u_avg, u_var, m_avg, m_var, EpP, MpP
+            real(pr), intent(in)    :: E, M
+            real(pr), intent(inout) :: u_avg, u_var, m_avg, m_var, EpP, MpP, Binder
         end subroutine update
     end interface
     procedure (update), pointer :: update_observables => null()
@@ -87,9 +88,11 @@ program ex1
     ! Select whether the absolute value of the magnetization is to be averaged
     select case (use_absolute_magnetization)
         case(.true.)
-            update_observables => update_observables_absMagnetization
+            if (do_binder) update_observables => update_observables_andBinder_absMagnetization
+            if (.not. do_binder) update_observables => update_observables_absMagnetization
         case(.false.)
-            update_observables => update_observables_normalMagnetization
+            if (do_binder) update_observables => update_observables_andBinder_normalMagnetization
+            if (.not. do_binder) update_observables => update_observables_normalMagnetization
     end select
 
     ! Only save lattice frames if one temperature is being inspected
@@ -108,11 +111,16 @@ program ex1
     open(newunit=unit_temperature, file=file_temperature, status='unknown')
     write(unit_temperature,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
     write(unit_temperature,'(a,I7)') "##  Effective Monte Carlo steps:", num_measurements
-    write(unit_temperature,'(a)') "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
-    "      <u>      |    u Error     |    capacity"
+    if (do_binder) then
+        write(unit_temperature,'(a)') "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
+        "      <u>      |    u Error     |    capacity     |  Binder cumulant"
+    else
+          write(unit_temperature,'(a)') "##     KbT      | Thread ID |       <m>      |     m Error    | susceptibility |"//&
+        "      <u>      |    u Error     |    capacity"
+    end if
 
     !$omp parallel do private(Energy, magnetization, lattice, u_avg, uSqr_avg, m_avg, mSqr_avg, threadID, transition_probability &
-    !$omp   , j, i, k, l, magnetization_per_particle, energy_per_particle, unit_steps, file_steps, energy_buffer &
+    !$omp   , j, i, k, l, magnetization_per_particle, energy_per_particle, unit_steps, file_steps, energy_buffer, Binder &
     !$omp   , magnetization_buffer, autocorr_count, i_last, i_next, energy_autocorr, magnetization_autocorr, file_lattice, frame) &
     !$omp shared(KbT, nthreads, unit_temperature, format_style0, format_style1, format_style_header, beta &
     !$omp   , states, seeds, real_MC_steps, prefix, suffix, N_spins, step_jump, autocorrelation_len_max &
@@ -182,7 +190,7 @@ program ex1
                         end do
 
                         call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg &
-                        , energy_per_particle, magnetization_per_particle)
+                        , energy_per_particle, magnetization_per_particle, Binder)
 
                         write(unit_steps,format_style1) i, energy_per_particle, magnetization_per_particle
                         if (do_autocorrelation)  call update_autocorrelation_contributions(magnetization_per_particle &
@@ -228,7 +236,7 @@ program ex1
                     end do
 
                     call update_observables(Energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle&
-                        , magnetization_per_particle)
+                        , magnetization_per_particle, Binder)
 
                     if (do_autocorrelation)  call update_autocorrelation_contributions(magnetization_per_particle &
                         , energy_per_particle, energy_autocorr, magnetization_autocorr, autocorr_count)
@@ -251,13 +259,19 @@ program ex1
         mSqr_avg = mSqr_avg / real_MC_steps
         m_var = (mSqr_avg - m_avg*m_avg)
         m_error = sqrt(m_var/(real_MC_steps-1_pr))
+        if (do_binder) Binder = 1._pr - Binder/(real_MC_steps*3._pr*mSqr_avg*mSqr_avg)
 
         ! Calculate other observables
         capacity = N_spins*u_var*beta(j)*beta(j)
         susceptibility = N_spins*m_var*beta(j)
 
         !$omp critical
-            write(unit_temperature,format_style2) KbT(j), threadID, m_avg, m_error, susceptibility, u_avg, u_error, capacity
+            if (do_binder) then
+                write(unit_temperature,format_style2) KbT(j), threadID, m_avg, m_error, susceptibility, u_avg, u_error, capacity &
+                    , Binder
+            else
+                write(unit_temperature,format_style2) KbT(j), threadID, m_avg, m_error, susceptibility, u_avg, u_error, capacity
+            end if
             call flush(unit_temperature)
         !$omp end critical
 

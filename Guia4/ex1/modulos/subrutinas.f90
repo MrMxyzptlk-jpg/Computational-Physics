@@ -169,36 +169,6 @@ subroutine MonteCarlo_step_PARALLEL(lattice, Energy, magnetization, transition_p
 
 end subroutine MonteCarlo_step_PARALLEL
 
-subroutine update_observables_absMagnetization(energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle &
-    , magnetization_per_particle)
-    real(pr)                :: Energy, magnetization
-    real(kind=pr)           :: u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle, magnetization_per_particle
-
-    energy_per_particle = Energy/N_spins
-    magnetization_per_particle = abs(magnetization)/N_spins
-
-    u_avg = u_avg + energy_per_particle
-    uSqr_avg = uSqr_avg + energy_per_particle*energy_per_particle
-
-    m_avg = m_avg + magnetization_per_particle
-    mSqr_avg = mSqr_avg + magnetization_per_particle*magnetization_per_particle
-
-end subroutine update_observables_absMagnetization
-
-subroutine update_observables_normalMagnetization(energy, magnetization, u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle &
-, magnetization_per_particle)
-    real(pr)                :: Energy, magnetization
-    real(kind=pr)           :: u_avg, uSqr_avg, m_avg, mSqr_avg, energy_per_particle, magnetization_per_particle
-
-    magnetization_per_particle = magnetization/N_spins
-    energy_per_particle = Energy/N_spins
-    u_avg = u_avg + energy_per_particle
-    uSqr_avg = uSqr_avg + energy_per_particle*energy_per_particle
-    m_avg = m_avg + magnetization_per_particle
-    mSqr_avg = mSqr_avg + magnetization_per_particle*magnetization_per_particle
-
-end subroutine update_observables_normalMagnetization
-
 subroutine init_autocorr()
     allocate(energy_buffer(0:autocorrelation_len_max))
     allocate(magnetization_buffer(0:autocorrelation_len_max))
