@@ -152,7 +152,7 @@ program ex1
                 call create_file_name(prefix, KbT(j), suffix, file_steps)
                 print*, "Calculating KbT = ",  KbT(j), "Filename:  ", file_steps, " ThreadID:", threadID
                 open(newunit=unit_steps, file=file_steps, status='replace')
-                    write(unit_temperature,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
+                    write(unit_steps,format_style_header) "##  Cell dimensions: ", x_size,"x",y_size
 
                     magnetization_per_particle = magnetization/N_spins
                     energy_per_particle = energy/N_spins

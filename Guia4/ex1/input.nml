@@ -1,11 +1,11 @@
 &physical
-    x_size      = 100
-    y_size      = 100
-    initial_magnetization = 1
+    x_size      = 40
+    y_size      = 40
+    initial_magnetization = 0
 
-    KbT_user    =  0.2265306E+01   ! T_critical = 2.2676
+    KbT_user    =  2.22  ! T_critical = 2.2676
 
-    T_range     = true
+    T_range     = false
     KbT_min     = 1.8
     KbT_max     = 3
     KbT_steps   = 50
@@ -13,20 +13,20 @@
 /
 
 &calculation
-    MC_steps  = 100000
-    step_jump = 10
+    MC_steps  = 800000
+    step_jump = 1
     transitory_steps = 5000,  ! Will be subtracted from MC_steps
-    use_absolute_magnetization = true
+    use_absolute_magnetization = false
 /
 
 &tasks
-    save_transitory     = False
-    save_thermalization = False ! False by default
+    save_transitory     = false
+    save_thermalization = false ! False by default
 
-    do_binder = true
+    do_binder = false
 
-    do_autocorrelation      = False
-    autocorrelation_len_max = 500
+    do_autocorrelation      = true
+    autocorrelation_len_max = 501
 
     save_lattice_evolution  = False
     lattice_frames          = 300
