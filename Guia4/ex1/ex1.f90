@@ -39,7 +39,7 @@ program ex1
     character(len=28)               :: file_steps, file_lattice
     character(len=8)                :: prefix
     character(len=14)               :: suffix
-    character(len=140)              :: sort_command
+    character(len=:), allocatable   :: sort_command, move_command
 
 
     abstract interface
@@ -294,11 +294,17 @@ program ex1
 
     !$omp end parallel do
 
-    sort_command = "(head -n 1 datos/temperature_functions.out && tail -n +2 datos/temperature_functions.out | sort -g) "//&
-   "> datos/temperature_functions_sorted.out"
-    call execute_command_line(sort_command, wait=.true., exitstat=status)
     close(unit_temperature)
     deallocate(KbT)
+
+    if (T_range) then
+        sort_command = "(head -n 1 datos/temperature_functions.out && tail -n +2 datos/temperature_functions.out | sort -g) "//&
+    "> datos/temperature_functions_sorted.out"
+        move_command = "mv datos/temperature_functions_sorted.out datos/temperature_functions.out"
+        call execute_command_line(sort_command, wait=.true., exitstat=status)
+        call execute_command_line(move_command, wait=.true., exitstat=status)
+
+    end if
 
 
 end program ex1
