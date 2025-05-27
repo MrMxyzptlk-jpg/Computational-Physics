@@ -7,6 +7,7 @@ use mzranmod
 implicit none
     integer(int_medium)      :: cell_dim(3)
     integer(int_huge)        :: num_atoms
+    real(pr)                 :: conversion_factors(4), periodicity(3)
 
 contains
 
@@ -27,25 +28,24 @@ subroutine create_file_name(prefix, num, suffix, filename)
 
 end subroutine create_file_name
 
-subroutine write_to_file(Y, time, dx, conversion_factors, unitnum)
-    real (pr), dimension (:), intent (in)  :: Y, conversion_factors
-    real (pr), intent (in)                 :: dx, time
-    integer (int_medium)                   :: unitnum
-    integer                                     :: i
+subroutine write_to_file(Y, time, unitnum)
+    real (pr), intent (in)  :: Y(:,:)
+    real (pr), intent (in)  :: time
+    integer (int_medium)    :: unitnum
+    integer                 :: i
 
-    do i = 1, size(Y)
-        write(unitnum, fmt=format_style2) time*conversion_factors(2) &
-        , dx*real(i-1,pr)*conversion_factors(1), Y(i)
+    do i = 1, size(Y,2)
+        write(unitnum, fmt=format_style) time*conversion_factors(2) , Y(:,i)*conversion_factors(2)
     end do
 
 end subroutine write_to_file
 
 subroutine initialize_positions_FCC(positions, passed_num_atoms)
-    real(pr), dimension(:,:), allocatable, intent(out) :: positions
-    integer(int_huge), intent(in)                      :: passed_num_atoms
-    integer(int_huge)                                  :: atom_id
-    integer(int_medium)                                :: h,k,l,b
-    integer(int_small)                                 :: i
+    real(pr), allocatable, intent(out) :: positions(:,:)
+    integer(int_huge), intent(in)      :: passed_num_atoms
+    integer(int_huge)                  :: atom_id
+    integer(int_medium)                :: h, k, l, b
+    integer(int_small)                 :: i
 
     ! FCC as simple cubic with a basis:
     real(pr), parameter         :: basis(3,4) = reshape([ &
@@ -79,11 +79,11 @@ subroutine initialize_positions_FCC(positions, passed_num_atoms)
 end subroutine initialize_positions_FCC
 
 subroutine initialize_positions_BCC(positions, passed_num_atoms)
-    real(pr), dimension(:,:), allocatable, intent(out) :: positions
-    integer(int_huge), intent(in)                      :: passed_num_atoms
-    integer(int_huge)                                  :: atom_id, num_atoms
-    integer(int_medium)                                :: h,k,l,b
-    integer(int_small)                                 :: i
+    real(pr), allocatable, intent(out) :: positions(:,:)
+    integer(int_huge), intent(in)      :: passed_num_atoms
+    integer(int_huge)                  :: atom_id, num_atoms
+    integer(int_medium)                :: h, k, l, b
+    integer(int_small)                 :: i
 
     ! BCC as simple cubic with a basis:
     real(pr), parameter         :: basis(3,2) = reshape([ &
@@ -150,9 +150,8 @@ subroutine initialize_positions_random(positions, passed_num_atoms)
 
 end subroutine initialize_positions_random
 
-subroutine get_forces(positions, forces, potential, E_potential, pressure_virial, radius_cutoff, periodicity)
+subroutine get_forces(positions, forces, potential, E_potential, pressure_virial, radius_cutoff)
     real(pr), dimension(:,:), intent(out)  :: positions, forces
-    real(pr), dimension(3), intent(in)     :: periodicity
     real(pr), intent(in)                   :: radius_cutoff
     real(pr), intent(out)                  :: E_potential, pressure_virial
     real(pr), dimension(3)                 :: particle1_position, particle2_position, particle_separation
@@ -193,19 +192,19 @@ subroutine get_forces(positions, forces, potential, E_potential, pressure_virial
 end subroutine get_forces
 
 subroutine get_E_kinetic(velocities, E_kinetic)
-    real(pr), dimension(:,:), intent(in)   :: velocities
-    real(pr), intent(out)                  :: E_kinetic
+    real(pr), intent(in)   :: velocities(:,:)
+    real(pr), intent(out)  :: E_kinetic
 
     E_kinetic = 0.5_pr*sum(velocities*velocities)
 
 end subroutine get_E_kinetic
 
 subroutine Lennard_Jones(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
-    real(pr), intent(in)               :: particle_distance_squared
-    real(pr), intent(out)              :: force_contribution
-    real(pr), intent(inout)            :: E_potential, pressure_virial
-    real(pr), intent(in)               :: potential_cutoff
-    real(pr)                           :: r2inv, r6inv
+    real(pr), intent(in)       :: particle_distance_squared
+    real(pr), intent(out)      :: force_contribution
+    real(pr), intent(inout)    :: E_potential, pressure_virial
+    real(pr), intent(in)       :: potential_cutoff
+    real(pr)                   :: r2inv, r6inv
 
     r2inv = 1._pr/particle_distance_squared
     r6inv = r2inv*r2inv*r2inv
@@ -216,9 +215,8 @@ subroutine Lennard_Jones(particle_distance_squared, force_contribution, E_potent
 
 end subroutine Lennard_Jones
 
-subroutine update_positions_velVer(positions, velocities, forces, dt, periodicity)
+subroutine update_positions_velVer(positions, velocities, forces, dt)
     real(pr), dimension(:,:), intent(inout)    :: positions, velocities, forces
-    real(pr), dimension(3), intent(in)         :: periodicity
     real(pr), intent(in)                       :: dt
     real(pr)                                   :: dtdt
 

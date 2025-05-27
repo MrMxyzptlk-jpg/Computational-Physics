@@ -27,12 +27,10 @@ program ex1
 
     real(kind=pr)                               :: pressure_virial
     real(kind=pr), dimension(:,:), allocatable  :: positions, velocities, forces, previous_forces, energies
-    real(kind=pr)                               :: periodicity(3)
-    real(kind=pr), allocatable                  :: conversion_factors(:)
 !    real(kind=pr)                               :: CPU_t_start, CPU_t_end, CPU_elapsed_time
     character (len=:), allocatable              :: filename, prefix, file_root_word, suffix
     integer(kind=int_huge)                      :: i
-    integer                                     :: unitnum
+    integer(int_medium)                         :: unit_positions
 
     abstract interface
         subroutine init_pos(positions, passed_num_atoms)
@@ -102,7 +100,7 @@ program ex1
 
     periodicity = cell_dim*lattice_constant
 
-    allocate(energies(2,0:nint((end_time-start_time)/dt))) ! energies = (E_potential, E_kinetic)
+    allocate(Energies(2,0:nint((end_time-start_time)/dt))) ! energies = (E_potential, E_kinetic)
 
 !##################################################################################################
 !      Start of the calculations
@@ -115,17 +113,20 @@ program ex1
         allocate(velocities(size(positions,1),size(positions,2)))
         allocate(forces(size(positions,1),size(positions,2)))
         call initialize_velocities(velocities, initial_Temp)
-        call get_forces(positions, forces, potential,  Energies(1,0), pressure_virial, radius_cutoff, periodicity)
+        call get_forces(positions, forces, potential,  Energies(1,0), pressure_virial, radius_cutoff)
         call get_E_kinetic(velocities,Energies(2,0))
 
-        do i = 1, nint((end_time-start_time)/dt)
-            call update_positions_velVer(positions, velocities, forces, dt, periodicity)
-            previous_forces = forces
-            call get_forces(positions, forces, potential, Energies(1,i), pressure_virial, radius_cutoff, periodicity)
-            call update_velocities_velVer(velocities, forces, previous_forces, dt)
-            call get_E_kinetic(velocities,Energies(2,i))
-            !print*, i*dt, energies(:,i)
-        end do
+        open(newunit=unit_positions, file="datos/positions.out", status="replace")
+            do i = 1, nint((end_time-start_time)/dt)
+                call update_positions_velVer(positions, velocities, forces, dt)
+                previous_forces = forces
+                call get_forces(positions, forces, potential, Energies(1,i), pressure_virial, radius_cutoff)
+                call update_velocities_velVer(velocities, forces, previous_forces, dt)
+                call get_E_kinetic(velocities, Energies(2,i))
+                call write_to_file(positions, i*dt, unit_positions)
+                !print*, i*dt, energies(:,i)
+            end do
+        close(unit_positions)
     end if
 
 end program ex1
