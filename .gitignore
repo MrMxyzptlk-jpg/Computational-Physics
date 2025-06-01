@@ -50,3 +50,8 @@
 # Data files
 *.dat
 *.txt
+*.bin
+*.xyz
+
+# Latex folder
+latex
