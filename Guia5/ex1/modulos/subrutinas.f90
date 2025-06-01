@@ -5,17 +5,35 @@ use formats
 use funciones
 use mzranmod
 implicit none
-    integer(int_medium)      :: cell_dim(3)
-    integer(int_huge)        :: num_atoms
-    real(pr)                 :: conversion_factors(4), periodicity(3)
+    private     size_x, size_y, size_z, symbol
+
+    character(len=11)   :: size_x, size_y, size_z
+    character(len=3)    :: symbol
+    integer(int_medium) :: cell_dim(3)
+    integer(int_huge)   :: num_atoms
+    real(pr)            :: conversion_factors(4), periodicity(3)
+    real(kind=pr)       :: lattice_constant, dt, dtdt
 
 contains
 
+subroutine initialize_XYZ_data()
+
+write (size_x,'(E11.5)') periodicity(1)
+write (size_y,'(E11.5)') periodicity(2)
+write (size_z,'(E11.5)') periodicity(3)
+
+size_x = adjustl(trim(size_x))
+size_y = adjustl(trim(size_y))
+size_z = adjustl(trim(size_z))
+
+end subroutine initialize_XYZ_data
+
 subroutine create_file_name(prefix, num, suffix, filename)
-    character(len=8)                        :: fmt  ! Format descriptor
-    character(len=12)                       :: x1   ! Temporary string for formatted real
-    character(len=:), allocatable           :: prefix, suffix, filename
-    integer(int_huge), intent(in)    :: num  ! Input real number
+    character(len=8)                :: fmt  ! Format descriptor
+    character(len=12)               :: x1   ! Temporary string for formatted real
+    character(len=*), intent(in)    :: prefix, suffix
+    character(len=*)                :: filename
+    real(kind=pr), intent(in)       :: num  ! Input real number
 
     fmt = '(I10)'  ! Format integer
     write(x1, fmt) num  ! Convert real to string
@@ -35,14 +53,57 @@ subroutine write_to_file(Y, time, unitnum)
     integer                 :: i
 
     do i = 1, size(Y,2)
-        write(unitnum, fmt=format_style) time*conversion_factors(2) , Y(:,i)*conversion_factors(2)
+        write(unitnum, fmt=format_style) time*conversion_factors(2) , Y(:,i)*conversion_factors(1)
     end do
 
 end subroutine write_to_file
 
-subroutine initialize_positions_FCC(positions, passed_num_atoms)
+subroutine write_to_XYZfile(Y, time, unitnum)
+    real (pr), intent (in)  :: Y(:,:), time
+    integer (int_medium)    :: unitnum
+    integer                 :: i
+    character(len=11)       :: time_tmp
+
+    symbol = 'X'      ! Change to real element if needed
+
+    ! Write time in string format
+    write(time_tmp,'(E11.5)') time*conversion_factors(2)
+    time_tmp = adjustl(trim(time_tmp))
+
+    ! Line 1: number of particles
+    write(unitnum, '(i6)') num_atoms
+
+    ! Line 2: extended XYZ header with box info and time
+    write(unitnum,'(A)') 'Lattice="' // &
+         size_x // ' 0.0  0.0  0.0 ' // &
+         size_y // ' 0.0  0.0  0.0 ' // &
+         size_z // '" Properties=species:S:1:pos:R:3 Time=' // &
+         time_tmp
+
+
+    do i = 1, num_atoms
+        write(unitnum, fmt=format_XYZ) symbol, Y(:,i)*conversion_factors(1)
+    end do
+
+end subroutine write_to_XYZfile
+
+subroutine initialize_positions_random(positions)
     real(pr), allocatable, intent(out) :: positions(:,:)
-    integer(int_huge), intent(in)      :: passed_num_atoms
+    integer(int_huge)                  :: num_atoms
+    integer                            :: i
+
+    do i = 1, size(cell_dim)
+        num_atoms = num_atoms * cell_dim(i)
+    end do
+
+    ! Need to add a check to avoid collisions
+    positions = reshape( [ (rmzran(), i = 1, size(positions)) ], shape(positions) )  ! Need to redefine this to get random positions in supercell, not unit cell
+
+end subroutine initialize_positions_random
+
+subroutine initialize_positions_FCC(positions)
+    real(pr), allocatable, intent(out) :: positions(:,:)
+    integer(int_huge)                  :: supercell_atoms
     integer(int_huge)                  :: atom_id
     integer(int_medium)                :: h, k, l, b
     integer(int_small)                 :: i
@@ -55,12 +116,15 @@ subroutine initialize_positions_FCC(positions, passed_num_atoms)
         0.0_pr, 0.5_pr, 0.5_pr   & ! Atom 4
     ], [3,4])
 
-    num_atoms = 4
+    supercell_atoms = 4
     do i = 1_int_small, size(cell_dim)
-        num_atoms = num_atoms * cell_dim(i)
+        supercell_atoms = supercell_atoms * cell_dim(i)
     end do
-    if (passed_num_atoms/=num_atoms .and. passed_num_atoms/=0) then
-        print*, "Number of atoms mismatch: selected number of atoms = ", passed_num_atoms, "atoms in the BCC supercell = ",num_atoms
+    if (supercell_atoms/=num_atoms .and. num_atoms/=0) then
+        print'(a,I5,a,I5)', "Number of atoms mismatch: selected number of atoms = ", num_atoms &
+            , " and atoms in the FCC supercell = ",supercell_atoms
+        print*, "Ignoring number of atoms specified"
+        num_atoms = supercell_atoms
     end if
     allocate(positions(3, num_atoms))
 
@@ -76,12 +140,14 @@ subroutine initialize_positions_FCC(positions, passed_num_atoms)
         end do
     end do
 
+    positions = positions*lattice_constant
+
 end subroutine initialize_positions_FCC
 
-subroutine initialize_positions_BCC(positions, passed_num_atoms)
+subroutine initialize_positions_BCC(positions)
     real(pr), allocatable, intent(out) :: positions(:,:)
-    integer(int_huge), intent(in)      :: passed_num_atoms
-    integer(int_huge)                  :: atom_id, num_atoms
+    integer(int_huge)                  :: supercell_atoms
+    integer(int_huge)                  :: atom_id
     integer(int_medium)                :: h, k, l, b
     integer(int_small)                 :: i
 
@@ -91,12 +157,15 @@ subroutine initialize_positions_BCC(positions, passed_num_atoms)
         0.5_pr, 0.5_pr, 0.5_pr  &  ! Atom 2
     ], [3,2])
 
-    num_atoms = 2
+    supercell_atoms = 2
     do i = 1_int_small, size(cell_dim)
-        num_atoms = num_atoms * cell_dim(i)
+        supercell_atoms = supercell_atoms * cell_dim(i)
     end do
-    if (passed_num_atoms/=num_atoms .and. passed_num_atoms/=0) then
-        print*, "Number of atoms mismatch: selected number of atoms = ", passed_num_atoms, "atoms in the BCC supercell = ",num_atoms
+    if (supercell_atoms/=num_atoms .and. num_atoms/=0) then
+        print'(a,I5,a,I5)', "Number of atoms mismatch: selected number of atoms = ", num_atoms &
+            , " and atoms in the BCC supercell = ",supercell_atoms
+        print*, "Ignoring number of atoms specified"
+        num_atoms = supercell_atoms
     end if
     allocate(positions(3, num_atoms))
 
@@ -134,21 +203,6 @@ subroutine initialize_velocities(velocities, initial_Temp)
     end do
 
 end subroutine initialize_velocities
-
-subroutine initialize_positions_random(positions, passed_num_atoms)
-    real(pr), allocatable, intent(out) :: positions(:,:)
-    integer(int_huge), intent(in)      :: passed_num_atoms
-    integer(int_huge)                  :: num_atoms
-    integer                            :: i
-
-    num_atoms = passed_num_atoms
-    do i = 1, size(cell_dim)
-        num_atoms = num_atoms * cell_dim(i)
-    end do
-
-    positions = reshape( [ (rmzran(), i = 1, size(positions)) ], shape(positions) )  ! Need to redefine this to get random positions in supercell, not unit cell
-
-end subroutine initialize_positions_random
 
 subroutine get_forces(positions, forces, potential, E_potential, pressure_virial, radius_cutoff)
     real(pr), dimension(:,:), intent(out)  :: positions, forces
@@ -215,23 +269,21 @@ subroutine Lennard_Jones(particle_distance_squared, force_contribution, E_potent
 
 end subroutine Lennard_Jones
 
-subroutine update_positions_velVer(positions, velocities, forces, dt)
+subroutine update_positions_velVer(positions, velocities, forces)
     real(pr), dimension(:,:), intent(inout)    :: positions, velocities, forces
-    real(pr), intent(in)                       :: dt
-    real(pr)                                   :: dtdt
 
-    dtdt = dt*dt ! Should be defined globally as well as dt
     positions = positions + velocities*dt + forces*dtdt*0.5_pr
 
     ! Apply periodic boundary conditions
     !positions = mod(positions, spread(periodicity, dim=2, ncopies=size(positions,2)))
-    positions(1,:) = mod(positions(1,:), periodicity(1))
+    positions(1,:) = modulo(positions(1,:), periodicity(1))
+    positions(2,:) = modulo(positions(2,:), periodicity(2))
+    positions(3,:) = modulo(positions(3,:), periodicity(3))
 
 end subroutine update_positions_velVer
 
-subroutine update_velocities_velVer(velocities, forces, previous_forces, dt)
+subroutine update_velocities_velVer(velocities, forces, previous_forces)
     real(pr), dimension(:,:), intent(inout)    :: velocities, forces, previous_forces
-    real(pr), intent(in)                       :: dt
 
     velocities = velocities + dt * 0.5_pr*(previous_forces + forces)
 

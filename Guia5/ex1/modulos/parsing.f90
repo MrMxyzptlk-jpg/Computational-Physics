@@ -7,8 +7,8 @@ MODULE parsing
     character (len=6)                           :: structure
     logical                                     :: do_velocity_verlet
     real(kind=pr)                               :: sigma, epsilon
-    real(kind=pr)                               :: start_time, end_time, dt
-    real(kind=pr)                               :: radius_cutoff, initial_Temp, density, lattice_constant, molar_mass
+    real(kind=pr)                               :: start_time, end_time
+    real(kind=pr)                               :: radius_cutoff, initial_Temp, density, molar_mass
     integer(kind=int_huge)                      :: epochs
 
     ! Namelist blocks
@@ -26,7 +26,7 @@ subroutine set_defaults()
         cell_dim            = (/1_int_small,1_int_small,1_int_small/)
         num_atoms           = 0
         initial_Temp        = 1.1_pr
-        density             = 0.8_pr
+        density             = 0._pr
         molar_mass          = 1._pr
 
         !Calculation settings
