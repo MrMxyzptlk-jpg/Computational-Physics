@@ -5,26 +5,51 @@ use formats
 use funciones
 use mzranmod
 implicit none
-    private     size_x, size_y, size_z, symbol
 
+    private     size_x, size_y, size_z, symbol, radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
     character(len=11)   :: size_x, size_y, size_z
     character(len=3)    :: symbol
+    real(pr)            :: radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
+
     integer(int_medium) :: cell_dim(3)
-    integer(int_huge)   :: num_atoms
+    integer(int_large)  :: num_atoms
     real(pr)            :: conversion_factors(4), periodicity(3)
-    real(kind=pr)       :: lattice_constant, dt, dtdt
+    real(pr)            :: lattice_constant, dt, dtdt
+    real(pr)            :: sigma, epsilon
+    real(pr)            :: radius_cutoff, initial_Temp, density, molar_mass
+    logical             :: transitory
 
 contains
 
+subroutine parameters_initialization()
+
+    ! Define conversion factors to adimensionalize the variables
+    conversion_factors = (/sigma, sigma*sqrt(molar_mass/(epsilon*Avogadro_number)), epsilon/Boltzmann_constant, epsilon/) ! distance, time, temperature, energy
+    lattice_constant = lattice_constant/conversion_factors(1)
+    dt = dt/conversion_factors(2)
+    dtdt = dt*dt
+    initial_Temp = initial_Temp/conversion_factors(3)
+
+    periodicity = cell_dim*lattice_constant
+
+    radius_cutoff_squared = radius_cutoff*radius_cutoff
+    potential_cutoff = Lennard_Jones_potencial(radius_cutoff_squared)
+
+    transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
+    Temp_factor = 2.0_pr / (3.0_pr * num_atoms)
+    Pressure_factor = 1._pr / (3._pr * product(cell_dim)*lattice_constant*lattice_constant*lattice_constant)
+
+end subroutine parameters_initialization
+
 subroutine initialize_XYZ_data()
 
-write (size_x,'(E11.5)') periodicity(1)
-write (size_y,'(E11.5)') periodicity(2)
-write (size_z,'(E11.5)') periodicity(3)
+    write (size_x,'(E11.5)') periodicity(1)
+    write (size_y,'(E11.5)') periodicity(2)
+    write (size_z,'(E11.5)') periodicity(3)
 
-size_x = adjustl(trim(size_x))
-size_y = adjustl(trim(size_y))
-size_z = adjustl(trim(size_z))
+    size_x = adjustl(trim(size_x))
+    size_y = adjustl(trim(size_y))
+    size_z = adjustl(trim(size_z))
 
 end subroutine initialize_XYZ_data
 
@@ -89,7 +114,6 @@ end subroutine write_to_XYZfile
 
 subroutine initialize_positions_random(positions)
     real(pr), allocatable, intent(out) :: positions(:,:)
-    integer(int_huge)                  :: num_atoms
     integer                            :: i
 
     do i = 1, size(cell_dim)
@@ -103,8 +127,8 @@ end subroutine initialize_positions_random
 
 subroutine initialize_positions_FCC(positions)
     real(pr), allocatable, intent(out) :: positions(:,:)
-    integer(int_huge)                  :: supercell_atoms
-    integer(int_huge)                  :: atom_id
+    integer(int_large)                 :: supercell_atoms
+    integer(int_large)                 :: atom_id
     integer(int_medium)                :: h, k, l, b
     integer(int_small)                 :: i
 
@@ -146,8 +170,8 @@ end subroutine initialize_positions_FCC
 
 subroutine initialize_positions_BCC(positions)
     real(pr), allocatable, intent(out) :: positions(:,:)
-    integer(int_huge)                  :: supercell_atoms
-    integer(int_huge)                  :: atom_id
+    integer(int_large)                 :: supercell_atoms
+    integer(int_large)                 :: atom_id
     integer(int_medium)                :: h, k, l, b
     integer(int_small)                 :: i
 
@@ -186,10 +210,19 @@ end subroutine initialize_positions_BCC
 subroutine initialize_velocities(velocities, initial_Temp)
     real(pr), allocatable, intent(out)          :: velocities(:,:)
     real(pr), intent(in)                        :: initial_Temp
-    real(pr), dimension(size(velocities,1))     :: velocity_average, velocity_variance, scaling_factor
     integer                                     :: i
 
     velocities = reshape( [ (rmzran() - 0.5_pr, i = 1, size(velocities)) ], shape(velocities) )
+
+    call rescale_velocities(velocities, initial_Temp)
+
+end subroutine initialize_velocities
+
+subroutine rescale_velocities(velocities, initial_Temp)
+    real(pr), allocatable, intent(inout)          :: velocities(:,:)
+    real(pr), intent(in)                        :: initial_Temp
+    real(pr), dimension(size(velocities,1))     :: velocity_average, velocity_variance, scaling_factor
+    integer                                     :: i
 
     velocity_average = sum(velocities,2)
     velocity_variance = sum(velocities*velocities,2)
@@ -202,31 +235,27 @@ subroutine initialize_velocities(velocities, initial_Temp)
         velocities(i,:) = (velocities(i,:)-velocity_average(i))*scaling_factor(i)
     end do
 
-end subroutine initialize_velocities
+end subroutine rescale_velocities
 
-subroutine get_forces(positions, forces, potential, E_potential, pressure_virial, radius_cutoff)
+subroutine get_forces(positions, forces, potential, E_potential, pressure_virial)
     real(pr), dimension(:,:), intent(out)  :: positions, forces
-    real(pr), intent(in)                   :: radius_cutoff
     real(pr), intent(out)                  :: E_potential, pressure_virial
     real(pr), dimension(3)                 :: particle1_position, particle2_position, particle_separation
-    real(pr)                               :: particle_distance_squared, radius_cutoff_squared, force_contribution
-    real(pr)                               :: potential_cutoff
+    real(pr)                               :: particle_distance_squared, force_contribution
     integer(int_huge)                      :: i, j
 
     interface
-    subroutine potential(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
-        use precision
-        real(pr), intent(in)               :: particle_distance_squared
-        real(pr), intent(out)              :: force_contribution
-        real(pr), intent(inout)            :: E_potential, pressure_virial
-        real(pr), intent(in)               :: potential_cutoff
-    end subroutine potential
+        subroutine potential(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
+            use precision
+            real(pr), intent(in)               :: particle_distance_squared
+            real(pr), intent(out)              :: force_contribution
+            real(pr), intent(inout)            :: E_potential, pressure_virial
+            real(pr), intent(in)               :: potential_cutoff
+        end subroutine potential
     end interface
 
     forces = 0._pr
-    E_potential = 0.0
-    radius_cutoff_squared = radius_cutoff*radius_cutoff
-    potential_cutoff = Lennard_Jones_potencial(radius_cutoff_squared)
+    if (transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     do i=1,size(positions,2)-1
         particle1_position = positions(:,i)
@@ -245,13 +274,15 @@ subroutine get_forces(positions, forces, potential, E_potential, pressure_virial
 
 end subroutine get_forces
 
-subroutine get_E_kinetic(velocities, E_kinetic)
+subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
     real(pr), intent(in)   :: velocities(:,:)
-    real(pr), intent(out)  :: E_kinetic
+    real(pr), intent(out)  :: E_kinetic, Pressure, Temperature
 
     E_kinetic = 0.5_pr*sum(velocities*velocities)
+    Temperature = Temp_factor*E_kinetic
+    Pressure = density*Temperature + Pressure*Pressure_factor
 
-end subroutine get_E_kinetic
+end subroutine get_observables
 
 subroutine Lennard_Jones(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
     real(pr), intent(in)       :: particle_distance_squared
@@ -290,9 +321,9 @@ subroutine update_velocities_velVer(velocities, forces, previous_forces)
 end subroutine update_velocities_velVer
 
 subroutine create_maps()
-    integer(int_large)                             :: ix, iy, iz
-    integer(int_large)                             :: imap
-    integer(int_large), dimension(1:13*cell_dim(1)*cell_dim(2)*cell_dim(3)) :: map
+    integer(int_large)  :: ix, iy, iz
+    integer(int_large)  :: imap
+    integer(int_large)  :: map(1:13*product(cell_dim))
 
     do ix=1, cell_dim(1)
         do iy=1, cell_dim(2)
@@ -317,13 +348,12 @@ subroutine create_maps()
 end subroutine create_maps
 
 subroutine create_links(positions, HEAD, LIST, side_length)
-    real(pr), intent(in)                                :: side_length
-    real(pr), intent(in)                                :: positions(:,:)
-    integer, dimension(product(cell_dim)), intent(out)  :: head
-    integer, dimension(size(positions,2)), intent(out)  :: list
-    integer                                             :: i, icell
-    integer(int_medium), dimension(3)                   :: position_index
-    real(pr), dimension(3)                              :: cell_length_inv
+    real(pr), intent(in)    :: side_length
+    real(pr), intent(in)    :: positions(:,:)
+    integer, intent(out)    :: head(product(cell_dim)), list(num_atoms)
+    integer                 :: i, icell
+    integer(int_medium)     :: position_index(3)
+    real(pr)                :: cell_length_inv(3)
 
     ! Initialize
     HEAD = 0

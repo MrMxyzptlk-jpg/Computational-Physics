@@ -25,12 +25,12 @@ program ex1
     use parsing
     implicit none
 
-    real(pr)                               :: pressure_virial
-    real(pr), dimension(:,:), allocatable  :: positions, velocities, forces, previous_forces, energies
+    real(pr), dimension(:), allocatable     :: Pressures, Temperatures
+    real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
 !    real(pr)                               :: CPU_t_start, CPU_t_end, CPU_elapsed_time
-    character (len=:), allocatable         :: filename, prefix, file_root_word, suffix
-    integer(int_huge)                      :: i
-    integer(int_medium)                    :: unit_positions, unitnum
+!    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
+    integer(int_huge)                       :: i, j, N_iterations
+    integer(int_medium)                     :: unit_positions, unitnum
 
     abstract interface
         subroutine init_pos(positions)
@@ -63,48 +63,41 @@ program ex1
 !##################################################################################################
 
     ! Set files' name defaults
-    prefix = "./datos/"
-    suffix = ".out"
+    !prefix = "./datos/"
+    !suffix = ".out"
 
 
     select case (structure)
-    case ("FCC")
-        initialize_positions =>  initialize_positions_FCC
-        if (density>0) lattice_constant = (2._pr/density)**(1._pr/3._pr)
-    case ("BCC")
-        initialize_positions =>  initialize_positions_BCC
-        if (density>0) lattice_constant = (4._pr/density)**(1._pr/3._pr)
-    case ("random")
-        initialize_positions =>  initialize_positions_random
-    case default
-        initialize_positions =>  initialize_positions_random
+        case ("FCC")
+            initialize_positions =>  initialize_positions_FCC
+            if (density>0) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+        case ("BCC")
+            initialize_positions =>  initialize_positions_BCC
+            if (density>0) lattice_constant = (4._pr/density)**(1._pr/3._pr)
+        case ("random")
+            initialize_positions =>  initialize_positions_random
+        case default
+            initialize_positions =>  initialize_positions_random
     end select
 
     print*, "Structure selected: ", structure
 
     select case (type)
-    case ("lannard_jones")
-        potential =>  Lennard_Jones
-    case default
-        potential =>  Lennard_Jones
+        case ("lannard_jones")
+            potential =>  Lennard_Jones
+        case default
+            potential =>  Lennard_Jones
     end select
 
     ! Initialize random number generator
     call mzran_init()
 
+    call parameters_initialization()
 
-    ! Define conversion factors to adimensionalize the variables
-    conversion_factors = (/sigma, sigma*sqrt(molar_mass/epsilon), epsilon/Boltzmann_constant, epsilon/) ! distance, time, temperature, energy
-    lattice_constant = lattice_constant/conversion_factors(1)
-    start_time = start_time/conversion_factors(2)
-    end_time = end_time/conversion_factors(2)
-    dt = dt/conversion_factors(2)
-    dtdt = dt*dt
-    initial_Temp = initial_Temp/conversion_factors(3)
+    !N_iterations = MD_steps - transitory_steps
 
-    periodicity = cell_dim*lattice_constant
-
-    allocate(Energies(2,0:nint((end_time-start_time)/dt))) ! energies = (E_potential, E_kinetic)
+    allocate(Energies(2,1:MD_steps)) ! energies = (E_potential, E_kinetic)
+    allocate(Pressures(1:MD_steps), Temperatures(1:MD_steps))
 
     call initialize_XYZ_data()
 
@@ -113,32 +106,39 @@ program ex1
 !##################################################################################################
 
 
-    if (do_velocity_verlet) then
-        print*,"-------------------- Calculating with velocity-Verlet --------------------"
+    if (integrator == 'velocity-Verlet') then
+        print*,"-------------------- Calculating with ",integrator," --------------------"
         call initialize_positions(positions)
         allocate(velocities(size(positions,1),size(positions,2)))
         allocate(forces(size(positions,1),size(positions,2)))
         call initialize_velocities(velocities, initial_Temp)
-        call get_forces(positions, forces, potential,  Energies(1,0), pressure_virial, radius_cutoff)
-        call get_E_kinetic(velocities,Energies(2,0))
+        call get_forces(positions, forces, potential,  Energies(1,1), pressures(1))
 
         open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
-        open(newunit=unitnum, file="datos/test.out", status="replace")
             call write_to_XYZfile(positions, 0._pr, unit_positions)
 
-            do i = 1, nint((end_time-start_time)/dt)
+            do i = 1, transitory_steps/rescale_steps
+                do j = 1, rescale_steps
+                    call update_positions_velVer(positions, velocities, forces)
+                    previous_forces = forces
+                    call get_forces(positions, forces, potential, Energies(1,1), pressures(1))
+                    call update_velocities_velVer(velocities, forces, previous_forces)
+                    call write_to_XYZfile(positions, real(i,pr)*dt, unit_positions)
+                end do
+                call rescale_velocities(velocities, initial_Temp)
+            end do
+
+            transitory = .False.
+
+            do i = transitory_steps + 1 , MD_steps
                 call update_positions_velVer(positions, velocities, forces)
                 previous_forces = forces
-
-                call get_forces(positions, forces, potential, Energies(1,i), pressure_virial, radius_cutoff)
+                call get_forces(positions, forces, potential, Energies(1,i), pressures(i))
                 call update_velocities_velVer(velocities, forces, previous_forces)
-                call get_E_kinetic(velocities, Energies(2,i))
+                call get_observables(velocities, Energies(2,i), pressures(i), temperatures(i))
                 call write_to_XYZfile(positions, real(i,pr)*dt, unit_positions)
-
-                call write_to_file(velocities*dt + forces*dtdt*0.5_pr, real(i,pr)*dt, unitnum)
             end do
         close(unit_positions)
-        close(unitnum)
     end if
 
 end program ex1

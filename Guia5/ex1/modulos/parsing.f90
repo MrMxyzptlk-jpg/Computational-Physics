@@ -3,19 +3,16 @@ MODULE parsing
     use subrutinas
     implicit none
 
-    character (len=15)                          :: type
+    character (len=15)                          :: integrator, type
     character (len=6)                           :: structure
-    logical                                     :: do_velocity_verlet
-    real(kind=pr)                               :: sigma, epsilon
-    real(kind=pr)                               :: start_time, end_time
-    real(kind=pr)                               :: radius_cutoff, initial_Temp, density, molar_mass
-    integer(kind=int_huge)                      :: epochs
+    logical                                     :: save_transitory
+    integer(kind=int_huge)                      :: MD_steps, transitory_steps, rescale_steps
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp, num_atoms, molar_mass, cell_dim
-    namelist /calculation/ start_time, end_time, dt, radius_cutoff, epochs
-    namelist /tasks/ do_velocity_verlet
-    namelist /approximation/ type, sigma, epsilon
+    namelist /calculation/ MD_steps, transitory_steps, rescale_steps, dt, radius_cutoff
+    namelist /tasks/ save_transitory
+    namelist /approximation/ integrator, type, sigma, epsilon
 
     CONTAINS
 
@@ -30,16 +27,17 @@ subroutine set_defaults()
         molar_mass          = 1._pr
 
         !Calculation settings
-        start_time      = 0._pr
-        end_time        = 1800._pr
-        dt              = 0.3_pr
-        radius_cutoff   = 2.5_pr
-        epochs          = 300
+        MD_steps         = 1000
+        transitory_steps = 1000
+        rescale_steps    = 50
+        dt               = 0.005_pr
+        radius_cutoff    = 2.5_pr
 
         ! Tasks
-        do_velocity_verlet  = .True.
+        save_transitory     = .False.
 
         ! Potential parameters
+        integrator  = 'velocity-Verlet'
         sigma   = 1._pr
         epsilon = 1._pr
 
