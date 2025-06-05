@@ -18,14 +18,14 @@ MODULE funciones
 
     end function Lennard_Jones_potencial
 
-    integer(int_large) function index_cell(ix,iy,iz, cell_dim)
-        integer(int_large), intent(in)   :: cell_dim(3)
+    integer(int_large) function index_cell(ix,iy,iz, dim_linkCell)
+        integer(int_large), intent(in)   :: dim_linkCell(3)
         integer(int_large), intent(in)   :: ix, iy, iz
         integer(int_large)               :: Mx, My, Mz
 
-        Mx = cell_dim(1)
-        My = cell_dim(2)
-        Mz = cell_dim(3)
+        Mx = dim_linkCell(1)
+        My = dim_linkCell(2)
+        Mz = dim_linkCell(3)
 
         index_cell = 1 + mod(ix - 1 + Mx, Mx) + mod(iy - 1 + My, My)*Mx  + mod(iz - 1 + Mz, Mz)*Mx*My
 
