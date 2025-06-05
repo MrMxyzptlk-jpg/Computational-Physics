@@ -5,12 +5,13 @@ MODULE parsing
 
     character (len=15)                          :: integrator, type
     character (len=6)                           :: structure
+    character (len=12)                          :: summation
     logical                                     :: save_transitory, save_observables
     integer(kind=int_huge)                      :: MD_steps, transitory_steps, rescale_steps
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp, num_atoms, molar_mass, cell_dim
-    namelist /calculation/ MD_steps, transitory_steps, rescale_steps, dt, radius_cutoff
+    namelist /calculation/ MD_steps, transitory_steps, rescale_steps, dt, radius_cutoff, summation
     namelist /tasks/ save_transitory, save_observables
     namelist /approximation/ integrator, type, sigma, epsilon
 
@@ -32,6 +33,7 @@ subroutine set_defaults()
         rescale_steps    = 50
         dt               = 0.005_pr
         radius_cutoff    = 2.5_pr
+        summation        = 'all-vs-all'
 
         ! Tasks
         save_transitory  = .False.

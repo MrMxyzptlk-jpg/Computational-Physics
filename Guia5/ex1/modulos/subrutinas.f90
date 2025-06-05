@@ -7,19 +7,20 @@ use mzranmod
 implicit none
 
     private     size_x, size_y, size_z, symbol, radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
-    character(len=11)   :: size_x, size_y, size_z
-    character(len=3)    :: symbol
-    real(pr)            :: radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
+    character(len=11)       :: size_x, size_y, size_z
+    character(len=3)        :: symbol
+    real(pr)                :: radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
 
-    integer(int_medium) :: cell_dim(3)
-    integer(int_large)  :: num_atoms
-    real(pr)            :: conversion_factors(5), periodicity(3)
-    real(pr)            :: lattice_constant, dt, dtdt
-    real(pr)            :: sigma, epsilon
-    real(pr)            :: radius_cutoff, initial_Temp, density, molar_mass
-    logical             :: transitory
+    integer(int_medium)     :: cell_dim(3)
+    integer(int_large)      :: num_atoms
+    real(pr)                :: conversion_factors(5), periodicity(3)
+    real(pr)                :: lattice_constant, dt, dtdt
+    real(pr)                :: sigma, epsilon
+    real(pr)                :: radius_cutoff, initial_Temp, density, molar_mass
+    logical                 :: transitory
+    procedure(pot), pointer :: potential => null()
 
-    abstract interface ! Intended to allow for the implementation of a different potential
+    abstract interface ! Intended to allow for the implementation of a different potential later on
         subroutine pot(particle_distance_squared, particle_separation, force_contribution, E_potential, pressure_virial &
             , potential_cutoff)
             use precision
@@ -87,18 +88,6 @@ subroutine create_file_name(prefix, num, suffix, filename)
 
 end subroutine create_file_name
 
-subroutine write_to_file(Y, time, unitnum)
-    real (pr), intent (in)  :: Y(:,:)
-    real (pr), intent (in)  :: time
-    integer (int_medium)    :: unitnum
-    integer                 :: i
-
-    do i = 1, size(Y,2)
-        write(unitnum, fmt=format_style) time*conversion_factors(2) , Y(:,i)*conversion_factors(1)
-    end do
-
-end subroutine write_to_file
-
 subroutine write_XYZfile(positions, velocities, time, unitnum)
     real (pr), intent (in)  :: positions(:,:), velocities(:,:), time
     integer (int_medium)    :: unitnum
@@ -128,7 +117,7 @@ subroutine write_XYZfile(positions, velocities, time, unitnum)
 
 end subroutine write_XYZfile
 
-subroutine initialize_positions_random(positions)
+subroutine initialize_positions_random(positions) ! Not debugged
     real(pr), allocatable, intent(out) :: positions(:,:)
     integer                            :: i
 
@@ -253,44 +242,43 @@ subroutine rescale_velocities(velocities, initial_Temp)
 
 end subroutine rescale_velocities
 
-subroutine get_forces(positions, forces, potential, E_potential, pressure_virial)
-    real(pr), dimension(:,:), intent(out)   :: positions, forces
-    real(pr), intent(out)                   :: E_potential, pressure_virial
-    real(pr), dimension(3)                  :: particle1_position, particle2_position, particle_separation
-    real(pr)                                :: particle_distance_squared, force_contribution(3)
-    integer(int_huge)                       :: i, j
-    procedure(pot)                          :: potential
+subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial)
+    real(pr), intent(in)    :: positions(:,:)
+    real(pr), intent(out)   :: forces(:,:)
+    real(pr), intent(out)   :: E_potential, pressure_virial
+    integer(int_huge)       :: i, j
 
     forces = 0._pr
     if (transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     do i=1,size(positions,2)-1
-        particle1_position = positions(:,i)
         do j = i+1,size(positions,2)
-            particle2_position = positions(:,j)
-            particle_separation = particle1_position - particle2_position ! Separation vector
-            particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
-            particle_distance_squared = sum(particle_separation*particle_separation)
-            if (particle_distance_squared <= radius_cutoff_squared) then
-                call Lennard_Jones(particle_distance_squared, particle_separation, force_contribution, E_potential &
-                    , pressure_virial, potential_cutoff)
-                forces(:,i) = forces(:,i) + force_contribution
-                forces(:,j) = forces(:,j) - force_contribution
-            endif
+            call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential &
+                , pressure_virial)
         end do
     end do
 
-end subroutine get_forces
+end subroutine get_forces_allVSall
 
-subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
-    real(pr), intent(in)   :: velocities(:,:)
-    real(pr), intent(out)  :: E_kinetic, Pressure, Temperature
+subroutine get_force_contribution(particle1_position, particle2_position, particle1_forces, particle2_forces, E_potential &
+    , pressure_virial)
+    real(pr), dimension(3), intent(in)      :: particle1_position, particle2_position
+    real(pr), dimension(3), intent(out)     :: particle1_forces, particle2_forces
+    real(pr), intent(out)                   :: E_potential, pressure_virial
+    real(pr), dimension(3)                  :: particle_separation
+    real(pr)                                :: particle_distance_squared, force_contribution(3)
 
-    E_kinetic = 0.5_pr*sum(velocities*velocities)
-    Temperature = Temp_factor*E_kinetic
-    Pressure = density*Temperature + Pressure*Pressure_factor
+    particle_separation = particle1_position - particle2_position ! Separation vector
+    particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
+    particle_distance_squared = sum(particle_separation*particle_separation)
+    if (particle_distance_squared <= radius_cutoff_squared) then
+        call potential(particle_distance_squared, particle_separation, force_contribution, E_potential &
+            , pressure_virial, potential_cutoff)
+        particle1_forces = particle1_forces + force_contribution
+        particle2_forces = particle2_forces - force_contribution
+    endif
 
-end subroutine get_observables
+end subroutine get_force_contribution
 
 subroutine Lennard_Jones(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
     , potential_cutoff)
@@ -329,5 +317,60 @@ subroutine update_velocities_velVer(velocities, forces, previous_forces)
     velocities = velocities + dt * 0.5_pr*(previous_forces + forces)
 
 end subroutine update_velocities_velVer
+
+subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
+    real(pr), intent(in)   :: velocities(:,:)
+    real(pr), intent(out)  :: E_kinetic, Pressure, Temperature
+
+    E_kinetic = 0.5_pr*sum(velocities*velocities)
+    Temperature = Temp_factor*E_kinetic
+    Pressure = density*Temperature + Pressure*Pressure_factor
+
+end subroutine get_observables
+
+!##################################################################################################
+!     Old/Unused
+!##################################################################################################
+
+subroutine get_forces_old(positions, forces, E_potential, pressure_virial)
+    real(pr), dimension(:,:), intent(out)   :: positions, forces
+    real(pr), intent(out)                   :: E_potential, pressure_virial
+    real(pr), dimension(3)                  :: particle1_position, particle2_position, particle_separation
+    real(pr)                                :: particle_distance_squared, force_contribution(3)
+    integer(int_huge)                       :: i, j
+
+    forces = 0._pr
+    if (transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+
+    do i=1,size(positions,2)-1
+        particle1_position = positions(:,i)
+        do j = i+1,size(positions,2)
+            particle2_position = positions(:,j)
+            particle_separation = particle1_position - particle2_position ! Separation vector
+            particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
+            particle_distance_squared = sum(particle_separation*particle_separation)
+            if (particle_distance_squared <= radius_cutoff_squared) then
+                call potential(particle_distance_squared, particle_separation, force_contribution, E_potential &
+                    , pressure_virial, potential_cutoff)
+                forces(:,i) = forces(:,i) + force_contribution
+                forces(:,j) = forces(:,j) - force_contribution
+            endif
+        end do
+    end do
+
+end subroutine get_forces_old
+
+subroutine write_to_file(Y, time, unitnum)
+    real (pr), intent (in)  :: Y(:,:)
+    real (pr), intent (in)  :: time
+    integer (int_medium)    :: unitnum
+    integer                 :: i
+
+    do i = 1, size(Y,2)
+        write(unitnum, fmt=format_style) time*conversion_factors(2) , Y(:,i)*conversion_factors(1)
+    end do
+
+end subroutine write_to_file
+
 
 END MODULE

@@ -39,10 +39,16 @@ program ex1
             implicit none
             real(pr), allocatable, intent(out) :: positions(:,:)
         end subroutine init_pos
+        subroutine force_sub(positions, forces, E_potential, pressure_virial)
+        use precision
+            real(pr), intent(in)    :: positions(:,:)
+            real(pr), intent(out)   :: forces(:,:)
+            real(pr), intent(out)   :: E_potential, pressure_virial
+        end subroutine
     end interface
 
     procedure(init_pos), pointer    :: initialize_positions => null()
-    procedure(pot), pointer         :: potential => null()
+    procedure(force_sub), pointer        :: get_forces => null()
 
 !###################################################################################################
 !   Set default values and parse input file
@@ -68,11 +74,12 @@ program ex1
             initialize_positions =>  initialize_positions_BCC
             if (density>0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
         case ("random")
+            call mzran_init() ! Initialize random number generator
             initialize_positions =>  initialize_positions_random
         case default
-            initialize_positions =>  initialize_positions_random
+            initialize_positions =>  initialize_positions_FCC
+            if (density>0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
     end select
-
     print*, "Structure selected: ", structure
 
     select case (type)
@@ -82,17 +89,26 @@ program ex1
             potential =>  Lennard_Jones
     end select
 
-    ! Initialize random number generator
-    call mzran_init()
-
-    call parameters_initialization()
-
     !N_iterations = MD_steps - transitory_steps
 
+    call parameters_initialization()
+    call initialize_XYZ_data()
+
+    call initialize_positions(positions)
     allocate(Energies(2,1:MD_steps)) ! energies = (E_potential, E_kinetic)
     allocate(Pressures(1:MD_steps), Temperatures(1:MD_steps))
+    allocate(velocities(size(positions,1),size(positions,2)))
+    allocate(forces(size(positions,1),size(positions,2)))
+    call initialize_velocities(velocities, initial_Temp)
 
-    call initialize_XYZ_data()
+    select case (summation)
+        case ("all-vs-all")
+            get_forces =>  get_forces_allVSall
+        case ("linked-lists")
+            get_forces =>  get_forces_linkedList
+            call create_maps(3,3,3)
+            call create_links(positions)
+    end select
 
 !##################################################################################################
 !      Start of the calculations
@@ -101,11 +117,7 @@ program ex1
 
     if (integrator == 'velocity-Verlet') then
         print*,"-------------------- Calculating with ",integrator," --------------------"
-        call initialize_positions(positions)
-        allocate(velocities(size(positions,1),size(positions,2)))
-        allocate(forces(size(positions,1),size(positions,2)))
-        call initialize_velocities(velocities, initial_Temp)
-        call get_forces(positions, forces, potential,  Energies(1,1), pressures(1))
+        call get_forces(positions, forces,  Energies(1,1), pressures(1))
 
         open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
         open(newunit=unit_observables, file="datos/observables.out", status="replace")
@@ -116,7 +128,7 @@ program ex1
                 do j = 1, rescale_steps
                     call update_positions_velVer(positions, velocities, forces)
                     previous_forces = forces
-                    call get_forces(positions, forces, potential, Energies(1,1), pressures(1))
+                    call get_forces(positions, forces, Energies(1,1), pressures(1))
                     call update_velocities_velVer(velocities, forces, previous_forces)
                     if (save_transitory) call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
                 end do
@@ -128,7 +140,7 @@ program ex1
             do i = transitory_steps + 1 , MD_steps
                 call update_positions_velVer(positions, velocities, forces)
                 previous_forces = forces
-                call get_forces(positions, forces, potential, Energies(1,i), pressures(i))
+                call get_forces(positions, forces, Energies(1,i), pressures(i))
                 call update_velocities_velVer(velocities, forces, previous_forces)
                 call get_observables(velocities, Energies(2,i), pressures(i), temperatures(i))
                 call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
