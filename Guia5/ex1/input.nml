@@ -17,7 +17,8 @@
 /
 
 &tasks
-    save_transitory = True
+    save_transitory  = true
+    save_observables = true
 /
 
 &approximation

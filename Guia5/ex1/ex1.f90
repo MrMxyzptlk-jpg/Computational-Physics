@@ -12,7 +12,7 @@
 !
 !
 !
-! Room for improvement: add check to the random initialization of positions in order to avoid collisions
+! Room for improvement: add check to the random initialization of positions in order to avoid collisions. Check cutoff_radius units (and relation to sigma).
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
@@ -23,14 +23,15 @@ program ex1
     use constantes
     use mzranmod
     use parsing
+    use linkedLists
     implicit none
 
     real(pr), dimension(:), allocatable     :: Pressures, Temperatures
     real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
 !    real(pr)                               :: CPU_t_start, CPU_t_end, CPU_elapsed_time
 !    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
-    integer(int_huge)                       :: i, j, N_iterations
-    integer(int_medium)                     :: unit_positions, unitnum
+    integer(int_huge)                       :: i, j
+    integer(int_medium)                     :: unit_positions, unit_observables, unit_info
 
     abstract interface
         subroutine init_pos(positions)
@@ -38,14 +39,6 @@ program ex1
             implicit none
             real(pr), allocatable, intent(out) :: positions(:,:)
         end subroutine init_pos
-
-        subroutine pot(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
-            use precision
-            real(pr), intent(in)               :: particle_distance_squared
-            real(pr), intent(out)              :: force_contribution
-            real(pr), intent(inout)            :: E_potential, pressure_virial
-            real(pr), intent(in)               :: potential_cutoff
-        end subroutine pot
     end interface
 
     procedure(init_pos), pointer    :: initialize_positions => null()
@@ -70,10 +63,10 @@ program ex1
     select case (structure)
         case ("FCC")
             initialize_positions =>  initialize_positions_FCC
-            if (density>0) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+            if (density>0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
         case ("BCC")
             initialize_positions =>  initialize_positions_BCC
-            if (density>0) lattice_constant = (4._pr/density)**(1._pr/3._pr)
+            if (density>0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
         case ("random")
             initialize_positions =>  initialize_positions_random
         case default
@@ -115,7 +108,9 @@ program ex1
         call get_forces(positions, forces, potential,  Energies(1,1), pressures(1))
 
         open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
-            call write_to_XYZfile(positions, 0._pr, unit_positions)
+        open(newunit=unit_observables, file="datos/observables.out", status="replace")
+            if (save_transitory) call write_XYZfile(positions, velocities, 0._pr, unit_positions)
+            if (save_observables) write(unit_observables,*) "## E_pot       |      E_kin      |      P       |       T"
 
             do i = 1, transitory_steps/rescale_steps
                 do j = 1, rescale_steps
@@ -123,7 +118,7 @@ program ex1
                     previous_forces = forces
                     call get_forces(positions, forces, potential, Energies(1,1), pressures(1))
                     call update_velocities_velVer(velocities, forces, previous_forces)
-                    call write_to_XYZfile(positions, real(i,pr)*dt, unit_positions)
+                    if (save_transitory) call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
                 end do
                 call rescale_velocities(velocities, initial_Temp)
             end do
@@ -136,9 +131,15 @@ program ex1
                 call get_forces(positions, forces, potential, Energies(1,i), pressures(i))
                 call update_velocities_velVer(velocities, forces, previous_forces)
                 call get_observables(velocities, Energies(2,i), pressures(i), temperatures(i))
-                call write_to_XYZfile(positions, real(i,pr)*dt, unit_positions)
+                call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
+                if (save_observables) write(unit_observables, format_style) energies(:,i), pressures(i), temperatures(i)
             end do
         close(unit_positions)
+        close(unit_observables)
     end if
+
+    open(newunit=unit_info, file="datos/INFO.out", status="replace")
+        write(unit_info,*) 
+    close(unit_info)
 
 end program ex1

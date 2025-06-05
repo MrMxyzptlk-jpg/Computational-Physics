@@ -5,13 +5,13 @@ MODULE parsing
 
     character (len=15)                          :: integrator, type
     character (len=6)                           :: structure
-    logical                                     :: save_transitory
+    logical                                     :: save_transitory, save_observables
     integer(kind=int_huge)                      :: MD_steps, transitory_steps, rescale_steps
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp, num_atoms, molar_mass, cell_dim
     namelist /calculation/ MD_steps, transitory_steps, rescale_steps, dt, radius_cutoff
-    namelist /tasks/ save_transitory
+    namelist /tasks/ save_transitory, save_observables
     namelist /approximation/ integrator, type, sigma, epsilon
 
     CONTAINS
@@ -34,7 +34,8 @@ subroutine set_defaults()
         radius_cutoff    = 2.5_pr
 
         ! Tasks
-        save_transitory     = .False.
+        save_transitory  = .False.
+        save_observables = .False.
 
         ! Potential parameters
         integrator  = 'velocity-Verlet'

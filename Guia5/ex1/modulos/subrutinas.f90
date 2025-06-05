@@ -13,24 +13,40 @@ implicit none
 
     integer(int_medium) :: cell_dim(3)
     integer(int_large)  :: num_atoms
-    real(pr)            :: conversion_factors(4), periodicity(3)
+    real(pr)            :: conversion_factors(5), periodicity(3)
     real(pr)            :: lattice_constant, dt, dtdt
     real(pr)            :: sigma, epsilon
     real(pr)            :: radius_cutoff, initial_Temp, density, molar_mass
     logical             :: transitory
+
+    abstract interface ! Intended to allow for the implementation of a different potential
+        subroutine pot(particle_distance_squared, particle_separation, force_contribution, E_potential, pressure_virial &
+            , potential_cutoff)
+            use precision
+            real(pr), intent(in)               :: particle_distance_squared, particle_separation(3)
+            real(pr), intent(out)              :: force_contribution(3)
+            real(pr), intent(inout)            :: E_potential, pressure_virial
+            real(pr), intent(in)               :: potential_cutoff
+        end subroutine pot
+    end interface
 
 contains
 
 subroutine parameters_initialization()
 
     ! Define conversion factors to adimensionalize the variables
-    conversion_factors = (/sigma, sigma*sqrt(molar_mass/(epsilon*Avogadro_number)), epsilon/Boltzmann_constant, epsilon/) ! distance, time, temperature, energy
+    conversion_factors(1) = sigma                                               ! Distance
+    conversion_factors(2) = sigma*sqrt(molar_mass/(epsilon*Avogadro_number))    ! Time
+    conversion_factors(3) = epsilon/Boltzmann_constant                          ! Temperature
+    conversion_factors(4) = epsilon                                             ! Energy
+    conversion_factors(5) = sqrt((epsilon*Avogadro_number)/molar_mass)          ! Velocity
+
     lattice_constant = lattice_constant/conversion_factors(1)
+    initial_Temp = initial_Temp/conversion_factors(3)
+    periodicity = cell_dim*lattice_constant
+
     dt = dt/conversion_factors(2)
     dtdt = dt*dt
-    initial_Temp = initial_Temp/conversion_factors(3)
-
-    periodicity = cell_dim*lattice_constant
 
     radius_cutoff_squared = radius_cutoff*radius_cutoff
     potential_cutoff = Lennard_Jones_potencial(radius_cutoff_squared)
@@ -83,8 +99,8 @@ subroutine write_to_file(Y, time, unitnum)
 
 end subroutine write_to_file
 
-subroutine write_to_XYZfile(Y, time, unitnum)
-    real (pr), intent (in)  :: Y(:,:), time
+subroutine write_XYZfile(positions, velocities, time, unitnum)
+    real (pr), intent (in)  :: positions(:,:), velocities(:,:), time
     integer (int_medium)    :: unitnum
     integer                 :: i
     character(len=11)       :: time_tmp
@@ -102,15 +118,15 @@ subroutine write_to_XYZfile(Y, time, unitnum)
     write(unitnum,'(A)') 'Lattice="' // &
          size_x // ' 0.0  0.0  0.0 ' // &
          size_y // ' 0.0  0.0  0.0 ' // &
-         size_z // '" Properties=species:S:1:pos:R:3 Time=' // &
+         size_z // '" Properties=species:S:1:pos:R:3:vel:R:3 Time=' // &
          time_tmp
 
 
     do i = 1, num_atoms
-        write(unitnum, fmt=format_XYZ) symbol, Y(:,i)*conversion_factors(1)
+        write(unitnum, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1), velocities(:,i)*conversion_factors(5)
     end do
 
-end subroutine write_to_XYZfile
+end subroutine write_XYZfile
 
 subroutine initialize_positions_random(positions)
     real(pr), allocatable, intent(out) :: positions(:,:)
@@ -238,21 +254,12 @@ subroutine rescale_velocities(velocities, initial_Temp)
 end subroutine rescale_velocities
 
 subroutine get_forces(positions, forces, potential, E_potential, pressure_virial)
-    real(pr), dimension(:,:), intent(out)  :: positions, forces
-    real(pr), intent(out)                  :: E_potential, pressure_virial
-    real(pr), dimension(3)                 :: particle1_position, particle2_position, particle_separation
-    real(pr)                               :: particle_distance_squared, force_contribution
-    integer(int_huge)                      :: i, j
-
-    interface
-        subroutine potential(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
-            use precision
-            real(pr), intent(in)               :: particle_distance_squared
-            real(pr), intent(out)              :: force_contribution
-            real(pr), intent(inout)            :: E_potential, pressure_virial
-            real(pr), intent(in)               :: potential_cutoff
-        end subroutine potential
-    end interface
+    real(pr), dimension(:,:), intent(out)   :: positions, forces
+    real(pr), intent(out)                   :: E_potential, pressure_virial
+    real(pr), dimension(3)                  :: particle1_position, particle2_position, particle_separation
+    real(pr)                                :: particle_distance_squared, force_contribution(3)
+    integer(int_huge)                       :: i, j
+    procedure(pot)                          :: potential
 
     forces = 0._pr
     if (transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
@@ -265,12 +272,13 @@ subroutine get_forces(positions, forces, potential, E_potential, pressure_virial
             particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
             particle_distance_squared = sum(particle_separation*particle_separation)
             if (particle_distance_squared <= radius_cutoff_squared) then
-                call Lennard_Jones(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
-                forces(:,i) = forces(:,i) + particle_separation*force_contribution
-                forces(:,j) = forces(:,j) - particle_separation*force_contribution
+                call Lennard_Jones(particle_distance_squared, particle_separation, force_contribution, E_potential &
+                    , pressure_virial, potential_cutoff)
+                forces(:,i) = forces(:,i) + force_contribution
+                forces(:,j) = forces(:,j) - force_contribution
             endif
-        enddo
-    enddo
+        end do
+    end do
 
 end subroutine get_forces
 
@@ -284,19 +292,21 @@ subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
 
 end subroutine get_observables
 
-subroutine Lennard_Jones(particle_distance_squared, force_contribution, E_potential, pressure_virial, potential_cutoff)
-    real(pr), intent(in)       :: particle_distance_squared
-    real(pr), intent(out)      :: force_contribution
+subroutine Lennard_Jones(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
+    , potential_cutoff)
+    real(pr), intent(in)       :: particle_distance_squared, particle_separation(3)
+    real(pr), intent(out)      :: force_contribution(3)
     real(pr), intent(inout)    :: E_potential, pressure_virial
     real(pr), intent(in)       :: potential_cutoff
-    real(pr)                   :: r2inv, r6inv
+    real(pr)                   :: r2inv, r6inv, force_magnitude
 
     r2inv = 1._pr/particle_distance_squared
     r6inv = r2inv*r2inv*r2inv
-    force_contribution = 48._pr*r2inv*r6inv*(r6inv-0.5_pr)
+    force_magnitude = 48._pr*r2inv*r6inv*(r6inv-0.5_pr)
+    force_contribution = force_magnitude*particle_separation
 
     E_potential = E_potential + 4._pr*r6inv*(r6inv-1._pr) - potential_cutoff
-    pressure_virial = pressure_virial + particle_distance_squared*force_contribution
+    pressure_virial = pressure_virial + particle_distance_squared*force_magnitude
 
 end subroutine Lennard_Jones
 
@@ -319,58 +329,5 @@ subroutine update_velocities_velVer(velocities, forces, previous_forces)
     velocities = velocities + dt * 0.5_pr*(previous_forces + forces)
 
 end subroutine update_velocities_velVer
-
-subroutine create_maps()
-    integer(int_large)  :: ix, iy, iz
-    integer(int_large)  :: imap
-    integer(int_large)  :: map(1:13*product(cell_dim))
-
-    do ix=1, cell_dim(1)
-        do iy=1, cell_dim(2)
-            do iz=1, cell_dim(3)
-                imap = ( icell (ix, iy, iz, cell_dim) - 1 ) * 13
-                map(imap+1)  = icell( ix+1,   iy  ,  iz   , cell_dim)
-                map(imap+2)  = icell(ix +1,  iy+1 ,  iz   , cell_dim)
-                map(imap+3)  = icell(  ix ,  iy+1 ,  iz   , cell_dim)
-                map(imap+4)  = icell( ix-1,  iy+1 ,  iz   , cell_dim)
-                map(imap+5)  = icell( ix+1,   iy  , iz-1  , cell_dim)
-                map(imap+6)  = icell( ix+1,  iy+1 , iz-1  , cell_dim)
-                map(imap+7)  = icell(  ix ,  iy+1 , iz-1  , cell_dim)
-                map(imap+8)  = icell( ix-1,  iy+1 , iz-1  , cell_dim)
-                map(imap+9)  = icell( ix+1,   iy  , iz+1  , cell_dim)
-                map(imap+10) = icell( ix+1,  iy+1 , iz+1  , cell_dim)
-                map(imap+11) = icell(  ix ,  iy+1 , iz+1  , cell_dim)
-                map(imap+12) = icell( ix-1,  iy+1 , iz+1  , cell_dim)
-                map(imap+13) = icell(  ix ,   iy  , iz+1  , cell_dim)
-            enddo
-        enddo
-    enddo
-end subroutine create_maps
-
-subroutine create_links(positions, HEAD, LIST, side_length)
-    real(pr), intent(in)    :: side_length
-    real(pr), intent(in)    :: positions(:,:)
-    integer, intent(out)    :: head(product(cell_dim)), list(num_atoms)
-    integer                 :: i, icell
-    integer(int_medium)     :: position_index(3)
-    real(pr)                :: cell_length_inv(3)
-
-    ! Initialize
-    HEAD = 0
-    cell_length_inv = real(cell_dim, pr)/side_length  ! Inverse cell size
-
-    do i = 1, size(list)
-        ! Get cell indices (0-based) and then periodic boundary correction (modulo M)
-        position_index = mod(int( (positions(:,i) + 0.5_pr * side_length) * cell_length_inv ), cell_dim)
-
-        ! Compute cell index (1-based Fortran indexing)
-        icell = 1 + position_index(1) + position_index(2)*cell_dim(1) + position_index(3)*cell_dim(1)*cell_dim(2)
-
-        ! Insert particle i at the head of the list for this cell
-        LIST(i) = HEAD(icell)
-        HEAD(icell) = i
-    end do
-end subroutine create_links
-
 
 END MODULE
