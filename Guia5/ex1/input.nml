@@ -1,7 +1,7 @@
 &physical
     structure           = 'FCC'
     lattice_constant    = 10.0     ! This parameter is ignored if density is specified
-    cell_dim            = 2,2,2
+    cell_dim            = 4,4,4
     num_atoms           = 256
     initial_Temp        = 1.1
     density             = 0.8
@@ -14,17 +14,21 @@
     transitory_steps = 1000
     rescale_steps    = 50
     radius_cutoff    = 2.5
+    pair_corr_cutoff = 4.0
+    pair_corr_bins   = 100
     summation        = 'linked-lists'  ! 'all-vs-all', 'linked-lists'
 /
 
 &tasks
     save_transitory  = true
     save_observables = true
+    do_pair_correlation = true
 /
 
 &approximation
-    integrator  = 'velocity-Verlet'
-    type        = 'lennard_jones'
-    sigma       = 1,
-    epsilon     = 1e-23        !1.60218e-19
+    integrator   = 'velocity-Verlet'
+    dim_linkCell = 3,3,3
+    type         = 'lennard_jones'
+    sigma        = 1
+    epsilon      = 1e-23        !1.60218e-19
 /

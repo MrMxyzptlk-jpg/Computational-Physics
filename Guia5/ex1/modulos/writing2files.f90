@@ -68,4 +68,19 @@ subroutine write_output(CPU_elapsed_time)
 
 end subroutine write_output
 
+subroutine write_pair_corr(pair_corr)
+    real (pr), intent (in)  :: pair_corr(:)
+    real (pr)               :: bin_center
+    integer                 :: unitnum, i
+
+    open(newunit=unitnum, file="datos/pair_correlation.out", status="replace")
+        write(unitnum, '(a)') " r | pair_correlation(r)"
+        do i =1, pair_corr_bins
+            bin_center = (real(i-1,pr) + 0.5)*dr
+            write(unitnum, format_style0) bin_center, pair_corr(i)
+        end do
+    close(unitnum)
+
+end subroutine write_pair_corr
+
 END MODULE writing2files

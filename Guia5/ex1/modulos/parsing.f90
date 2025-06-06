@@ -7,13 +7,13 @@ MODULE parsing
     character (len=6)                           :: structure
     character (len=12)                          :: summation
     logical                                     :: save_transitory, save_observables
-    integer(kind=int_huge)                      :: MD_steps, transitory_steps, rescale_steps
+    integer(kind=int_large)                     :: MD_steps, transitory_steps, rescale_steps, dim_linkCell(3)
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp, num_atoms, molar_mass, cell_dim
-    namelist /calculation/ MD_steps, transitory_steps, rescale_steps, dt, radius_cutoff, summation
-    namelist /tasks/ save_transitory, save_observables
-    namelist /approximation/ integrator, type, sigma, epsilon
+    namelist /calculation/ MD_steps, transitory_steps, rescale_steps, dt, radius_cutoff, pair_corr_cutoff, pair_corr_bins, summation
+    namelist /tasks/ save_transitory, save_observables, do_pair_correlation
+    namelist /approximation/ integrator, dim_linkCell, type, sigma, epsilon
 
     CONTAINS
 
@@ -33,14 +33,18 @@ subroutine set_defaults()
         rescale_steps    = 50
         dt               = 0.005_pr
         radius_cutoff    = 2.5_pr
+        pair_corr_cutoff = 4.0_pr
+        pair_corr_bins   = 100._pr
         summation        = 'all-vs-all'
 
         ! Tasks
         save_transitory  = .False.
         save_observables = .False.
+        do_pair_correlation = .True.
 
         ! Potential parameters
         integrator  = 'velocity-Verlet'
+        dim_linkCell = (/2,2,2/)
         sigma   = 1._pr
         epsilon = 1._pr
 

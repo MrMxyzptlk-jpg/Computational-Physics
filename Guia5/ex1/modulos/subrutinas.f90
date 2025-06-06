@@ -1,21 +1,22 @@
 MODULE subrutinas
-use precision
-use constantes
-use formats
-use funciones
-use mzranmod
-implicit none
+    use precision
+    use constantes
+    use formats
+    use funciones
+    use mzranmod
+    use omp_lib
+    implicit none
 
-    private     radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
-    real(pr)                :: radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
+    private     radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
+    real(pr)                :: radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
 
     integer(int_medium)     :: cell_dim(3)
-    integer(int_large)      :: num_atoms
+    integer(int_large)      :: num_atoms, pair_corr_bins
     real(pr)                :: conversion_factors(5), periodicity(3)
     real(pr)                :: lattice_constant, dt, dtdt
     real(pr)                :: sigma, epsilon
-    real(pr)                :: radius_cutoff, initial_Temp, density, molar_mass
-    logical                 :: transitory
+    real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp, density, molar_mass
+    logical                 :: transitory, do_pair_correlation
     procedure(pot), pointer :: potential => null()
 
     abstract interface ! Intended to allow for the implementation of a different potential later on
@@ -43,6 +44,7 @@ subroutine parameters_initialization()
     lattice_constant = lattice_constant/conversion_factors(1)
     initial_Temp = initial_Temp/conversion_factors(3)
     periodicity = cell_dim*lattice_constant
+    radius_cutoff = radius_cutoff/conversion_factors(1)
 
     dt = dt/conversion_factors(2)
     dtdt = dt*dt
@@ -53,6 +55,11 @@ subroutine parameters_initialization()
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
     Temp_factor = 2.0_pr / (3.0_pr * num_atoms)
     Pressure_factor = 1._pr / (3._pr * product(cell_dim)*lattice_constant*lattice_constant*lattice_constant)
+
+    if(do_pair_correlation) then
+        pair_corr_cutoff_sqr = pair_corr_cutoff*pair_corr_cutoff
+        dr = pair_corr_cutoff/real(pair_corr_bins,pr)
+    end if
 
 end subroutine parameters_initialization
 
@@ -199,31 +206,37 @@ subroutine rescale_velocities(velocities, initial_Temp)
 
 end subroutine rescale_velocities
 
-subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial)
+subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial, pair_corr)
     real(pr), intent(in)    :: positions(:,:)
     real(pr), intent(out)   :: forces(:,:)
     real(pr), intent(out)   :: E_potential, pressure_virial
+    real(pr), intent(inout) :: pair_corr(:)
     integer(int_huge)       :: i, j
 
     forces = 0._pr
     if (transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
+    !$omp parallel do private(j, i) &
+    !$omp shared(positions, forces) &
+    !$omp schedule(dynamic) reduction(+:E_potential, pressure_virial, pair_corr)
     do i=1,size(positions,2)-1
         do j = i+1,size(positions,2)
             call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential &
-                , pressure_virial)
+                , pressure_virial, pair_corr)
         end do
     end do
+    !$omp end parallel do
 
 end subroutine get_forces_allVSall
 
 subroutine get_force_contribution(particle1_position, particle2_position, particle1_forces, particle2_forces, E_potential &
-    , pressure_virial)
+    , pressure_virial, pair_corr)
     real(pr), dimension(3), intent(in)      :: particle1_position, particle2_position
     real(pr), dimension(3), intent(out)     :: particle1_forces, particle2_forces
     real(pr), intent(out)                   :: E_potential, pressure_virial
-    real(pr), dimension(3)                  :: particle_separation
-    real(pr)                                :: particle_distance_squared, force_contribution(3)
+    real(pr), intent(inout)                 :: pair_corr(:)
+    real(pr), dimension(3)                  :: particle_separation, force_contribution
+    real(pr)                                :: particle_distance_squared
 
     particle_separation = particle1_position - particle2_position ! Separation vector
     particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
@@ -234,6 +247,8 @@ subroutine get_force_contribution(particle1_position, particle2_position, partic
         particle1_forces = particle1_forces + force_contribution
         particle2_forces = particle2_forces - force_contribution
     endif
+
+    if (do_pair_correlation) call update_pair_correlation(particle_distance_squared, pair_corr)
 
 end subroutine get_force_contribution
 
@@ -275,6 +290,33 @@ subroutine update_velocities_velVer(velocities, forces, previous_forces)
 
 end subroutine update_velocities_velVer
 
+subroutine update_pair_correlation(particle_distance_squared, pair_corr)
+    real(pr), intent(in)        :: particle_distance_squared
+    real(pr), intent(inout)     :: pair_corr(:)
+    integer(int_large)          :: radius_bin
+
+    if (particle_distance_squared <= pair_corr_cutoff_sqr) then
+        radius_bin = int(sqrt(particle_distance_squared) / dr) + 1
+        pair_corr(radius_bin) = pair_corr(radius_bin) + 1._pr
+    end if
+
+end subroutine update_pair_correlation
+
+subroutine normalize_pair_correlation(pair_corr, MD_steps)
+    real(pr), intent(inout)     :: pair_corr(:)
+    integer                     :: i, MD_steps
+    real(pr)                    :: r_lower, r_upper, shell_vol, ideal_pair_corr
+
+    do i = 1, pair_corr_bins
+        r_lower = real(i-1,pr) * dr
+        r_upper = r_lower + dr
+        shell_vol = (4.0_pr*pi / 3.0_pr) * (r_upper**3 - r_lower**3)
+        ideal_pair_corr = density * shell_vol * num_atoms
+        pair_corr(i) = pair_corr(i) / ideal_pair_corr / MD_steps
+    end do
+
+end subroutine normalize_pair_correlation
+
 subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
     real(pr), intent(in)   :: velocities(:,:)
     real(pr), intent(out)  :: E_kinetic, Pressure, Temperature
@@ -284,6 +326,7 @@ subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
     Pressure = density*Temperature + Pressure*Pressure_factor
 
 end subroutine get_observables
+
 
 !##################################################################################################
 !     Old/Unused

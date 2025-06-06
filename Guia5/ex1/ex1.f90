@@ -28,12 +28,13 @@ program ex1
     use writing2files
     implicit none
 
-    real(pr), dimension(:), allocatable     :: Pressures, Temperatures
+    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr
     real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
 !    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
     integer(int_huge)                       :: i, j
-    integer(int_medium)                     :: unit_positions, unit_observables, unit_info
+    integer(int_medium)                     :: unit_positions, unit_observables
+    logical                                 :: do_linkCell
 
     abstract interface
         subroutine init_pos(positions)
@@ -41,11 +42,12 @@ program ex1
             implicit none
             real(pr), allocatable, intent(out) :: positions(:,:)
         end subroutine init_pos
-        subroutine force_sub(positions, forces, E_potential, pressure_virial)
+        subroutine force_sub(positions, forces, E_potential, pressure_virial, pair_corr)
         use precision
             real(pr), intent(in)    :: positions(:,:)
             real(pr), intent(out)   :: forces(:,:)
             real(pr), intent(out)   :: E_potential, pressure_virial
+            real(pr), intent(inout) :: pair_corr(:)
         end subroutine
     end interface
 
@@ -106,10 +108,23 @@ program ex1
         case ("all-vs-all")
             get_forces =>  get_forces_allVSall
         case ("linked-lists")
-            get_forces =>  get_forces_linkedList
-            call create_maps(3,3,3)
-            call create_links(positions)
+            call check_linkCell(do_linkCell)
+            if (do_linkCell) then  ! Should be parsed from input
+                get_forces =>  get_forces_linkedList
+                call create_maps()
+                call create_links(positions)
+            else
+                print'(a,3I3,a,3I3,a)', "Number of linked cells in each directions = (", dim_linkCell,") > L/int(L/rcut) = (" &
+                    ,int(periodicity/int(periodicity/radius_cutoff)),")   --->   Using 'all-vs-all' integrator instead"
+                summation = "all-vs-all"
+                get_forces =>  get_forces_allVSall
+            end if
     end select
+
+    if (do_pair_correlation) then
+        allocate(pair_corr(pair_corr_bins))
+        pair_corr = 0._pr
+    end if
 
 !##################################################################################################
 !      Start of the calculations
@@ -119,7 +134,7 @@ program ex1
     CPU_t_start = omp_get_wtime()
 
     if (integrator == 'velocity-Verlet') then
-        call get_forces(positions, forces,  Energies(1,1), pressures(1))
+        call get_forces(positions, forces,  Energies(1,1), pressures(1), pair_corr)
 
         open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
         open(newunit=unit_observables, file="datos/observables.out", status="replace")
@@ -130,7 +145,7 @@ program ex1
                 do j = 1, rescale_steps
                     call update_positions_velVer(positions, velocities, forces)
                     previous_forces = forces
-                    call get_forces(positions, forces, Energies(1,1), pressures(1))
+                    call get_forces(positions, forces, Energies(1,1), pressures(1), pair_corr)
                     call update_velocities_velVer(velocities, forces, previous_forces)
                     if (save_transitory) call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
                 end do
@@ -142,14 +157,19 @@ program ex1
             do i = 1 , MD_steps
                 call update_positions_velVer(positions, velocities, forces)
                 previous_forces = forces
-                call get_forces(positions, forces, Energies(1,i), pressures(i))
+                call get_forces(positions, forces, Energies(1,i), pressures(i), pair_corr)
                 call update_velocities_velVer(velocities, forces, previous_forces)
                 call get_observables(velocities, Energies(2,i), pressures(i), temperatures(i))
                 call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
-                if (save_observables) write(unit_observables, format_style) energies(:,i), pressures(i), temperatures(i)
+                if (save_observables) write(unit_observables, format_style0) energies(:,i), pressures(i), temperatures(i)
             end do
         close(unit_positions)
         close(unit_observables)
+    end if
+
+    if (do_pair_correlation) then
+        call normalize_pair_correlation(pair_corr, MD_steps)
+        call write_pair_corr(pair_corr)
     end if
 
     CPU_t_end = omp_get_wtime()
