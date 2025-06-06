@@ -24,11 +24,12 @@ program ex1
     use mzranmod
     use parsing
     use linkedLists
+    use omp_lib
     implicit none
 
     real(pr), dimension(:), allocatable     :: Pressures, Temperatures
     real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
-!    real(pr)                               :: CPU_t_start, CPU_t_end, CPU_elapsed_time
+    real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
 !    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
     integer(int_huge)                       :: i, j
     integer(int_medium)                     :: unit_positions, unit_observables, unit_info
@@ -48,7 +49,7 @@ program ex1
     end interface
 
     procedure(init_pos), pointer    :: initialize_positions => null()
-    procedure(force_sub), pointer        :: get_forces => null()
+    procedure(force_sub), pointer   :: get_forces => null()
 
 !###################################################################################################
 !   Set default values and parse input file
@@ -80,7 +81,6 @@ program ex1
             initialize_positions =>  initialize_positions_FCC
             if (density>0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
     end select
-    print*, "Structure selected: ", structure
 
     select case (type)
         case ("lannard_jones")
@@ -115,8 +115,9 @@ program ex1
 !##################################################################################################
 
 
+    CPU_t_start = omp_get_wtime()
+
     if (integrator == 'velocity-Verlet') then
-        print*,"-------------------- Calculating with ",integrator," --------------------"
         call get_forces(positions, forces,  Energies(1,1), pressures(1))
 
         open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
@@ -137,7 +138,7 @@ program ex1
 
             transitory = .False.
 
-            do i = transitory_steps + 1 , MD_steps
+            do i = 1 , MD_steps
                 call update_positions_velVer(positions, velocities, forces)
                 previous_forces = forces
                 call get_forces(positions, forces, Energies(1,i), pressures(i))
@@ -150,8 +151,18 @@ program ex1
         close(unit_observables)
     end if
 
+    CPU_t_end = omp_get_wtime()
+    CPU_elapsed_time = CPU_t_end - CPU_t_start
+
     open(newunit=unit_info, file="datos/INFO.out", status="replace")
-        write(unit_info,*) 
+        write(unit_info,'(a20,13x,I4)')     "Number of atoms:       ", num_atoms
+        write(unit_info,'(a20,14x,a)')      "Initial structure:     ", structure
+        write(unit_info,'(a20,4x,a)')       "Potential:             ", type
+        write(unit_info,'(a20,2x,a)')       "Integrator:            ", integrator
+        write(unit_info,'(a20,11x,I6)')     "Transitory steps:      ", transitory_steps
+        write(unit_info,'(a20,11x,I6)')     "Run steps:             ", MD_steps
+        write(unit_info,'(a20,6x,E11.5)')   "Simulated time:        ", real(MD_steps,pr)*dt*conversion_factors(2)
+        write(unit_info,'(a20,5x,F11.5, a)')"Elapsed time:          ", CPU_elapsed_time,"s"
     close(unit_info)
 
 end program ex1
