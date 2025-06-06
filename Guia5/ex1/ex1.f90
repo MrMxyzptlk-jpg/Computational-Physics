@@ -25,6 +25,7 @@ program ex1
     use parsing
     use linkedLists
     use omp_lib
+    use writing2files
     implicit none
 
     real(pr), dimension(:), allocatable     :: Pressures, Temperatures
@@ -154,15 +155,6 @@ program ex1
     CPU_t_end = omp_get_wtime()
     CPU_elapsed_time = CPU_t_end - CPU_t_start
 
-    open(newunit=unit_info, file="datos/INFO.out", status="replace")
-        write(unit_info,'(a20,13x,I4)')     "Number of atoms:       ", num_atoms
-        write(unit_info,'(a20,14x,a)')      "Initial structure:     ", structure
-        write(unit_info,'(a20,4x,a)')       "Potential:             ", type
-        write(unit_info,'(a20,2x,a)')       "Integrator:            ", integrator
-        write(unit_info,'(a20,11x,I6)')     "Transitory steps:      ", transitory_steps
-        write(unit_info,'(a20,11x,I6)')     "Run steps:             ", MD_steps
-        write(unit_info,'(a20,6x,E11.5)')   "Simulated time:        ", real(MD_steps,pr)*dt*conversion_factors(2)
-        write(unit_info,'(a20,5x,F11.5, a)')"Elapsed time:          ", CPU_elapsed_time,"s"
-    close(unit_info)
+    call write_output(CPU_elapsed_time)
 
 end program ex1

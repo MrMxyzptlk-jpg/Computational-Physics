@@ -6,9 +6,7 @@ use funciones
 use mzranmod
 implicit none
 
-    private     size_x, size_y, size_z, symbol, radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
-    character(len=11)       :: size_x, size_y, size_z
-    character(len=3)        :: symbol
+    private     radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
     real(pr)                :: radius_cutoff_squared, potential_cutoff, Temp_factor, Pressure_factor
 
     integer(int_medium)     :: cell_dim(3)
@@ -58,18 +56,6 @@ subroutine parameters_initialization()
 
 end subroutine parameters_initialization
 
-subroutine initialize_XYZ_data()
-
-    write (size_x,'(E11.5)') periodicity(1)
-    write (size_y,'(E11.5)') periodicity(2)
-    write (size_z,'(E11.5)') periodicity(3)
-
-    size_x = adjustl(trim(size_x))
-    size_y = adjustl(trim(size_y))
-    size_z = adjustl(trim(size_z))
-
-end subroutine initialize_XYZ_data
-
 subroutine create_file_name(prefix, num, suffix, filename)
     character(len=8)                :: fmt  ! Format descriptor
     character(len=12)               :: x1   ! Temporary string for formatted real
@@ -87,35 +73,6 @@ subroutine create_file_name(prefix, num, suffix, filename)
     filename = prefix // trim(x1) // suffix
 
 end subroutine create_file_name
-
-subroutine write_XYZfile(positions, velocities, time, unitnum)
-    real (pr), intent (in)  :: positions(:,:), velocities(:,:), time
-    integer (int_medium)    :: unitnum
-    integer                 :: i
-    character(len=11)       :: time_tmp
-
-    symbol = 'X'      ! Change to real element if needed
-
-    ! Write time in string format
-    write(time_tmp,'(E11.5)') time*conversion_factors(2)
-    time_tmp = adjustl(trim(time_tmp))
-
-    ! Line 1: number of particles
-    write(unitnum, '(i6)') num_atoms
-
-    ! Line 2: extended XYZ header with box info and time
-    write(unitnum,'(A)') 'Lattice="' // &
-         size_x // ' 0.0  0.0  0.0 ' // &
-         size_y // ' 0.0  0.0  0.0 ' // &
-         size_z // '" Properties=species:S:1:pos:R:3:vel:R:3 Time=' // &
-         time_tmp
-
-
-    do i = 1, num_atoms
-        write(unitnum, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1), velocities(:,i)*conversion_factors(5)
-    end do
-
-end subroutine write_XYZfile
 
 subroutine initialize_positions_random(positions) ! Not debugged
     real(pr), allocatable, intent(out) :: positions(:,:)
@@ -360,17 +317,6 @@ subroutine get_forces_old(positions, forces, E_potential, pressure_virial)
 
 end subroutine get_forces_old
 
-subroutine write_to_file(Y, time, unitnum)
-    real (pr), intent (in)  :: Y(:,:)
-    real (pr), intent (in)  :: time
-    integer (int_medium)    :: unitnum
-    integer                 :: i
-
-    do i = 1, size(Y,2)
-        write(unitnum, fmt=format_style) time*conversion_factors(2) , Y(:,i)*conversion_factors(1)
-    end do
-
-end subroutine write_to_file
 
 
 END MODULE
