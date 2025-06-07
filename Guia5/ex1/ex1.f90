@@ -98,8 +98,8 @@ program ex1
     call initialize_XYZ_data()
 
     call initialize_positions(positions)
-    allocate(Energies(2,1:MD_steps)) ! energies = (E_potential, E_kinetic)
-    allocate(Pressures(1:MD_steps), Temperatures(1:MD_steps))
+    allocate(Energies(2,0:MD_steps)) ! energies = (E_potential, E_kinetic)
+    allocate(Pressures(0:MD_steps), Temperatures(MD_steps))
     allocate(velocities(size(positions,1),size(positions,2)))
     allocate(forces(size(positions,1),size(positions,2)))
     call initialize_velocities(velocities, initial_Temp)
@@ -124,7 +124,11 @@ program ex1
     if (do_pair_correlation) then
         allocate(pair_corr(pair_corr_bins))
         pair_corr = 0._pr
+    else
+        allocate(pair_corr(1)) ! Must be allocated to avoid issues in parallelized subroutines
+        pair_corr = 0._pr
     end if
+
 
 !##################################################################################################
 !      Start of the calculations
@@ -134,25 +138,24 @@ program ex1
     CPU_t_start = omp_get_wtime()
 
     if (integrator == 'velocity-Verlet') then
-        call get_forces(positions, forces,  Energies(1,1), pressures(1), pair_corr)
+        call get_forces(positions, forces,  Energies(1,0), pressures(0), pair_corr)
 
         open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
         open(newunit=unit_observables, file="datos/observables.out", status="replace")
             if (save_transitory) call write_XYZfile(positions, velocities, 0._pr, unit_positions)
-            if (save_observables) write(unit_observables,*) "## E_pot       |      E_kin      |      P       |       T"
-
+            if (save_observables) write(unit_observables,*) "##    E_pot    |     E_kin      |   Pressure    |   Temperature"
             do i = 1, transitory_steps/rescale_steps
                 do j = 1, rescale_steps
                     call update_positions_velVer(positions, velocities, forces)
                     previous_forces = forces
-                    call get_forces(positions, forces, Energies(1,1), pressures(1), pair_corr)
+                    call get_forces(positions, forces, Energies(1,0), pressures(0), pair_corr)
                     call update_velocities_velVer(velocities, forces, previous_forces)
                     if (save_transitory) call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
                 end do
                 call rescale_velocities(velocities, initial_Temp)
             end do
 
-            transitory = .False.
+            transitory = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory
 
             do i = 1 , MD_steps
                 call update_positions_velVer(positions, velocities, forces)

@@ -74,6 +74,7 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
     integer                 :: i, j, icell, jcell, jcell0, neighbor
 
     forces = 0._pr
+
     !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell) &
     !$omp shared(positions, forces, head, map, list, N_linkedCells) &
     !$omp schedule(dynamic) reduction(+:E_potential, pressure_virial, pair_corr)

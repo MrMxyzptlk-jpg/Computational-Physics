@@ -20,14 +20,14 @@
 /
 
 &tasks
-    save_transitory  = true
+    save_transitory  = false
     save_observables = true
-    do_pair_correlation = true
+    do_pair_correlation = false
 /
 
 &approximation
     integrator   = 'velocity-Verlet'
-    dim_linkCell = 3,3,3
+    dim_linkCell = 2,2,2
     type         = 'lennard_jones'
     sigma        = 1
     epsilon      = 1e-23        !1.60218e-19

@@ -216,16 +216,21 @@ subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial, 
     forces = 0._pr
     if (transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
-    !$omp parallel do private(j, i) &
-    !$omp shared(positions, forces) &
-    !$omp schedule(dynamic) reduction(+:E_potential, pressure_virial, pair_corr)
-    do i=1,size(positions,2)-1
-        do j = i+1,size(positions,2)
-            call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential &
-                , pressure_virial, pair_corr)
+    !$omp parallel private(j, i) &
+    !$omp shared(positions, forces, num_atoms) &
+    !$omp reduction(+:E_potential, pressure_virial, pair_corr)
+
+        !$omp do schedule(dynamic)
+        do i=1,num_atoms-1
+            do j = i+1, num_atoms
+                call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
+                    pressure_virial, pair_corr)
+            end do
         end do
-    end do
-    !$omp end parallel do
+        !$omp end do
+
+    !$omp end parallel
+
 
 end subroutine get_forces_allVSall
 
@@ -326,6 +331,22 @@ subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
     Pressure = density*Temperature + Pressure*Pressure_factor
 
 end subroutine get_observables
+
+subroutine get_stats(measurements, variance, stddev, average)
+    real(pr), intent(in)                :: measurements(:)
+    real(pr), optional, intent(out)     :: variance, stddev, average
+    real(pr)                            :: avg, sqr_avg
+
+    if (present(average) .or. present(variance) .or. present(stddev)) then
+        avg = sum(measurements)/size(measurements)
+        sqr_avg = sum(measurements*measurements)/size(measurements)
+    end if
+
+    if  (present(average))   average  = avg
+    if  (present(variance))  variance = sqr_avg - avg*avg
+    if  (present(stddev))     stddev   = sqrt(sqr_avg - avg*avg)
+
+end subroutine get_stats
 
 
 !##################################################################################################

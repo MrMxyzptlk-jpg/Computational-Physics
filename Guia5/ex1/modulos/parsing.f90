@@ -34,7 +34,7 @@ subroutine set_defaults()
         dt               = 0.005_pr
         radius_cutoff    = 2.5_pr
         pair_corr_cutoff = 4.0_pr
-        pair_corr_bins   = 100._pr
+        pair_corr_bins   = 100
         summation        = 'all-vs-all'
 
         ! Tasks

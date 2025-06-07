@@ -12,8 +12,4 @@ gfortran ./modulos/precision.f90\
          -O -Wall -fcheck=all -g -fbacktrace \
          -fopenmp -O2
 
-#./ex1.exe # Executable file
-
-#python3 relative_errors.py # Used to calculate the relative errors (may need manual modifications depending on the calculations)
-
 echo
