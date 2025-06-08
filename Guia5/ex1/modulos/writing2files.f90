@@ -104,7 +104,8 @@ subroutine write_observables(unitnum, time, energies, pressures, temperatures)
     real (pr), intent (in)              :: time, energies(2), pressures, temperatures
     integer(int_medium), intent (in)    :: unitnum
 
-    write(unitnum, format_style0) time, energies, pressures, temperatures
+    write(unitnum, format_style0) time*conversion_factors(2), energies*conversion_factors(4), pressures*conversion_factors(7) &
+        , temperatures
 
 end subroutine write_observables
 
