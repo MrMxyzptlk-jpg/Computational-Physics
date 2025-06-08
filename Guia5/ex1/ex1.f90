@@ -39,20 +39,26 @@ program ex1
     abstract interface
         subroutine init_pos(positions)
             use precision
-            implicit none
             real(pr), allocatable, intent(out) :: positions(:,:)
         end subroutine init_pos
+
         subroutine force_sub(positions, forces, E_potential, pressure_virial, pair_corr)
-        use precision
+            use precision
             real(pr), intent(in)    :: positions(:,:)
             real(pr), intent(out)   :: forces(:,:)
             real(pr), intent(out)   :: E_potential, pressure_virial
             real(pr), intent(inout) :: pair_corr(:)
-        end subroutine
+        end subroutine force_sub
+
+        subroutine thermo(velocities)
+            use precision
+            real(pr), allocatable, intent(inout)    :: velocities(:,:)
+        end subroutine thermo
     end interface
 
     procedure(init_pos), pointer    :: initialize_positions => null()
     procedure(force_sub), pointer   :: get_forces => null()
+    procedure(thermo), pointer      :: thermostat_chosen => null()
 
 !###################################################################################################
 !   Set default values and parse input file
@@ -73,7 +79,6 @@ program ex1
             initialize_positions =>  initialize_positions_BCC
             if (density>0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
         case ("random")
-            call mzran_init() ! Initialize random number generator
             initialize_positions =>  initialize_positions_random
         case default
             initialize_positions =>  initialize_positions_FCC
@@ -87,11 +92,20 @@ program ex1
             potential =>  Lennard_Jones
     end select
 
-    call parameters_initialization()
+    select case (thermostat_type)
+        case ("rescale")
+            thermostat_chosen =>  thermostat_rescale
+        case ("Berendsen")
+            thermostat_chosen =>  thermostat_Berendsen
+        case default
+            thermostat_chosen =>  thermostat_rescale
+    end select
+
+    call initialize_parameters()
     call initialize_XYZ_data()
     call initialize_positions(positions)
     if (save_transitory) then
-        transitory_minIndex = -int(transitory_steps/rescale_steps)*rescale_steps+1
+        transitory_minIndex = -int(transitory_steps/thermostat_steps)*thermostat_steps+1
         allocate(Energies(2,transitory_minIndex:MD_steps)) ! Energies = (E_potential, E_kinetic)
         allocate(Pressures(transitory_minIndex:MD_steps), Temperatures(transitory_minIndex:MD_steps))
     else
@@ -127,6 +141,8 @@ program ex1
         pair_corr = 0._pr
     end if
 
+    call initialize_rest()
+
 
 !##################################################################################################
 !      Start of the calculations
@@ -143,9 +159,9 @@ program ex1
             if (save_transitory) call write_XYZfile(positions, velocities, 0._pr, unit_positions)
             if (save_observables) write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    "//&
                 "|   Temperature"
-            do i = -transitory_steps/rescale_steps , -1, 1
-                do j = 1, rescale_steps
-                    k = i*rescale_steps + j
+            do i = -transitory_steps/thermostat_steps , -1, 1
+                do j = 1, thermostat_steps
+                    k = i*thermostat_steps + j
                     call update_positions_velVer(positions, velocities, forces)
                     previous_forces = forces
 
@@ -164,7 +180,7 @@ program ex1
                         end if
                     end if
                 end do
-                call rescale_velocities(velocities)
+                call thermostat_chosen(velocities)
             end do
 
             transitory = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory
@@ -179,6 +195,7 @@ program ex1
                 if (save_observables) then
                     call write_observables(unit_observables, real(i,pr)*dt, energies(:,i), pressures(i), temperatures(i))
                 end if
+                if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
             end do
         close(unit_positions)
         close(unit_observables)

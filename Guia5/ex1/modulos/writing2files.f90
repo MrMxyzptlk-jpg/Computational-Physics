@@ -78,7 +78,7 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
             write(unit_info,format_observables)     "Pressure:           ", " Average = ", pressure_avg*conversion_factors(7)  &
                 , " Standard deviation = ", pressure_stddev*conversion_factors(7)
             call get_stats(temperatures, average = temperature_avg, stddev = temperature_stddev)
-            write(unit_info,format_observables)     "Temperature/Kb:     ", " Average = ", temperature_avg  &
+            write(unit_info,format_observables)     "Temperature [epsilon/Kb]:     ", " Average = ", temperature_avg  &
                 , " Standard deviation = ", temperature_stddev
         end if
     close(unit_info)

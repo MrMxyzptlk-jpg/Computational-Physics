@@ -13,7 +13,7 @@ MODULE subrutinas
     integer(int_medium)     :: cell_dim(3)
     integer(int_large)      :: num_atoms, pair_corr_bins
     real(pr)                :: conversion_factors(7), periodicity(3)
-    real(pr)                :: lattice_constant, dt, dtdt
+    real(pr)                :: lattice_constant, dt, dtdt, Berendsen_time
     real(pr)                :: sigma, epsilon
     real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp_Adim, density, molar_mass
     logical                 :: transitory, save_transitory, do_pair_correlation
@@ -32,7 +32,7 @@ MODULE subrutinas
 
 contains
 
-subroutine parameters_initialization()
+subroutine initialize_parameters()
 
     ! Define conversion factors to adimensionalize the variables
     conversion_factors(1) = sigma                                               ! Distance
@@ -61,7 +61,16 @@ subroutine parameters_initialization()
         dr = pair_corr_cutoff/real(pair_corr_bins,pr)
     end if
 
-end subroutine parameters_initialization
+    call mzran_init() ! Initialize random number generator
+
+end subroutine initialize_parameters
+
+subroutine initialize_rest()
+
+    Temp_factor = 2.0_pr / (3.0_pr * real(num_atoms,pr))
+    Pressure_factor = 1._pr / (3._pr * product(cell_dim)*lattice_constant*lattice_constant*lattice_constant)
+
+end subroutine initialize_rest
 
 subroutine create_file_name(prefix, num, suffix, filename)
     character(len=8)                :: fmt  ! Format descriptor
@@ -177,20 +186,12 @@ subroutine initialize_positions_BCC(positions)
 end subroutine initialize_positions_BCC
 
 subroutine initialize_velocities(velocities)
-    real(pr), allocatable, intent(out)          :: velocities(:,:)
-    integer                                     :: i
-
-    velocities = reshape( [ (rmzran() - 0.5_pr, i = 1, size(velocities)) ], shape(velocities) )
-
-    call rescale_velocities(velocities)
-
-end subroutine initialize_velocities
-
-subroutine rescale_velocities(velocities)
-    real(pr), allocatable, intent(inout)    :: velocities(:,:)
+    real(pr), allocatable, intent(out)      :: velocities(:,:)
     real(pr)                                :: velocity_average(size(velocities,1))
     real(pr)                                :: instant_Temp, scaling_factor
     integer                                 :: i
+
+    velocities = reshape( [ (rmzran() - 0.5_pr, i = 1, size(velocities)) ], shape(velocities) )
 
     velocity_average = sum(velocities,2)/real(num_atoms,pr)
     instant_Temp = sum(velocities*velocities)/(3.0_pr * real(num_atoms,pr))
@@ -200,7 +201,30 @@ subroutine rescale_velocities(velocities)
         velocities(i,:) = (velocities(i,:) - velocity_average(i))*scaling_factor
     end do
 
-end subroutine rescale_velocities
+end subroutine initialize_velocities
+
+subroutine thermostat_rescale(velocities)
+    real(pr), allocatable, intent(inout)    :: velocities(:,:)
+    real(pr)                                :: instant_Temp, scaling_factor
+
+    instant_Temp = sum(velocities*velocities)/(3.0_pr * real(num_atoms,pr))
+    scaling_factor = sqrt( initial_Temp_Adim / instant_Temp )
+
+    velocities = velocities*scaling_factor
+
+end subroutine thermostat_rescale
+
+subroutine thermostat_Berendsen(velocities)
+    real(pr), allocatable, intent(inout)    :: velocities(:,:)
+    real(pr)                                :: instant_Temp, scaling_factor
+
+    instant_Temp = sum(velocities*velocities)/(3.0_pr * real(num_atoms,pr))
+
+    scaling_factor = sqrt( 1._pr + dt/Berendsen_time*(initial_Temp_Adim / instant_Temp -1._pr))
+
+    velocities = velocities*scaling_factor
+
+end subroutine thermostat_Berendsen
 
 subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial, pair_corr)
     real(pr), intent(in)    :: positions(:,:)
@@ -324,9 +348,6 @@ subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
     real(pr), intent(in)    :: velocities(:,:)
     real(pr), intent(inout) :: Pressure  ! Comes in as Pressure_virial
     real(pr), intent(out)   :: E_kinetic, Temperature
-
-    Temp_factor = 2.0_pr / (3.0_pr * real(num_atoms,pr))
-    Pressure_factor = 1._pr / (3._pr * product(cell_dim)*lattice_constant*lattice_constant*lattice_constant)
 
     E_kinetic = 0.5_pr*sum(velocities*velocities)
     Temperature = Temp_factor*E_kinetic

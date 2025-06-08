@@ -4,22 +4,25 @@ MODULE parsing
     implicit none
 
     character (len=15)                          :: integrator, type
-    character (len=6)                           :: structure
-    character (len=12)                          :: summation
+    character (len=6)                           :: structure, ensemble
+    character (len=12)                          :: summation, thermostat_type
     logical                                     :: save_observables
-    integer(kind=int_large)                     :: MD_steps, transitory_steps, rescale_steps, dim_linkCell(3)
+    integer(kind=int_large)                     :: MD_steps, transitory_steps, thermostat_steps, dim_linkCell(3)
 
     ! Namelist blocks
-    namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, molar_mass, cell_dim
-    namelist /calculation/ MD_steps, transitory_steps, rescale_steps, dt, radius_cutoff, pair_corr_cutoff, pair_corr_bins, summation
+    namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, molar_mass, cell_dim, ensemble
+    namelist /calculation/ MD_steps, transitory_steps, thermostat_steps, dt, radius_cutoff, pair_corr_cutoff, pair_corr_bins &
+        , summation
     namelist /tasks/ save_transitory, save_observables, do_pair_correlation
     namelist /approximation/ integrator, dim_linkCell, type, sigma, epsilon
+    namelist /thermostat/ thermostat_type, Berendsen_time
 
     CONTAINS
 
 subroutine set_defaults()
         ! Physical problems' characteristics
-        structure           = "random"
+        ensemble            = "NVE"
+        structure           = "FCC"
         lattice_constant    = 1._pr
         cell_dim            = (/1_int_small,1_int_small,1_int_small/)
         num_atoms           = 0
@@ -30,7 +33,7 @@ subroutine set_defaults()
         !Calculation settings
         MD_steps         = 1000
         transitory_steps = 1000
-        rescale_steps    = 50
+        thermostat_steps = 50
         dt               = 0.005_pr
         radius_cutoff    = 2.5_pr
         pair_corr_cutoff = 4.0_pr
@@ -48,6 +51,10 @@ subroutine set_defaults()
         sigma   = 1._pr
         epsilon = 1._pr
 
+        ! Thermostat parameters
+        thermostat_type      = 'rescale'
+        Berendsen_time  = 0.01_pr
+
 end subroutine set_defaults
 
 subroutine parse_input()
@@ -58,6 +65,9 @@ subroutine parse_input()
         read(unit_input, nml=calculation)
         read(unit_input, nml=tasks)
         read(unit_input, nml=approximation)
+        if(ensemble=="NVT") then
+            read(unit_input, nml=thermostat)
+        end if
     close(unit_input)
 
 end subroutine parse_input
