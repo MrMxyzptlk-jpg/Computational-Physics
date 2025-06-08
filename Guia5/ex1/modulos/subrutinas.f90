@@ -371,6 +371,22 @@ subroutine get_stats(measurements, variance, stddev, average)
 
 end subroutine get_stats
 
+subroutine update_structureFactor(positions, structure_factor, reciprocal_vec)
+    real(pr), intent(in)        :: positions(:,:), reciprocal_vec(3)
+    real(pr), intent(inout)     :: structure_factor(:)
+    complex(pr)                 :: summation
+    integer                     :: i
+
+    summation = (0._pr,0._pr)
+
+    do i = 1, 3
+        summation = summation + sum(exp(CMPLX(0._pr,reciprocal_vec(i)*positions(i,:), pr)))
+    end do
+
+    structure_factor = abs(summation)*abs(summation)/num_atoms
+
+end subroutine update_structureFactor
+
 
 !##################################################################################################
 !     Old/Unused
