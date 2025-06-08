@@ -6,11 +6,11 @@ MODULE parsing
     character (len=15)                          :: integrator, type
     character (len=6)                           :: structure
     character (len=12)                          :: summation
-    logical                                     :: save_transitory, save_observables
+    logical                                     :: save_observables
     integer(kind=int_large)                     :: MD_steps, transitory_steps, rescale_steps, dim_linkCell(3)
 
     ! Namelist blocks
-    namelist /physical/ structure, lattice_constant, density, initial_Temp, num_atoms, molar_mass, cell_dim
+    namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, molar_mass, cell_dim
     namelist /calculation/ MD_steps, transitory_steps, rescale_steps, dt, radius_cutoff, pair_corr_cutoff, pair_corr_bins, summation
     namelist /tasks/ save_transitory, save_observables, do_pair_correlation
     namelist /approximation/ integrator, dim_linkCell, type, sigma, epsilon
@@ -23,7 +23,7 @@ subroutine set_defaults()
         lattice_constant    = 1._pr
         cell_dim            = (/1_int_small,1_int_small,1_int_small/)
         num_atoms           = 0
-        initial_Temp        = 1.1_pr
+        initial_Temp_Adim        = 1.1_pr
         density             = 0._pr
         molar_mass          = 1._pr
 

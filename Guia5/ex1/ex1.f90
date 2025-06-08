@@ -32,7 +32,7 @@ program ex1
     real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
 !    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
-    integer(int_huge)                       :: i, j
+    integer(int_huge)                       :: i, j, k, transitory_minIndex
     integer(int_medium)                     :: unit_positions, unit_observables
     logical                                 :: do_linkCell
 
@@ -65,11 +65,6 @@ program ex1
 !      Necessary definitions, pointers, initializations and conversion factors
 !##################################################################################################
 
-    ! Set files' name defaults
-    !prefix = "./datos/"
-    !suffix = ".out"
-
-
     select case (structure)
         case ("FCC")
             initialize_positions =>  initialize_positions_FCC
@@ -92,17 +87,20 @@ program ex1
             potential =>  Lennard_Jones
     end select
 
-    !N_iterations = MD_steps - transitory_steps
-
     call parameters_initialization()
     call initialize_XYZ_data()
-
     call initialize_positions(positions)
-    allocate(Energies(2,0:MD_steps)) ! Energies = (E_potential, E_kinetic)
-    allocate(Pressures(0:MD_steps), Temperatures(MD_steps))
+    if (save_transitory) then
+        transitory_minIndex = -int(transitory_steps/rescale_steps)*rescale_steps+1
+        allocate(Energies(2,transitory_minIndex:MD_steps)) ! Energies = (E_potential, E_kinetic)
+        allocate(Pressures(transitory_minIndex:MD_steps), Temperatures(transitory_minIndex:MD_steps))
+    else
+        allocate(Energies(2,0:MD_steps)) ! Energies = (E_potential, E_kinetic)
+        allocate(Pressures(0:MD_steps), Temperatures(1:MD_steps))
+    end if
     allocate(velocities(size(positions,1),size(positions,2)))
     allocate(forces(size(positions,1),size(positions,2)))
-    call initialize_velocities(velocities, initial_Temp)
+    call initialize_velocities(velocities)
 
     select case (summation)
         case ("all-vs-all")
@@ -143,16 +141,30 @@ program ex1
         open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
         open(newunit=unit_observables, file="datos/observables.out", status="replace")
             if (save_transitory) call write_XYZfile(positions, velocities, 0._pr, unit_positions)
-            if (save_observables) write(unit_observables,*) "##    E_pot    |     E_kin      |   Pressure    |   Temperature"
-            do i = 1, transitory_steps/rescale_steps
+            if (save_observables) write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    "//&
+                "|   Temperature"
+            do i = -transitory_steps/rescale_steps , -1, 1
                 do j = 1, rescale_steps
+                    k = i*rescale_steps + j
                     call update_positions_velVer(positions, velocities, forces)
                     previous_forces = forces
-                    call get_forces(positions, forces, Energies(1,0), pressures(0), pair_corr)
+
+                    if (save_transitory) then
+                        call get_forces(positions, forces, Energies(1,k), pressures(k), pair_corr)
+                    else
+                        call get_forces(positions, forces, Energies(1,0), pressures(0), pair_corr)
+                    end if
+
                     call update_velocities_velVer(velocities, forces, previous_forces)
-                    if (save_transitory) call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
+                    if (save_transitory) then
+                        call get_observables(velocities, Energies(2,k), pressures(k), temperatures(k))
+                        call write_XYZfile(positions, velocities, real(k,pr)*dt, unit_positions)
+                        if (save_observables) then
+                            call write_observables(unit_observables, real(k,pr)*dt, energies(:,k), pressures(k), temperatures(k))
+                        end if
+                    end if
                 end do
-                call rescale_velocities(velocities, initial_Temp)
+                call rescale_velocities(velocities)
             end do
 
             transitory = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory
@@ -164,7 +176,9 @@ program ex1
                 call update_velocities_velVer(velocities, forces, previous_forces)
                 call get_observables(velocities, Energies(2,i), pressures(i), temperatures(i))
                 call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
-                if (save_observables) write(unit_observables, format_style0) energies(:,i), pressures(i), temperatures(i)
+                if (save_observables) then
+                    call write_observables(unit_observables, real(i,pr)*dt, energies(:,i), pressures(i), temperatures(i))
+                end if
             end do
         close(unit_positions)
         close(unit_observables)

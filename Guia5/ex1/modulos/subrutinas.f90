@@ -15,8 +15,8 @@ MODULE subrutinas
     real(pr)                :: conversion_factors(7), periodicity(3)
     real(pr)                :: lattice_constant, dt, dtdt
     real(pr)                :: sigma, epsilon
-    real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp, density, molar_mass
-    logical                 :: transitory, do_pair_correlation
+    real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp_Adim, density, molar_mass
+    logical                 :: transitory, save_transitory, do_pair_correlation
     procedure(pot), pointer :: potential => null()
 
     abstract interface ! Intended to allow for the implementation of a different potential later on
@@ -44,7 +44,7 @@ subroutine parameters_initialization()
     conversion_factors(7) = conversion_factors(6) / (conversion_factors(2)*conversion_factors(1)*conversion_factors(1))   ! Pressure
 
     lattice_constant = lattice_constant/conversion_factors(1)
-    initial_Temp = initial_Temp/conversion_factors(3)
+    initial_Temp_Adim = initial_Temp_Adim   ! Already non-dimensional!!
     periodicity = cell_dim*lattice_constant
     radius_cutoff = radius_cutoff/conversion_factors(1)
 
@@ -55,8 +55,6 @@ subroutine parameters_initialization()
     potential_cutoff = Lennard_Jones_potencial(radius_cutoff_squared)
 
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
-    Temp_factor = 2.0_pr / (3.0_pr * num_atoms)
-    Pressure_factor = 1._pr / (3._pr * product(cell_dim)*lattice_constant*lattice_constant*lattice_constant)
 
     if(do_pair_correlation) then
         pair_corr_cutoff_sqr = pair_corr_cutoff*pair_corr_cutoff
@@ -178,32 +176,28 @@ subroutine initialize_positions_BCC(positions)
 
 end subroutine initialize_positions_BCC
 
-subroutine initialize_velocities(velocities, initial_Temp)
+subroutine initialize_velocities(velocities)
     real(pr), allocatable, intent(out)          :: velocities(:,:)
-    real(pr), intent(in)                        :: initial_Temp
     integer                                     :: i
 
     velocities = reshape( [ (rmzran() - 0.5_pr, i = 1, size(velocities)) ], shape(velocities) )
 
-    call rescale_velocities(velocities, initial_Temp)
+    call rescale_velocities(velocities)
 
 end subroutine initialize_velocities
 
-subroutine rescale_velocities(velocities, initial_Temp)
-    real(pr), allocatable, intent(inout)          :: velocities(:,:)
-    real(pr), intent(in)                        :: initial_Temp
-    real(pr), dimension(size(velocities,1))     :: velocity_average, velocity_variance, scaling_factor
-    integer                                     :: i
+subroutine rescale_velocities(velocities)
+    real(pr), allocatable, intent(inout)    :: velocities(:,:)
+    real(pr)                                :: velocity_average(size(velocities,1))
+    real(pr)                                :: instant_Temp, scaling_factor
+    integer                                 :: i
 
-    velocity_average = sum(velocities,2)
-    velocity_variance = sum(velocities*velocities,2)
+    velocity_average = sum(velocities,2)/real(num_atoms,pr)
+    instant_Temp = sum(velocities*velocities)/(3.0_pr * real(num_atoms,pr))
+    scaling_factor = sqrt( initial_Temp_Adim / instant_Temp )
 
-    velocity_average = velocity_average/real(size(velocities,2))
-    velocity_variance = velocity_variance/real(size(velocities,2))
-    scaling_factor = sqrt( 3._pr*initial_Temp/velocity_variance )
-
-    do i = 1, size(velocities,1)
-        velocities(i,:) = (velocities(i,:)-velocity_average(i))*scaling_factor(i)
+    do i = 1, 3
+        velocities(i,:) = (velocities(i,:) - velocity_average(i))*scaling_factor
     end do
 
 end subroutine rescale_velocities
@@ -216,11 +210,11 @@ subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial, 
     integer(int_huge)       :: i, j
 
     forces = 0._pr
-    if (.not. transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+    if (.not. transitory .or. save_transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     !$omp parallel private(j, i) &
-    !$omp shared(positions, forces, num_atoms) &
-    !$omp reduction(+:E_potential, pressure_virial, pair_corr)
+    !$omp shared(positions, num_atoms) &
+    !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
 
         !$omp do schedule(dynamic)
         do i=1,num_atoms-1
@@ -272,7 +266,7 @@ subroutine Lennard_Jones(particle_distance_squared, particle_separation,  force_
     force_magnitude = 48._pr*r2inv*r6inv*(r6inv-0.5_pr)
     force_contribution = force_magnitude*particle_separation
 
-    if (.not. transitory) then
+    if (.not. transitory .or. save_transitory) then
         E_potential = E_potential + 4._pr*r6inv*(r6inv-1._pr) - potential_cutoff
         pressure_virial = pressure_virial + particle_distance_squared*force_magnitude
     end if
@@ -320,15 +314,19 @@ subroutine normalize_pair_correlation(pair_corr, MD_steps)
         r_lower = real(i-1,pr) * dr
         r_upper = r_lower + dr
         shell_vol = (4.0_pr*pi / 3.0_pr) * (r_upper**3 - r_lower**3)
-        ideal_pair_corr = density * shell_vol * num_atoms
+        ideal_pair_corr = density * shell_vol * real(num_atoms,pr)
         pair_corr(i) = pair_corr(i) / ideal_pair_corr / MD_steps
     end do
 
 end subroutine normalize_pair_correlation
 
 subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
-    real(pr), intent(in)   :: velocities(:,:)
-    real(pr), intent(out)  :: E_kinetic, Pressure, Temperature
+    real(pr), intent(in)    :: velocities(:,:)
+    real(pr), intent(inout) :: Pressure  ! Comes in as Pressure_virial
+    real(pr), intent(out)   :: E_kinetic, Temperature
+
+    Temp_factor = 2.0_pr / (3.0_pr * real(num_atoms,pr))
+    Pressure_factor = 1._pr / (3._pr * product(cell_dim)*lattice_constant*lattice_constant*lattice_constant)
 
     E_kinetic = 0.5_pr*sum(velocities*velocities)
     Temperature = Temp_factor*E_kinetic
@@ -365,7 +363,7 @@ subroutine get_forces_old(positions, forces, E_potential, pressure_virial)
     integer(int_huge)                       :: i, j
 
     forces = 0._pr
-    if (.not. transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+    if (.not. transitory .or. save_transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     do i=1,size(positions,2)-1
         particle1_position = positions(:,i)

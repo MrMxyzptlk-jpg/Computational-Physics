@@ -23,10 +23,10 @@ subroutine initialize_XYZ_data()
 end subroutine initialize_XYZ_data
 
 subroutine write_XYZfile(positions, velocities, time, unitnum)
-    real (pr), intent (in)  :: positions(:,:), velocities(:,:), time
-    integer (int_medium)    :: unitnum
-    integer                 :: i
-    character(len=11)       :: time_tmp
+    real (pr), intent (in)              :: positions(:,:), velocities(:,:), time
+    integer(int_medium), intent (in)    :: unitnum
+    integer                             :: i
+    character(len=11)                   :: time_tmp
 
     symbol = 'X'      ! Change to real element if needed
 
@@ -78,8 +78,8 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
             write(unit_info,format_observables)     "Pressure:           ", " Average = ", pressure_avg*conversion_factors(7)  &
                 , " Standard deviation = ", pressure_stddev*conversion_factors(7)
             call get_stats(temperatures, average = temperature_avg, stddev = temperature_stddev)
-            write(unit_info,format_observables)     "Temperature:        ", " Average = ", temperature_avg*conversion_factors(4)  &
-                , " Standard deviation = ", temperature_stddev*conversion_factors(4)
+            write(unit_info,format_observables)     "Temperature/Kb:     ", " Average = ", temperature_avg  &
+                , " Standard deviation = ", temperature_stddev
         end if
     close(unit_info)
 
@@ -99,5 +99,13 @@ subroutine write_pair_corr(pair_corr)
     close(unitnum)
 
 end subroutine write_pair_corr
+
+subroutine write_observables(unitnum, time, energies, pressures, temperatures)
+    real (pr), intent (in)              :: time, energies(2), pressures, temperatures
+    integer(int_medium), intent (in)    :: unitnum
+
+    write(unitnum, format_style0) time, energies, pressures, temperatures
+
+end subroutine write_observables
 
 END MODULE writing2files

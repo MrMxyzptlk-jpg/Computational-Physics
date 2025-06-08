@@ -1,9 +1,9 @@
 &physical
     structure           = 'FCC'
-    lattice_constant    = 10.0     ! This parameter is ignored if density is specified
+    lattice_constant    = 10.0      ! This parameter is ignored if density is specified
     cell_dim            = 4,4,4
     num_atoms           = 256
-    initial_Temp        = 1.1
+    initial_Temp_Adim   = 1.1       ! In units of epsilon/Kb
     density             = 0.8
     molar_mass          = 8
 /
@@ -12,7 +12,7 @@
     dt               = 0.005
     MD_steps         = 1000
     transitory_steps = 1000
-    rescale_steps    = 50
+    rescale_steps    = 50           ! Rescales every 50 transitory steps
     radius_cutoff    = 2.5
     pair_corr_cutoff = 4.0
     pair_corr_bins   = 100
@@ -20,7 +20,7 @@
 /
 
 &tasks
-    save_transitory  = false
+    save_transitory  = true
     save_observables = true
     do_pair_correlation = false
 /
