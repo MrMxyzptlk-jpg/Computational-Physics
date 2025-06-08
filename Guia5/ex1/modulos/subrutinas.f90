@@ -12,7 +12,7 @@ MODULE subrutinas
 
     integer(int_medium)     :: cell_dim(3)
     integer(int_large)      :: num_atoms, pair_corr_bins
-    real(pr)                :: conversion_factors(5), periodicity(3)
+    real(pr)                :: conversion_factors(7), periodicity(3)
     real(pr)                :: lattice_constant, dt, dtdt
     real(pr)                :: sigma, epsilon
     real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp, density, molar_mass
@@ -40,6 +40,8 @@ subroutine parameters_initialization()
     conversion_factors(3) = epsilon/Boltzmann_constant                          ! Temperature
     conversion_factors(4) = epsilon                                             ! Energy
     conversion_factors(5) = sqrt((epsilon*Avogadro_number)/molar_mass)          ! Velocity
+    conversion_factors(6) = (molar_mass/Avogadro_number)                        ! Mass
+    conversion_factors(7) = conversion_factors(6) / (conversion_factors(2)*conversion_factors(1)*conversion_factors(1))   ! Pressure
 
     lattice_constant = lattice_constant/conversion_factors(1)
     initial_Temp = initial_Temp/conversion_factors(3)
@@ -214,7 +216,7 @@ subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial, 
     integer(int_huge)       :: i, j
 
     forces = 0._pr
-    if (transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+    if (.not. transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     !$omp parallel private(j, i) &
     !$omp shared(positions, forces, num_atoms) &
@@ -270,8 +272,10 @@ subroutine Lennard_Jones(particle_distance_squared, particle_separation,  force_
     force_magnitude = 48._pr*r2inv*r6inv*(r6inv-0.5_pr)
     force_contribution = force_magnitude*particle_separation
 
-    E_potential = E_potential + 4._pr*r6inv*(r6inv-1._pr) - potential_cutoff
-    pressure_virial = pressure_virial + particle_distance_squared*force_magnitude
+    if (.not. transitory) then
+        E_potential = E_potential + 4._pr*r6inv*(r6inv-1._pr) - potential_cutoff
+        pressure_virial = pressure_virial + particle_distance_squared*force_magnitude
+    end if
 
 end subroutine Lennard_Jones
 
@@ -361,7 +365,7 @@ subroutine get_forces_old(positions, forces, E_potential, pressure_virial)
     integer(int_huge)                       :: i, j
 
     forces = 0._pr
-    if (transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+    if (.not. transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     do i=1,size(positions,2)-1
         particle1_position = positions(:,i)

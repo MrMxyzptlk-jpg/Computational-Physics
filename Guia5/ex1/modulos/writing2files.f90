@@ -51,8 +51,10 @@ subroutine write_XYZfile(positions, velocities, time, unitnum)
 
 end subroutine write_XYZfile
 
-subroutine write_output(CPU_elapsed_time)
-    real (pr), intent (in)  :: CPU_elapsed_time
+subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
+    real (pr), intent (in)  :: CPU_elapsed_time, energies(:,:), pressures(:), temperatures(:)
+    real (pr)               :: energy_avg(2), pressure_avg, temperature_avg
+    real (pr)               :: energy_stddev(2), pressure_stddev, temperature_stddev
     integer                 :: unit_info
 
     open(newunit=unit_info, file="datos/INFO.out", status="replace")
@@ -64,6 +66,21 @@ subroutine write_output(CPU_elapsed_time)
         write(unit_info,'(a20,11x,I6)')     "Run steps:             ", MD_steps
         write(unit_info,'(a20,6x,E11.5)')   "Simulated time:        ", real(MD_steps,pr)*dt*conversion_factors(2)
         write(unit_info,'(a20,5x,F11.5, a)')"Elapsed time:          ", CPU_elapsed_time,"s"
+
+        if (save_observables) then
+            call get_stats(energies(1,:), average = energy_avg(1), stddev = energy_stddev(1))
+            write(unit_info,format_observables)     "Potential Energy:   ", " Average = ", energy_avg(1)*conversion_factors(4)  &
+                , " Standard deviation = ", energy_stddev(1)*conversion_factors(4)
+            call get_stats(energies(2,:), average = energy_avg(2), stddev = energy_stddev(2))
+            write(unit_info,format_observables)     "Kinetic Energy:     ", " Average = ", energy_avg(2)*conversion_factors(4)  &
+                , " Standard deviation = ", energy_stddev(2)*conversion_factors(4)
+            call get_stats(pressures, average = pressure_avg, stddev = pressure_stddev)
+            write(unit_info,format_observables)     "Pressure:           ", " Average = ", pressure_avg*conversion_factors(7)  &
+                , " Standard deviation = ", pressure_stddev*conversion_factors(7)
+            call get_stats(temperatures, average = temperature_avg, stddev = temperature_stddev)
+            write(unit_info,format_observables)     "Temperature:        ", " Average = ", temperature_avg*conversion_factors(4)  &
+                , " Standard deviation = ", temperature_stddev*conversion_factors(4)
+        end if
     close(unit_info)
 
 end subroutine write_output

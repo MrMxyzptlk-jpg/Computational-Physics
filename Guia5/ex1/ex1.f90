@@ -98,7 +98,7 @@ program ex1
     call initialize_XYZ_data()
 
     call initialize_positions(positions)
-    allocate(Energies(2,0:MD_steps)) ! energies = (E_potential, E_kinetic)
+    allocate(Energies(2,0:MD_steps)) ! Energies = (E_potential, E_kinetic)
     allocate(Pressures(0:MD_steps), Temperatures(MD_steps))
     allocate(velocities(size(positions,1),size(positions,2)))
     allocate(forces(size(positions,1),size(positions,2)))
@@ -178,6 +178,6 @@ program ex1
     CPU_t_end = omp_get_wtime()
     CPU_elapsed_time = CPU_t_end - CPU_t_start
 
-    call write_output(CPU_elapsed_time)
+    call write_output(CPU_elapsed_time, energies, pressures, temperatures)
 
 end program ex1

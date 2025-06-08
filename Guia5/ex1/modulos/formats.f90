@@ -3,4 +3,5 @@ module formats
     character (len=13)   :: format_style0 = "(*(E14.7,3x))"
     character (len=16)   :: format_XYZ   = "(A5,*(E14.7,3x))"
     character (len=26)   :: format_style2 = "(2(E14.7,3x),*(E24.16,3x))"
+    character (len=26)   :: format_observables = "(a,a,E11.5,3x,a,E11.5)"
 END MODULE formats

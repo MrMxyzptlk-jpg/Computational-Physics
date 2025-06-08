@@ -74,6 +74,7 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
     integer                 :: i, j, icell, jcell, jcell0, neighbor
 
     forces = 0._pr
+    if (.not. transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell) &
     !$omp shared(positions, forces, head, map, list, N_linkedCells) &
