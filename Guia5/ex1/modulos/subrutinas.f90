@@ -12,10 +12,10 @@ MODULE subrutinas
 
     integer(int_medium)     :: cell_dim(3)
     integer(int_large)      :: num_atoms, pair_corr_bins
-    real(pr)                :: conversion_factors(7), periodicity(3)
+    real(pr)                :: conversion_factors(6), periodicity(3)
     real(pr)                :: lattice_constant, dt, dtdt, Berendsen_time
     real(pr)                :: sigma, epsilon
-    real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp_Adim, density, molar_mass
+    real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp_Adim, density, mass
     logical                 :: transitory, save_transitory, do_pair_correlation
     procedure(pot), pointer :: potential => null()
 
@@ -35,13 +35,12 @@ contains
 subroutine initialize_parameters()
 
     ! Define conversion factors to adimensionalize the variables
-    conversion_factors(1) = sigma                                               ! Distance
-    conversion_factors(2) = sigma*sqrt(molar_mass/(epsilon*Avogadro_number))    ! Time
-    conversion_factors(3) = epsilon/Boltzmann_constant                          ! Temperature
-    conversion_factors(4) = epsilon                                             ! Energy
-    conversion_factors(5) = sqrt((epsilon*Avogadro_number)/molar_mass)          ! Velocity
-    conversion_factors(6) = (molar_mass/Avogadro_number)                        ! Mass
-    conversion_factors(7) = conversion_factors(6) / (conversion_factors(2)*conversion_factors(1)*conversion_factors(1))   ! Pressure
+    conversion_factors(1) = sigma                           ! Distance      [Bohr = a₀]
+    conversion_factors(2) = sigma*sqrt(mass/epsilon)        ! Time          [ℏ/Eh = tₐ]
+    conversion_factors(3) = 1._pr                           ! Temperature   [epsilon / kB]
+    conversion_factors(4) = epsilon                         ! Energy        [hartree = Eh]
+    conversion_factors(5) = sqrt(epsilon/mass)              ! Velocity      [a₀ / tₐ]
+    conversion_factors(6) = epsilon/(sigma*sigma*sigma)     ! Pressure      [hartree / bohr³]
 
     lattice_constant = lattice_constant/conversion_factors(1)
     initial_Temp_Adim = initial_Temp_Adim   ! Already non-dimensional!!

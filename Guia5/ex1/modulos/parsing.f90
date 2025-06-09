@@ -6,14 +6,14 @@ MODULE parsing
     character (len=15)                          :: integrator, type
     character (len=6)                           :: structure, ensemble
     character (len=12)                          :: summation, thermostat_type
-    logical                                     :: save_observables
+    logical                                     :: save_observables, save_positions
     integer(kind=int_large)                     :: MD_steps, transitory_steps, thermostat_steps, dim_linkCell(3)
 
     ! Namelist blocks
-    namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, molar_mass, cell_dim, ensemble
+    namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, mass, cell_dim, ensemble
     namelist /calculation/ MD_steps, transitory_steps, thermostat_steps, dt, radius_cutoff, pair_corr_cutoff, pair_corr_bins &
         , summation
-    namelist /tasks/ save_transitory, save_observables, do_pair_correlation
+    namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation
     namelist /approximation/ integrator, dim_linkCell, type, sigma, epsilon
     namelist /thermostat/ thermostat_type, Berendsen_time
 
@@ -28,7 +28,7 @@ subroutine set_defaults()
         num_atoms           = 0
         initial_Temp_Adim        = 1.1_pr
         density             = 0._pr
-        molar_mass          = 1._pr
+        mass                = 1._pr
 
         !Calculation settings
         MD_steps         = 1000
@@ -43,6 +43,7 @@ subroutine set_defaults()
         ! Tasks
         save_transitory  = .False.
         save_observables = .False.
+        save_positions   = .False.
         do_pair_correlation = .True.
 
         ! Potential parameters

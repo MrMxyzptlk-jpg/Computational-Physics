@@ -5,7 +5,7 @@
 !
 ! Description:
 !
-! Input:
+! Input: All parameters are in ATOMIC UNITS. The program adimensionalized the problem in order to calculate, and re-dimnesionalizes the values when writing to files.
 !
 !
 ! Output:
@@ -154,9 +154,9 @@ program ex1
     if (integrator == 'velocity-Verlet') then
         call get_forces(positions, forces,  Energies(1,0), pressures(0), pair_corr)
 
-        open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
+        if (save_positions) open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
         open(newunit=unit_observables, file="datos/observables.out", status="replace")
-            if (save_transitory) call write_XYZfile(positions, velocities, 0._pr, unit_positions)
+            if (save_transitory .and. save_positions) call write_XYZfile(positions, velocities, 0._pr, unit_positions)
             if (save_observables) write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    "//&
                 "|   Temperature"
             do i = -transitory_steps/thermostat_steps , -1, 1
@@ -174,7 +174,7 @@ program ex1
                     call update_velocities_velVer(velocities, forces, previous_forces)
                     if (save_transitory) then
                         call get_observables(velocities, Energies(2,k), pressures(k), temperatures(k))
-                        call write_XYZfile(positions, velocities, real(k,pr)*dt, unit_positions)
+                        if (save_positions) call write_XYZfile(positions, velocities, real(k,pr)*dt, unit_positions)
                         if (save_observables) then
                             call write_observables(unit_observables, real(k,pr)*dt, energies(:,k), pressures(k), temperatures(k))
                         end if
@@ -191,13 +191,13 @@ program ex1
                 call get_forces(positions, forces, Energies(1,i), pressures(i), pair_corr)
                 call update_velocities_velVer(velocities, forces, previous_forces)
                 call get_observables(velocities, Energies(2,i), pressures(i), temperatures(i))
-                call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
+                if (save_positions) call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
                 if (save_observables) then
                     call write_observables(unit_observables, real(i,pr)*dt, energies(:,i), pressures(i), temperatures(i))
                 end if
                 if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
             end do
-        close(unit_positions)
+        if (save_positions) close(unit_positions)
         close(unit_observables)
     end if
 
