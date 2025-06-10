@@ -109,7 +109,7 @@ subroutine write_msd(msd)
     open(newunit=unitnum, file="datos/mean_sqr_displacement.out", status="replace")
         write(unitnum, '(a)') "## Δt | ⟨Δr(t)^2⟩"
         do i = 0, size(msd) - 1
-            write(unitnum, format_style0) real(i,pr)*dt, msd(i)
+            write(unitnum, format_style0) real(i,pr)*dt, msd(i)*conversion_factors(1)
         end do
     close(unitnum)
 
@@ -142,6 +142,7 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
         write(unit_info,'(a24,6x,E11.5)')   "Lattice constant:      ", lattice_constant*conversion_factors(1)
         write(unit_info,'(a24,5x,3(x,E11.5))')   "Super-cell dimensions: ", periodicity*conversion_factors(1)
         write(unit_info,'(a24,6x,E11.5)')   "Density:               ", density
+        write(unit_info,'(a24,4x,a)')       "Summation:             ", summation
         write(unit_info,'(a24,4x,a)')       "Potential:             ", type
         write(unit_info,'(a24,2x,a)')       "Integrator:            ", integrator
         write(unit_info,'(a24,11x,I6)')     "Transitory steps:      ", transitory_steps

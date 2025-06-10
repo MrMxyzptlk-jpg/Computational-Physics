@@ -8,9 +8,9 @@ MODULE subrutinas
     implicit none
 
     private     radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
-    private     positions_buffer, msd_accumulator, msd_counts, msd_count
+    private     positions_buffer, msd_counts, msd_count
     real(pr)                :: radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
-    real(pr), allocatable   :: positions_buffer(:,:,:), msd_accumulator(:)
+    real(pr), allocatable   :: positions_buffer(:,:,:)
     integer, allocatable    :: msd_counts(:)
     integer                 :: msd_count
 
@@ -468,12 +468,10 @@ subroutine initialize_msd(msd)
     real(pr), allocatable, intent(out)  :: msd(:)
 
     allocate(positions_buffer(3,num_atoms, 0:max_correlation))
-    allocate(msd_accumulator(0:max_correlation))
     allocate(msd_counts(0:max_correlation))
     allocate(msd(0:max_correlation))
 
     positions_buffer = 0._pr
-    msd_accumulator = 0.0_pr
     msd_counts = 0
     msd = 0._pr
 
@@ -486,12 +484,12 @@ subroutine update_msd(positions, msd)
     real(pr)                :: displacements(3,num_atoms)
 
     msd_count = msd_count + 1
-    ilast = mod(msd_count, size(msd_accumulator))
+    ilast = mod(msd_count, max_correlation + 1)
 
     positions_buffer (:,:,ilast)= positions(:,:)
 
-    do j = 0, min(size(msd_accumulator)-1, msd_count-1)
-        inext = mod(msd_count - j, size(msd_accumulator))
+    do j = 0, min(max_correlation, msd_count-1)
+        inext = mod(msd_count - j, max_correlation + 1)
 
         displacements = positions_buffer(:,:,ilast) - positions_buffer(:,:,inext)
 
@@ -505,9 +503,9 @@ subroutine normalize_msd(msd)
     real(pr), intent(out)   :: msd(0:)
     integer                 :: j
 
-    do j = 0, size(msd)-1
+    do j = 0, max_correlation
         if (msd_counts(j) > 0) then
-            msd(j) = msd_accumulator(j) / (real(msd_counts(j), pr) * real(num_atoms, pr))
+            msd(j) = msd(j) / (real(msd_counts(j), pr) * real(num_atoms, pr))
         else
             msd(j) = 0._pr
         end if

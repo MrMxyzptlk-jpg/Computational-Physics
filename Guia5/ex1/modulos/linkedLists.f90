@@ -16,12 +16,12 @@ contains
 
 subroutine check_linkCell(do_linkCell)
     logical, intent(out)    :: do_linkCell
-    real(pr)                :: max_cells(3), denominator(3)
+    real(pr)                :: max_cells(3)
     integer                 :: i
 
     do_linkCell = .False.
-    denominator = int(periodicity/radius_cutoff)
-    if (any((/(denominator(i) == 0 , i=1,3)/))) then
+    max_cells = int(periodicity/radius_cutoff)  ! There must be less cells than the number of radius_cutoff that fit in any given direction
+    if (any((/(max_cells(i) == 0 , i=1,3)/))) then
         print'(a,3I3,a)', "Radius cutoff greater than the super-cell dimensions --->   Using 'all-vs-all' integrator instead"
         return
     end if
@@ -31,13 +31,11 @@ subroutine check_linkCell(do_linkCell)
         return
     end if
 
-    max_cells = periodicity/denominator
-
     if ((dim_linkCell(1)<=max_cells(1)).and.(dim_linkCell(2)<=max_cells(2)).and.(dim_linkCell(3)<=max_cells(3)))  then
         do_linkCell=.True.
     else
         print'(a,3I3,a,3I3,a)', "Number of linked cells in each directions = (", dim_linkCell,") > L/int(L/rcut) = (" &
-            ,int(periodicity/denominator),")   --->   Using 'all-vs-all' integrator instead"
+            ,max_cells,")   --->   Using 'all-vs-all' integrator instead"
     end if
 
  end subroutine check_linkCell
