@@ -28,7 +28,8 @@ program ex1
     use writing2files
     implicit none
 
-    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr
+    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, structure_factor
+    real(pr)                                :: reciprocal_vec(3)
     real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
 !    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
@@ -74,15 +75,18 @@ program ex1
     select case (structure)
         case ("FCC")
             initialize_positions =>  initialize_positions_FCC
-            if (density>0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
         case ("BCC")
             initialize_positions =>  initialize_positions_BCC
-            if (density>0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
+            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
         case ("random")
             initialize_positions =>  initialize_positions_random
+            if (density > 0._pr) then
+                print*, "Random structure selected -> Chosen density is being ignored. Using density = num_atoms/vol instead"
+            end if
         case default
             initialize_positions =>  initialize_positions_FCC
-            if (density>0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
     end select
 
     select case (type)
@@ -133,6 +137,11 @@ program ex1
             end if
     end select
 
+    if (do_structure_factor) then
+        call get_reciprocal_vec(Miller_index, reciprocal_vec)
+        allocate(structure_factor(MD_steps))
+    end if
+
     if (do_pair_correlation) then
         allocate(pair_corr(pair_corr_bins))
         pair_corr = 0._pr
@@ -155,7 +164,7 @@ program ex1
         call get_forces(positions, forces,  Energies(1,0), pressures(0), pair_corr)
 
         if (save_positions) open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
-        open(newunit=unit_observables, file="datos/observables.out", status="replace")
+        if (save_observables) open(newunit=unit_observables, file="datos/observables.out", status="replace")
             if (save_transitory .and. save_positions) call write_XYZfile(positions, velocities, 0._pr, unit_positions)
             if (save_observables) write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    "//&
                 "|   Temperature"
@@ -196,6 +205,7 @@ program ex1
                     call write_observables(unit_observables, real(i,pr)*dt, energies(:,i), pressures(i), temperatures(i))
                 end if
                 if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
+                if (do_structure_factor) call update_structureFactor(positions, structure_factor(i), reciprocal_vec)
             end do
         if (save_positions) close(unit_positions)
         close(unit_observables)
@@ -205,6 +215,8 @@ program ex1
         call normalize_pair_correlation(pair_corr, MD_steps)
         call write_pair_corr(pair_corr)
     end if
+
+    if (do_structure_factor) call write_structure_factor(structure_factor, reciprocal_vec)
 
     CPU_t_end = omp_get_wtime()
     CPU_elapsed_time = CPU_t_end - CPU_t_start

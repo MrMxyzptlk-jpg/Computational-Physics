@@ -93,14 +93,31 @@ subroutine write_pair_corr(pair_corr)
     integer                 :: unitnum, i
 
     open(newunit=unitnum, file="datos/pair_correlation.out", status="replace")
-        write(unitnum, '(a)') " r | pair_correlation(r)"
+        write(unitnum, '(a)') "## r | pair_correlation(r)"
         do i =1, pair_corr_bins
-            bin_center = (real(i-1,pr) + 0.5)*dr
+            bin_center = (real(i-1,pr) + 0.5_pr)*dr
             write(unitnum, format_style0) bin_center, pair_corr(i)
         end do
     close(unitnum)
 
 end subroutine write_pair_corr
+
+
+subroutine write_structure_factor(structure_factor, reciprocal_vec)
+    real (pr), intent (in)  :: structure_factor(:), reciprocal_vec(3)
+    integer                 :: unitnum, i
+
+    open(newunit=unitnum, file="datos/structure_factor.out", status="replace")
+        write(unitnum, '(a,3(E12.5,1x))') "## Reciprocal vector: K = ", reciprocal_vec
+        write(unitnum, '(a,2(I2,a),I2)')  "## Miller indexes: h = ", Miller_index(1), " ; k = ", Miller_index(2) &
+            , " ; l = ", Miller_index(3)
+        write(unitnum, '(a)') "## t | structure_factor(K,t)"
+        do i =1, size(structure_factor)
+            write(unitnum, format_style0) real(i,pr)*dt*conversion_factors(2), structure_factor(i)
+        end do
+    close(unitnum)
+
+end subroutine write_structure_factor
 
 subroutine write_observables(unitnum, time, energies, pressures, temperatures)
     real (pr), intent (in)              :: time, energies(2), pressures, temperatures

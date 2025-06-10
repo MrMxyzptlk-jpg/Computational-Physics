@@ -4,16 +4,16 @@ MODULE parsing
     implicit none
 
     character (len=15)                          :: integrator, type
-    character (len=6)                           :: structure, ensemble
+    character (len=6)                           :: ensemble
     character (len=12)                          :: summation, thermostat_type
-    logical                                     :: save_observables, save_positions
-    integer(kind=int_large)                     :: MD_steps, transitory_steps, thermostat_steps, dim_linkCell(3)
+    logical                                     :: save_observables, save_positions, do_structure_factor
+    integer(kind=int_large)                     :: MD_steps, transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, mass, cell_dim, ensemble
     namelist /calculation/ MD_steps, transitory_steps, thermostat_steps, dt, radius_cutoff, pair_corr_cutoff, pair_corr_bins &
         , summation
-    namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation
+    namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_structure_factor, Miller_index
     namelist /approximation/ integrator, dim_linkCell, type, sigma, epsilon
     namelist /thermostat/ thermostat_type, Berendsen_time
 
@@ -44,7 +44,9 @@ subroutine set_defaults()
         save_transitory  = .False.
         save_observables = .False.
         save_positions   = .False.
-        do_pair_correlation = .True.
+        do_pair_correlation = .False.
+        do_structure_factor = .False.
+        Miller_index        = (/0,-1,0/)
 
         ! Potential parameters
         integrator  = 'velocity-Verlet'

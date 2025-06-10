@@ -11,6 +11,7 @@ MODULE subrutinas
     real(pr)                :: radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
 
     integer(int_medium)     :: cell_dim(3)
+    character (len=6)       :: structure
     integer(int_large)      :: num_atoms, pair_corr_bins
     real(pr)                :: conversion_factors(6), periodicity(3)
     real(pr)                :: lattice_constant, dt, dtdt, Berendsen_time
@@ -43,7 +44,7 @@ subroutine initialize_parameters()
     conversion_factors(6) = epsilon/(sigma*sigma*sigma)     ! Pressure      [hartree / bohr³]
 
     lattice_constant = lattice_constant/conversion_factors(1)
-    initial_Temp_Adim = initial_Temp_Adim   ! Already non-dimensional!!
+    initial_Temp_Adim = initial_Temp_Adim*conversion_factors(3)    ! Already non-dimensional!!
     periodicity = cell_dim*lattice_constant
     radius_cutoff = radius_cutoff/conversion_factors(1)
 
@@ -370,19 +371,58 @@ subroutine get_stats(measurements, variance, stddev, average)
 
 end subroutine get_stats
 
+subroutine get_reciprocal_vec(Miller_index, reciprocal_vec)
+    integer, intent(in)     :: Miller_index(3)
+    real(pr), intent(out)   :: reciprocal_vec(3)
+    real(pr)                :: reciprocal_basis(3,3), reciprocal_latticeParam
+    integer                 :: i
+
+    select case (structure)
+        case ("FCC")
+            reciprocal_latticeParam = 4._pr*pi/lattice_constant
+            reciprocal_basis(:,1) = (/-0.5_pr,  0.5_pr,  0.5_pr/)  ! reciprocal lattice basis vector 1
+            reciprocal_basis(:,2) = (/ 0.5_pr, -0.5_pr,  0.5_pr/)  ! reciprocal lattice basis vector 2
+            reciprocal_basis(:,3) = (/ 0.5_pr,  0.5_pr, -0.5_pr/)  ! reciprocal lattice basis vector 3
+        case ("BCC")
+            reciprocal_latticeParam = 4._pr*pi/lattice_constant
+            reciprocal_basis(:,1) = (/0.0_pr, 0.5_pr, 0.5_pr/)      ! reciprocal lattice basis vector 1
+            reciprocal_basis(:,2) = (/0.5_pr, 0.0_pr, 0.5_pr/)      ! reciprocal lattice basis vector 2
+            reciprocal_basis(:,3) = (/0.5_pr, 0.5_pr, 0.0_pr/)      ! reciprocal lattice basis vector 3
+        case ("random")
+            print*, "Random structure selected -> Simple cubic basis set will be employed for structure factor calculation"
+            reciprocal_latticeParam = 2._pr*pi/lattice_constant
+            reciprocal_basis(:,1) = (/1._pr, 0._pr, 0._pr/)         ! reciprocal lattice basis vector 1
+            reciprocal_basis(:,2) = (/0._pr, 1._pr, 0._pr/)         ! reciprocal lattice basis vector 2
+            reciprocal_basis(:,3) = (/0._pr, 0._pr, 1._pr/)         ! reciprocal lattice basis vector 3
+        case default
+            reciprocal_latticeParam = 4._pr*pi/lattice_constant
+            reciprocal_basis(:,1) = (/-0.5_pr,  0.5_pr,  0.5_pr/)   ! reciprocal lattice basis vector 1
+            reciprocal_basis(:,2) = (/ 0.5_pr, -0.5_pr,  0.5_pr/)   ! reciprocal lattice basis vector 2
+            reciprocal_basis(:,3) = (/ 0.5_pr,  0.5_pr, -0.5_pr/)   ! reciprocal lattice basis vector 3
+    end select
+
+    reciprocal_basis = reciprocal_basis * reciprocal_latticeParam
+
+    reciprocal_vec = 0._pr
+    do i =1, 3
+        reciprocal_vec = reciprocal_vec + real(Miller_index(i),pr)*reciprocal_basis(:,i)
+    end do
+
+end subroutine get_reciprocal_vec
+
 subroutine update_structureFactor(positions, structure_factor, reciprocal_vec)
     real(pr), intent(in)        :: positions(:,:), reciprocal_vec(3)
-    real(pr), intent(inout)     :: structure_factor(:)
+    real(pr), intent(inout)     :: structure_factor
     complex(pr)                 :: summation
     integer                     :: i
 
     summation = (0._pr,0._pr)
 
-    do i = 1, 3
-        summation = summation + sum(exp(CMPLX(0._pr,reciprocal_vec(i)*positions(i,:), pr)))
+    do i = 1, num_atoms
+        summation = summation + exp(CMPLX(0._pr,sum(reciprocal_vec*positions(:,i)), pr))
     end do
 
-    structure_factor = abs(summation)*abs(summation)/num_atoms
+    structure_factor = CONJG(summation)*summation/(num_atoms*num_atoms)
 
 end subroutine update_structureFactor
 
