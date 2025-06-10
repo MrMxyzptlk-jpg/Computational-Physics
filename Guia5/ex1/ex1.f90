@@ -74,10 +74,10 @@ program ex1
     select case (structure)
         case ("FCC")
             initialize_positions =>  initialize_positions_FCC
-            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
         case ("BCC")
             initialize_positions =>  initialize_positions_BCC
-            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
+            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
         case ("random")
             initialize_positions =>  initialize_positions_random
             if (density > 0._pr) then
@@ -85,7 +85,7 @@ program ex1
             end if
         case default
             initialize_positions =>  initialize_positions_FCC
-            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
     end select
 
     select case (type)
@@ -108,7 +108,7 @@ program ex1
     call initialize_XYZ_data()
     call initialize_positions(positions)
     if (save_transitory) then
-        transitory_minIndex = -int(transitory_steps/thermostat_steps)*thermostat_steps+1
+        transitory_minIndex = -int(transitory_steps/thermostat_steps)*thermostat_steps
         allocate(Energies(2,transitory_minIndex:MD_steps)) ! Energies = (E_potential, E_kinetic)
         allocate(Pressures(transitory_minIndex:MD_steps), Temperatures(transitory_minIndex:MD_steps))
     else
@@ -151,7 +151,7 @@ program ex1
     end if
 
     call initialize_rest()
-
+    call thermostat_rescale(velocities)
 
 !##################################################################################################
 !      Start of the calculations
@@ -161,9 +161,18 @@ program ex1
     CPU_t_start = omp_get_wtime()
 
     if (integrator == 'velocity-Verlet') then
-        call get_forces(positions, forces,  Energies(1,0), pressures(0), pair_corr)
 
         call open_files(reciprocal_vec)
+            if (save_transitory) then
+                call get_forces(positions, forces,  Energies(1,transitory_minIndex), pressures(transitory_minIndex), pair_corr)
+                call get_observables(velocities, Energies(2,transitory_minIndex), pressures(transitory_minIndex) &
+                    , temperatures(transitory_minIndex))
+                if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
+                call write_tasks(transitory_minIndex*dt, positions, velocities, energies(:,transitory_minIndex) &
+                    , pressures(transitory_minIndex), temperatures(transitory_minIndex), structure_factor)
+            else
+                call get_forces(positions, forces,  Energies(1,0), pressures(0), pair_corr)
+            end if
             if (save_transitory .and. save_positions) call write_XYZfile(0._pr, positions, velocities)
             do i = -transitory_steps/thermostat_steps , -1, 1
                 do j = 1, thermostat_steps

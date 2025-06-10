@@ -149,16 +149,16 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
         write(unit_info,'(a24,6x,E11.5)')   "Simulated time:        ", real(MD_steps,pr)*dt*conversion_factors(2)
 
         if (save_observables) then
-            call get_stats(energies(1,:), average = energy_avg(1), stddev = energy_stddev(1))
+            call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1))
             write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", energy_avg(1)*conversion_factors(4)  &
                 , " Standard deviation = ", energy_stddev(1)*conversion_factors(4)
-            call get_stats(energies(2,:), average = energy_avg(2), stddev = energy_stddev(2))
+            call get_stats(energies(2,1:), average = energy_avg(2), stddev = energy_stddev(2))
             write(unit_info,format_observables)     "Kinetic Energy:    ", " Average = ", energy_avg(2)*conversion_factors(4)  &
                 , " Standard deviation = ", energy_stddev(2)*conversion_factors(4)
-            call get_stats(pressures, average = pressure_avg, stddev = pressure_stddev)
+            call get_stats(pressures(1:), average = pressure_avg, stddev = pressure_stddev)
             write(unit_info,format_observables)     "Pressure:          ", " Average = ", pressure_avg*conversion_factors(6)  &
                 , " Standard deviation = ", pressure_stddev*conversion_factors(6)
-            call get_stats(temperatures, average = temperature_avg, stddev = temperature_stddev)
+            call get_stats(temperatures(1:), average = temperature_avg, stddev = temperature_stddev)
             write(unit_info,format_observables)     "Temperature:       ", " Average = ", temperature_avg*conversion_factors(3)  &
                 , " Standard deviation = ", temperature_stddev*conversion_factors(3)
         end if

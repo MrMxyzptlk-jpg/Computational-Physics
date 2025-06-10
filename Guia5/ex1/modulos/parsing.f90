@@ -12,13 +12,13 @@ MODULE parsing
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, mass, cell_dim, ensemble
-    namelist /calculation/ MD_steps, transitory_steps, thermostat_steps, dt, radius_cutoff, pair_corr_cutoff, pair_corr_bins &
-        , summation
+    namelist /calculation/ MD_steps, transitory_steps, thermostat_steps, dt, radius_cutoff, summation, dim_linkCell
     namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
         , do_structure_factor, Miller_index
-    namelist /approximation/ integrator, dim_linkCell, type, sigma, epsilon
+    namelist /approximation/ integrator, type, sigma, epsilon
     namelist /thermostat/ thermostat_type, Berendsen_time
     namelist /MSD/ max_correlation, correlation_jump
+    namelist /pair_correlation/pair_corr_cutoff, pair_corr_bins
 
     CONTAINS
 
@@ -39,9 +39,8 @@ subroutine set_defaults()
         thermostat_steps = 50
         dt               = 0.005_pr
         radius_cutoff    = 2.5_pr
-        pair_corr_cutoff = 4.0_pr
-        pair_corr_bins   = 100
         summation        = 'all-vs-all'
+        dim_linkCell = (/3,3,3/)
 
         ! Tasks
         save_transitory  = .False.
@@ -54,7 +53,6 @@ subroutine set_defaults()
 
         ! Potential parameters
         integrator  = 'velocity-Verlet'
-        dim_linkCell = (/2,2,2/)
         sigma   = 1._pr
         epsilon = 1._pr
 
@@ -66,6 +64,10 @@ subroutine set_defaults()
         max_correlation  = 100
         correlation_jump  = 10
 
+        ! Pair correlation parameters
+        pair_corr_cutoff = 4.0_pr
+        pair_corr_bins   = 100
+
 end subroutine set_defaults
 
 subroutine parse_input()
@@ -76,12 +78,19 @@ subroutine parse_input()
         read(unit_input, nml=calculation)
         read(unit_input, nml=tasks)
         read(unit_input, nml=approximation)
+
         if(ensemble=="NVT") then
             read(unit_input, nml=thermostat)
         end if
+
         if(do_mean_sqr_displacement) then
             read(unit_input, nml=MSD)
         end if
+
+        if(do_pair_correlation) then
+            read(unit_input, nml=pair_correlation)
+        end if
+
     close(unit_input)
 
 end subroutine parse_input

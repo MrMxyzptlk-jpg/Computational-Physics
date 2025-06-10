@@ -58,7 +58,7 @@ subroutine initialize_parameters()
     dtdt = dt*dt
 
     radius_cutoff_squared = radius_cutoff*radius_cutoff
-    potential_cutoff = Lennard_Jones_potencial(radius_cutoff_squared)
+    potential_cutoff = Lennard_Jones_cutoff(radius_cutoff_squared)
 
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
 
@@ -228,17 +228,14 @@ end subroutine initialize_positions_BCC
 subroutine initialize_velocities(velocities)
     real(pr), allocatable, intent(out)      :: velocities(:,:)
     real(pr)                                :: velocity_average(size(velocities,1))
-    real(pr)                                :: instant_Temp, scaling_factor
     integer                                 :: i
 
     velocities = reshape( [ (rmzran() - 0.5_pr, i = 1, size(velocities)) ], shape(velocities) )
 
     velocity_average = sum(velocities,2)/real(num_atoms,pr)
-    instant_Temp = sum(velocities*velocities)/(3.0_pr * real(num_atoms,pr))
-    scaling_factor = sqrt( initial_Temp_Adim / instant_Temp )
 
     do i = 1, 3
-        velocities(i,:) = (velocities(i,:) - velocity_average(i))*scaling_factor
+        velocities(i,:) = (velocities(i,:) - velocity_average(i))   ! Removing center of mass displacement
     end do
 
 end subroutine initialize_velocities
@@ -306,6 +303,7 @@ subroutine get_force_contribution(particle1_position, particle2_position, partic
     particle_separation = particle1_position - particle2_position ! Separation vector
     particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
     particle_distance_squared = sum(particle_separation*particle_separation)
+
     if (particle_distance_squared <= radius_cutoff_squared) then
         call potential(particle_distance_squared, particle_separation, force_contribution, E_potential &
             , pressure_virial, potential_cutoff)

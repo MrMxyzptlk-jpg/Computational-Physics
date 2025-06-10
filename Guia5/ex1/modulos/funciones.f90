@@ -7,16 +7,16 @@ MODULE funciones
 
     !funciones de la guía 5
 
-    function Lennard_Jones_potencial(particle_distance_squared) ! Lennard-Jones potential
+    function Lennard_Jones_cutoff(particle_distance_squared) ! Lennard-Jones potential
         real(pr), intent(in)   :: particle_distance_squared
-        real(pr)               :: Lennard_Jones_potencial
+        real(pr)               :: Lennard_Jones_cutoff
         real(pr)               :: r2inv, r6inv
 
         r2inv = 1._pr/particle_distance_squared
         r6inv = r2inv*r2inv*r2inv
-        Lennard_Jones_potencial =  4.0_pr *r6inv * (r6inv - 1.0_pr)
+        Lennard_Jones_cutoff =  4.0_pr *r6inv * (r6inv - 1.0_pr)
 
-    end function Lennard_Jones_potencial
+    end function Lennard_Jones_cutoff
 
     integer(int_large) function index_cell(ix,iy,iz, dim_linkCell)
         integer(int_large), intent(in)   :: dim_linkCell(3)
