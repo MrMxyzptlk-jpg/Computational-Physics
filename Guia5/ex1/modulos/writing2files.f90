@@ -43,6 +43,22 @@ subroutine open_files(reciprocal_vec)
     end if
 end subroutine open_files
 
+subroutine write_tasks(time, positions, velocities, energies, pressures, temperatures, structure_factor)
+    real (pr), dimension(:,:), intent (in)  :: positions, velocities
+    real (pr), intent (in)                  :: time, energies(2), pressures, temperatures, structure_factor
+
+    if (save_positions)      call write_XYZfile(time, positions, velocities)
+    if (save_observables)    call write_observables(time, energies, pressures, temperatures)
+    if (do_structure_factor) call write_structure_factor(time, structure_factor)
+
+end subroutine write_tasks
+
+subroutine close_files()
+    if (save_positions)         close (unit_positions)
+    if (save_observables)       close (unit_observables)
+    if (do_structure_factor)    close (unit_structFact)
+end subroutine close_files
+
 subroutine write_XYZfile(time, positions, velocities)
     real (pr), intent (in)              :: positions(:,:), velocities(:,:), time
     integer                             :: i
@@ -70,6 +86,49 @@ subroutine write_XYZfile(time, positions, velocities)
     end do
 
 end subroutine write_XYZfile
+
+subroutine write_observables(time, energies, pressures, temperatures)
+    real (pr), intent (in)  :: time, energies(2), pressures, temperatures
+
+    write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4) &
+        , pressures*conversion_factors(6), temperatures
+
+end subroutine write_observables
+
+subroutine write_structure_factor(time, structure_factor)
+    real (pr), intent (in)  :: structure_factor, time
+
+    write(unit_structFact, format_style0) time*conversion_factors(2), structure_factor
+
+end subroutine write_structure_factor
+
+subroutine write_msd(msd)
+    real (pr), intent (in)  :: msd(0:)
+    integer                 :: unitnum, i
+
+    open(newunit=unitnum, file="datos/mean_sqr_displacement.out", status="replace")
+        write(unitnum, '(a)') "## Δt | ⟨Δr(t)^2⟩"
+        do i = 0, size(msd) - 1
+            write(unitnum, format_style0) real(i,pr)*dt, msd(i)
+        end do
+    close(unitnum)
+
+end subroutine write_msd
+
+subroutine write_pair_corr(pair_corr)
+    real (pr), intent (in)  :: pair_corr(:)
+    real (pr)               :: bin_center
+    integer                 :: unitnum, i
+
+    open(newunit=unitnum, file="datos/pair_correlation.out", status="replace")
+        write(unitnum, '(a)') "## r | pair_correlation(r)"
+        do i = 1, pair_corr_bins
+            bin_center = (real(i-1,pr) + 0.5_pr)*dr
+            write(unitnum, format_style0) bin_center, pair_corr(i)
+        end do
+    close(unitnum)
+
+end subroutine write_pair_corr
 
 subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
     real (pr), intent (in)  :: CPU_elapsed_time, energies(:,:), pressures(:), temperatures(:)
@@ -106,51 +165,5 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
     close(unit_info)
 
 end subroutine write_output
-
-subroutine write_pair_corr(pair_corr)
-    real (pr), intent (in)  :: pair_corr(:)
-    real (pr)               :: bin_center
-    integer                 :: unitnum, i
-
-    open(newunit=unitnum, file="datos/pair_correlation.out", status="replace")
-        write(unitnum, '(a)') "## r | pair_correlation(r)"
-        do i =1, pair_corr_bins
-            bin_center = (real(i-1,pr) + 0.5_pr)*dr
-            write(unitnum, format_style0) bin_center, pair_corr(i)
-        end do
-    close(unitnum)
-
-end subroutine write_pair_corr
-
-subroutine write_structure_factor(time, structure_factor)
-    real (pr), intent (in)  :: structure_factor, time
-
-    write(unit_structFact, format_style0) time*conversion_factors(2), structure_factor
-
-end subroutine write_structure_factor
-
-subroutine write_observables(time, energies, pressures, temperatures)
-    real (pr), intent (in)  :: time, energies(2), pressures, temperatures
-
-    write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4) &
-        , pressures*conversion_factors(6), temperatures
-
-end subroutine write_observables
-
-subroutine write_tasks(time, positions, velocities, energies, pressures, temperatures, structure_factor)
-    real (pr), dimension(:,:), intent (in)  :: positions, velocities
-    real (pr), intent (in)                  :: time, energies(2), pressures, temperatures, structure_factor
-
-    if (save_positions)      call write_XYZfile(time, positions, velocities)
-    if (save_observables)    call write_observables(time, energies, pressures, temperatures)
-    if (do_structure_factor) call write_structure_factor(time, structure_factor)
-
-end subroutine write_tasks
-
-subroutine close_files()
-    if (save_positions)         close (unit_positions)
-    if (save_observables)       close (unit_observables)
-    if (do_structure_factor)    close (unit_structFact)
-end subroutine close_files
 
 END MODULE writing2files

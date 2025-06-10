@@ -8,7 +8,7 @@ MODULE parsing
     character (len=12)  :: summation, thermostat_type
     logical             :: save_observables, save_positions, do_structure_factor, do_mean_sqr_displacement
     integer(int_large)  :: MD_steps, transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
-    integer(int_large)  :: max_correlation, correlation_jump
+    integer(int_large)  :: correlation_jump
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, mass, cell_dim, ensemble

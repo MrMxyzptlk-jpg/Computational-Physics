@@ -8,14 +8,15 @@ MODULE subrutinas
     implicit none
 
     private     radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
-    private     positions_buffer, msd_accumulator, msd_counts
+    private     positions_buffer, msd_accumulator, msd_counts, msd_count
     real(pr)                :: radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
     real(pr), allocatable   :: positions_buffer(:,:,:), msd_accumulator(:)
     integer, allocatable    :: msd_counts(:)
+    integer                 :: msd_count
 
     integer(int_medium)     :: cell_dim(3)
     character (len=6)       :: structure
-    integer(int_large)      :: num_atoms, pair_corr_bins
+    integer(int_large)      :: num_atoms, pair_corr_bins, max_correlation
     real(pr)                :: conversion_factors(6), periodicity(3), lattice_constant, sigma, epsilon, dt, dtdt, Berendsen_time
     real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp_Adim, density, mass
     logical                 :: transitory, save_transitory, do_pair_correlation
@@ -427,23 +428,24 @@ subroutine get_structure_factor(positions, structure_factor, reciprocal_vec)
 
 end subroutine get_structure_factor
 
-subroutine initialize_msd(msd_len_max)
-    integer, intent(in) :: msd_len_max
+subroutine initialize_msd(msd)
+    real(pr), allocatable, intent(out)  :: msd(:)
 
-    allocate(positions_buffer(3,num_atoms, 0:msd_len_max))
-    allocate(msd_accumulator(0:msd_len_max))
-    allocate(msd_counts(0:msd_len_max))
+    allocate(positions_buffer(3,num_atoms, 0:max_correlation))
+    allocate(msd_accumulator(0:max_correlation))
+    allocate(msd_counts(0:max_correlation))
+    allocate(msd(0:max_correlation))
 
     positions_buffer = 0._pr
     msd_accumulator = 0.0_pr
     msd_counts = 0
+    msd = 0._pr
 
 end subroutine initialize_msd
 
-subroutine update_msd(positions, msd_accumulator, msd_counts, msd_count, msd)
+subroutine update_msd(positions, msd)
     real(pr), intent(in)    :: positions(:,:)
-    real(pr), intent(inout) :: msd_accumulator(0:), msd_counts(0:), msd(0:)
-    integer, intent(inout)  :: msd_count
+    real(pr), intent(inout) :: msd(0:)
     integer                 :: j, ilast, inext
     real(pr)                :: displacements(3,num_atoms)
 
@@ -463,10 +465,8 @@ subroutine update_msd(positions, msd_accumulator, msd_counts, msd_count, msd)
 
 end subroutine update_msd
 
-subroutine normalize_msd(msd, msd_accumulator, msd_counts)
+subroutine normalize_msd(msd)
     real(pr), intent(out)   :: msd(0:)
-    real(pr), intent(in)    :: msd_accumulator(0:)
-    integer,  intent(in)    :: msd_counts(0:)
     integer                 :: j
 
     do j = 0, size(msd)-1
@@ -476,6 +476,7 @@ subroutine normalize_msd(msd, msd_accumulator, msd_counts)
             msd(j) = 0._pr
         end if
     end do
+
 end subroutine normalize_msd
 
 

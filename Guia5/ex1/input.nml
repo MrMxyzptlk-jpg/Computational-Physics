@@ -24,8 +24,9 @@
     save_transitory  = false
     save_observables = false
     save_positions   = false
-    do_pair_correlation = true
+    do_pair_correlation = false
     do_structure_factor = false
+    do_mean_sqr_displacement = true
     Miller_index        = 0,-1,0
 /
 
@@ -45,3 +46,4 @@
 &MSD
     max_correlation  = 100
     correlation_jump  = 10
+/

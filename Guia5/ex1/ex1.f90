@@ -28,7 +28,7 @@ program ex1
     use writing2files
     implicit none
 
-    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr
+    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, meanSqrDisplacement
     real(pr)                                :: reciprocal_vec(3), structure_factor
     real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
@@ -140,6 +140,10 @@ program ex1
         call get_reciprocal_vec(Miller_index, reciprocal_vec)
     end if
 
+    if (do_mean_sqr_displacement) then
+        call initialize_msd(meanSqrDisplacement)
+    end if
+
     if (do_pair_correlation) then
         allocate(pair_corr(pair_corr_bins))
         pair_corr = 0._pr
@@ -199,6 +203,7 @@ program ex1
                 call get_observables(velocities, Energies(2,i), pressures(i), temperatures(i))
 
                 if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
+                if (do_mean_sqr_displacement .and. (mod(i,correlation_jump) == 0)) call update_msd(positions, meanSqrDisplacement)
                 call write_tasks(real(i,pr)*dt, positions, velocities, energies(:,i), pressures(i), temperatures(i) &
                     , structure_factor)
 
@@ -210,6 +215,11 @@ program ex1
     if (do_pair_correlation) then
         call normalize_pair_correlation(pair_corr, MD_steps)
         call write_pair_corr(pair_corr)
+    end if
+
+    if (do_mean_sqr_displacement) then
+        call normalize_msd(meanSqrDisplacement)
+        call write_msd(meanSqrDisplacement)
     end if
 
     CPU_t_end = omp_get_wtime()
