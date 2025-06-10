@@ -28,13 +28,12 @@ program ex1
     use writing2files
     implicit none
 
-    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, structure_factor
-    real(pr)                                :: reciprocal_vec(3)
+    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr
+    real(pr)                                :: reciprocal_vec(3), structure_factor
     real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
 !    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
     integer(int_huge)                       :: i, j, k, transitory_minIndex
-    integer(int_medium)                     :: unit_positions, unit_observables
     logical                                 :: do_linkCell
 
     abstract interface
@@ -139,7 +138,6 @@ program ex1
 
     if (do_structure_factor) then
         call get_reciprocal_vec(Miller_index, reciprocal_vec)
-        allocate(structure_factor(MD_steps))
     end if
 
     if (do_pair_correlation) then
@@ -163,15 +161,13 @@ program ex1
     if (integrator == 'velocity-Verlet') then
         call get_forces(positions, forces,  Energies(1,0), pressures(0), pair_corr)
 
-        if (save_positions) open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
-        if (save_observables) open(newunit=unit_observables, file="datos/observables.out", status="replace")
-            if (save_transitory .and. save_positions) call write_XYZfile(positions, velocities, 0._pr, unit_positions)
-            if (save_observables) write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    "//&
-                "|   Temperature"
+        call open_files(reciprocal_vec)
+            if (save_transitory .and. save_positions) call write_XYZfile(0._pr, positions, velocities)
             do i = -transitory_steps/thermostat_steps , -1, 1
                 do j = 1, thermostat_steps
                     k = i*thermostat_steps + j
                     call update_positions_velVer(positions, velocities, forces)
+                    if (do_linkCell) call create_links(positions)
                     previous_forces = forces
 
                     if (save_transitory) then
@@ -181,12 +177,12 @@ program ex1
                     end if
 
                     call update_velocities_velVer(velocities, forces, previous_forces)
+
                     if (save_transitory) then
                         call get_observables(velocities, Energies(2,k), pressures(k), temperatures(k))
-                        if (save_positions) call write_XYZfile(positions, velocities, real(k,pr)*dt, unit_positions)
-                        if (save_observables) then
-                            call write_observables(unit_observables, real(k,pr)*dt, energies(:,k), pressures(k), temperatures(k))
-                        end if
+                        if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
+                        call write_tasks(real(k,pr)*dt, positions, velocities, energies(:,k), pressures(k), temperatures(k) &
+                            , structure_factor)
                     end if
                 end do
                 call thermostat_chosen(velocities)
@@ -196,27 +192,25 @@ program ex1
 
             do i = 1 , MD_steps
                 call update_positions_velVer(positions, velocities, forces)
+                if (do_linkCell) call create_links(positions)
                 previous_forces = forces
                 call get_forces(positions, forces, Energies(1,i), pressures(i), pair_corr)
                 call update_velocities_velVer(velocities, forces, previous_forces)
                 call get_observables(velocities, Energies(2,i), pressures(i), temperatures(i))
-                if (save_positions) call write_XYZfile(positions, velocities, real(i,pr)*dt, unit_positions)
-                if (save_observables) then
-                    call write_observables(unit_observables, real(i,pr)*dt, energies(:,i), pressures(i), temperatures(i))
-                end if
+
+                if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
+                call write_tasks(real(i,pr)*dt, positions, velocities, energies(:,i), pressures(i), temperatures(i) &
+                    , structure_factor)
+
                 if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
-                if (do_structure_factor) call update_structureFactor(positions, structure_factor(i), reciprocal_vec)
             end do
-        if (save_positions) close(unit_positions)
-        close(unit_observables)
+        call close_files()
     end if
 
     if (do_pair_correlation) then
         call normalize_pair_correlation(pair_corr, MD_steps)
         call write_pair_corr(pair_corr)
     end if
-
-    if (do_structure_factor) call write_structure_factor(structure_factor, reciprocal_vec)
 
     CPU_t_end = omp_get_wtime()
     CPU_elapsed_time = CPU_t_end - CPU_t_start

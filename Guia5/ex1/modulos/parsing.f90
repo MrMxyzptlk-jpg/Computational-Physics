@@ -3,19 +3,22 @@ MODULE parsing
     use subrutinas
     implicit none
 
-    character (len=15)                          :: integrator, type
-    character (len=6)                           :: ensemble
-    character (len=12)                          :: summation, thermostat_type
-    logical                                     :: save_observables, save_positions, do_structure_factor
-    integer(kind=int_large)                     :: MD_steps, transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
+    character (len=15)  :: integrator, type
+    character (len=6)   :: ensemble
+    character (len=12)  :: summation, thermostat_type
+    logical             :: save_observables, save_positions, do_structure_factor, do_mean_sqr_displacement
+    integer(int_large)  :: MD_steps, transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
+    integer(int_large)  :: max_correlation, correlation_jump
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, mass, cell_dim, ensemble
     namelist /calculation/ MD_steps, transitory_steps, thermostat_steps, dt, radius_cutoff, pair_corr_cutoff, pair_corr_bins &
         , summation
-    namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_structure_factor, Miller_index
+    namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
+        , do_structure_factor, Miller_index
     namelist /approximation/ integrator, dim_linkCell, type, sigma, epsilon
     namelist /thermostat/ thermostat_type, Berendsen_time
+    namelist /MSD/ max_correlation, correlation_jump
 
     CONTAINS
 
@@ -45,6 +48,7 @@ subroutine set_defaults()
         save_observables = .False.
         save_positions   = .False.
         do_pair_correlation = .False.
+        do_mean_sqr_displacement = .False.
         do_structure_factor = .False.
         Miller_index        = (/0,-1,0/)
 
@@ -58,6 +62,10 @@ subroutine set_defaults()
         thermostat_type      = 'rescale'
         Berendsen_time  = 0.01_pr
 
+        ! MSD
+        max_correlation  = 100
+        correlation_jump  = 10
+
 end subroutine set_defaults
 
 subroutine parse_input()
@@ -70,6 +78,9 @@ subroutine parse_input()
         read(unit_input, nml=approximation)
         if(ensemble=="NVT") then
             read(unit_input, nml=thermostat)
+        end if
+        if(do_mean_sqr_displacement) then
+            read(unit_input, nml=MSD)
         end if
     close(unit_input)
 

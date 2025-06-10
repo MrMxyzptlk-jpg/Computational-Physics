@@ -8,6 +8,8 @@ MODULE writing2files
     character(len=11)       :: size_x, size_y, size_z
     character(len=3)        :: symbol
 
+    integer(int_medium)     :: unit_positions, unit_observables, unit_structFact
+
 contains
 
 subroutine initialize_XYZ_data()
@@ -22,9 +24,27 @@ subroutine initialize_XYZ_data()
 
 end subroutine initialize_XYZ_data
 
-subroutine write_XYZfile(positions, velocities, time, unitnum)
+subroutine open_files(reciprocal_vec)
+    real (pr), intent (in)  :: reciprocal_vec(3)
+
+    if (save_positions)  open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
+
+    if (save_observables) then
+        open(newunit=unit_observables, file="datos/observables.out", status="replace")
+        write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    |   Temperature"
+    end if
+
+    if (do_structure_factor) then
+        open(newunit=unit_structFact, file="datos/structure_factor.out", status="replace")
+        write(unit_structFact, '(a,3(E12.5,1x))') "## Reciprocal vector: K = ", reciprocal_vec
+        write(unit_structFact, '(a,2(I2,a),I2)')  "## Miller indexes: h = ", Miller_index(1), " ; k = ", Miller_index(2) &
+            , " ; l = ", Miller_index(3)
+        write(unit_structFact, '(a)') "## t | structure_factor(K,t)"
+    end if
+end subroutine open_files
+
+subroutine write_XYZfile(time, positions, velocities)
     real (pr), intent (in)              :: positions(:,:), velocities(:,:), time
-    integer(int_medium), intent (in)    :: unitnum
     integer                             :: i
     character(len=11)                   :: time_tmp
 
@@ -35,10 +55,10 @@ subroutine write_XYZfile(positions, velocities, time, unitnum)
     time_tmp = adjustl(trim(time_tmp))
 
     ! Line 1: number of particles
-    write(unitnum, '(i6)') num_atoms
+    write(unit_positions, '(i6)') num_atoms
 
     ! Line 2: extended XYZ header with box info and time
-    write(unitnum,'(A)') 'Lattice="' // &
+    write(unit_positions,'(A)') 'Lattice="' // &
          size_x // ' 0.0  0.0  0.0 ' // &
          size_y // ' 0.0  0.0  0.0 ' // &
          size_z // '" Properties=species:S:1:pos:R:3:vel:R:3 Time=' // &
@@ -46,7 +66,7 @@ subroutine write_XYZfile(positions, velocities, time, unitnum)
 
 
     do i = 1, num_atoms
-        write(unitnum, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1), velocities(:,i)*conversion_factors(5)
+        write(unit_positions, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1), velocities(:,i)*conversion_factors(5)
     end do
 
 end subroutine write_XYZfile
@@ -102,30 +122,35 @@ subroutine write_pair_corr(pair_corr)
 
 end subroutine write_pair_corr
 
+subroutine write_structure_factor(time, structure_factor)
+    real (pr), intent (in)  :: structure_factor, time
 
-subroutine write_structure_factor(structure_factor, reciprocal_vec)
-    real (pr), intent (in)  :: structure_factor(:), reciprocal_vec(3)
-    integer                 :: unitnum, i
-
-    open(newunit=unitnum, file="datos/structure_factor.out", status="replace")
-        write(unitnum, '(a,3(E12.5,1x))') "## Reciprocal vector: K = ", reciprocal_vec
-        write(unitnum, '(a,2(I2,a),I2)')  "## Miller indexes: h = ", Miller_index(1), " ; k = ", Miller_index(2) &
-            , " ; l = ", Miller_index(3)
-        write(unitnum, '(a)') "## t | structure_factor(K,t)"
-        do i =1, size(structure_factor)
-            write(unitnum, format_style0) real(i,pr)*dt*conversion_factors(2), structure_factor(i)
-        end do
-    close(unitnum)
+    write(unit_structFact, format_style0) time*conversion_factors(2), structure_factor
 
 end subroutine write_structure_factor
 
-subroutine write_observables(unitnum, time, energies, pressures, temperatures)
-    real (pr), intent (in)              :: time, energies(2), pressures, temperatures
-    integer(int_medium), intent (in)    :: unitnum
+subroutine write_observables(time, energies, pressures, temperatures)
+    real (pr), intent (in)  :: time, energies(2), pressures, temperatures
 
-    write(unitnum, format_style0) time*conversion_factors(2), energies*conversion_factors(4), pressures*conversion_factors(6) &
-        , temperatures
+    write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4) &
+        , pressures*conversion_factors(6), temperatures
 
 end subroutine write_observables
+
+subroutine write_tasks(time, positions, velocities, energies, pressures, temperatures, structure_factor)
+    real (pr), dimension(:,:), intent (in)  :: positions, velocities
+    real (pr), intent (in)                  :: time, energies(2), pressures, temperatures, structure_factor
+
+    if (save_positions)      call write_XYZfile(time, positions, velocities)
+    if (save_observables)    call write_observables(time, energies, pressures, temperatures)
+    if (do_structure_factor) call write_structure_factor(time, structure_factor)
+
+end subroutine write_tasks
+
+subroutine close_files()
+    if (save_positions)         close (unit_positions)
+    if (save_observables)       close (unit_observables)
+    if (do_structure_factor)    close (unit_structFact)
+end subroutine close_files
 
 END MODULE writing2files

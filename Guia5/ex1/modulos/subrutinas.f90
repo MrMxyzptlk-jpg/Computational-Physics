@@ -8,14 +8,15 @@ MODULE subrutinas
     implicit none
 
     private     radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
+    private     positions_buffer, msd_accumulator, msd_counts
     real(pr)                :: radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
+    real(pr), allocatable   :: positions_buffer(:,:,:), msd_accumulator(:)
+    integer, allocatable    :: msd_counts(:)
 
     integer(int_medium)     :: cell_dim(3)
     character (len=6)       :: structure
     integer(int_large)      :: num_atoms, pair_corr_bins
-    real(pr)                :: conversion_factors(6), periodicity(3)
-    real(pr)                :: lattice_constant, dt, dtdt, Berendsen_time
-    real(pr)                :: sigma, epsilon
+    real(pr)                :: conversion_factors(6), periodicity(3), lattice_constant, sigma, epsilon, dt, dtdt, Berendsen_time
     real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp_Adim, density, mass
     logical                 :: transitory, save_transitory, do_pair_correlation
     procedure(pot), pointer :: potential => null()
@@ -410,7 +411,7 @@ subroutine get_reciprocal_vec(Miller_index, reciprocal_vec)
 
 end subroutine get_reciprocal_vec
 
-subroutine update_structureFactor(positions, structure_factor, reciprocal_vec)
+subroutine get_structure_factor(positions, structure_factor, reciprocal_vec)
     real(pr), intent(in)        :: positions(:,:), reciprocal_vec(3)
     real(pr), intent(inout)     :: structure_factor
     complex(pr)                 :: summation
@@ -422,43 +423,60 @@ subroutine update_structureFactor(positions, structure_factor, reciprocal_vec)
         summation = summation + exp(CMPLX(0._pr,sum(reciprocal_vec*positions(:,i)), pr))
     end do
 
-    structure_factor = CONJG(summation)*summation/(num_atoms*num_atoms)
+    structure_factor = abs(summation)*abs(summation)/(num_atoms*num_atoms)
 
-end subroutine update_structureFactor
+end subroutine get_structure_factor
 
+subroutine initialize_msd(msd_len_max)
+    integer, intent(in) :: msd_len_max
 
-!##################################################################################################
-!     Old/Unused
-!##################################################################################################
+    allocate(positions_buffer(3,num_atoms, 0:msd_len_max))
+    allocate(msd_accumulator(0:msd_len_max))
+    allocate(msd_counts(0:msd_len_max))
 
-subroutine get_forces_old(positions, forces, E_potential, pressure_virial)
-    real(pr), dimension(:,:), intent(out)   :: positions, forces
-    real(pr), intent(out)                   :: E_potential, pressure_virial
-    real(pr), dimension(3)                  :: particle1_position, particle2_position, particle_separation
-    real(pr)                                :: particle_distance_squared, force_contribution(3)
-    integer(int_huge)                       :: i, j
+    positions_buffer = 0._pr
+    msd_accumulator = 0.0_pr
+    msd_counts = 0
 
-    forces = 0._pr
-    if (.not. transitory .or. save_transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+end subroutine initialize_msd
 
-    do i=1,size(positions,2)-1
-        particle1_position = positions(:,i)
-        do j = i+1,size(positions,2)
-            particle2_position = positions(:,j)
-            particle_separation = particle1_position - particle2_position ! Separation vector
-            particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
-            particle_distance_squared = sum(particle_separation*particle_separation)
-            if (particle_distance_squared <= radius_cutoff_squared) then
-                call potential(particle_distance_squared, particle_separation, force_contribution, E_potential &
-                    , pressure_virial, potential_cutoff)
-                forces(:,i) = forces(:,i) + force_contribution
-                forces(:,j) = forces(:,j) - force_contribution
-            endif
-        end do
+subroutine update_msd(positions, msd_accumulator, msd_counts, msd_count, msd)
+    real(pr), intent(in)    :: positions(:,:)
+    real(pr), intent(inout) :: msd_accumulator(0:), msd_counts(0:), msd(0:)
+    integer, intent(inout)  :: msd_count
+    integer                 :: j, ilast, inext
+    real(pr)                :: displacements(3,num_atoms)
+
+    msd_count = msd_count + 1
+    ilast = mod(msd_count, size(msd_accumulator))
+
+    positions_buffer (:,:,ilast)= positions(:,:)
+
+    do j = 0, min(size(msd_accumulator)-1, msd_count-1)
+        inext = mod(msd_count - j, size(msd_accumulator))
+
+        displacements = positions_buffer(:,:,ilast) - positions_buffer(:,:,inext)
+
+        msd (j) = msd(j) + sum(displacements*displacements)
+        msd_counts(j) = msd_counts(j) + 1
     end do
 
-end subroutine get_forces_old
+end subroutine update_msd
 
+subroutine normalize_msd(msd, msd_accumulator, msd_counts)
+    real(pr), intent(out)   :: msd(0:)
+    real(pr), intent(in)    :: msd_accumulator(0:)
+    integer,  intent(in)    :: msd_counts(0:)
+    integer                 :: j
+
+    do j = 0, size(msd)-1
+        if (msd_counts(j) > 0) then
+            msd(j) = msd_accumulator(j) / (real(msd_counts(j), pr) * real(num_atoms, pr))
+        else
+            msd(j) = 0._pr
+        end if
+    end do
+end subroutine normalize_msd
 
 
 END MODULE
