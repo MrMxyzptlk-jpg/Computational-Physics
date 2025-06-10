@@ -14,6 +14,34 @@ MODULE linkedlists
 
 contains
 
+subroutine check_linkCell(do_linkCell)
+    logical, intent(out)    :: do_linkCell
+    real(pr)                :: max_cells(3), denominator(3)
+    integer                 :: i
+
+    do_linkCell = .False.
+    denominator = int(periodicity/radius_cutoff)
+    if (any((/(denominator(i) == 0 , i=1,3)/))) then
+        print'(a,3I3,a)', "Radius cutoff greater than the super-cell dimensions --->   Using 'all-vs-all' integrator instead"
+        return
+    end if
+    if (any((/(dim_linkCell(i) < 2 , i=1,3)/))) then
+        print'(a,3I3,a)', "Number of linked cells in each directions = (", dim_linkCell,") < (3 3 3)   ---> "// &
+            "  Using 'all-vs-all' integrator instead"
+        return
+    end if
+
+    max_cells = periodicity/denominator
+
+    if ((dim_linkCell(1)<=max_cells(1)).and.(dim_linkCell(2)<=max_cells(2)).and.(dim_linkCell(3)<=max_cells(3)))  then
+        do_linkCell=.True.
+    else
+        print'(a,3I3,a,3I3,a)', "Number of linked cells in each directions = (", dim_linkCell,") > L/int(L/rcut) = (" &
+            ,int(periodicity/denominator),")   --->   Using 'all-vs-all' integrator instead"
+    end if
+
+ end subroutine check_linkCell
+
 subroutine create_maps()
     integer(int_large)  :: ix, iy, iz, imap
 
@@ -106,21 +134,5 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
     end do
     !$omp end parallel do
 end subroutine get_forces_linkedlist
-
-subroutine check_linkCell(do_linkCell)
-    logical, intent(out)    :: do_linkCell
-    real(pr)                :: max_cells(3), denominator(3)
-    integer                 :: i
-
-    do_linkCell = .False.
-    denominator = int(periodicity/radius_cutoff)
-    if (any((/(denominator(i) == 0 , i=1,3)/))) return
-    if (any((/(dim_linkCell(i) < 2 , i=1,3)/))) return
-
-    max_cells = periodicity/denominator
-
-    if ((dim_linkCell(1)<=max_cells(1)).and.(dim_linkCell(2)<=max_cells(2)).and.(dim_linkCell(3)<=max_cells(3))) do_linkCell=.True.
-
- end subroutine check_linkCell
 
 END MODULE linkedlists

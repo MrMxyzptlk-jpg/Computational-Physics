@@ -137,13 +137,16 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
     integer                 :: unit_info
 
     open(newunit=unit_info, file="datos/INFO.out", status="replace")
-        write(unit_info,'(a20,13x,I4)')     "Number of atoms:       ", num_atoms
-        write(unit_info,'(a20,14x,a)')      "Initial structure:     ", structure
-        write(unit_info,'(a20,4x,a)')       "Potential:             ", type
-        write(unit_info,'(a20,2x,a)')       "Integrator:            ", integrator
-        write(unit_info,'(a20,11x,I6)')     "Transitory steps:      ", transitory_steps
-        write(unit_info,'(a20,11x,I6)')     "Run steps:             ", MD_steps
-        write(unit_info,'(a20,6x,E11.5)')   "Simulated time:        ", real(MD_steps,pr)*dt*conversion_factors(2)
+        write(unit_info,'(a24,13x,I4)')     "Number of atoms:       ", num_atoms
+        write(unit_info,'(a24,14x,a)')      "Initial structure:     ", structure
+        write(unit_info,'(a24,6x,E11.5)')   "Lattice constant:      ", lattice_constant*conversion_factors(1)
+        write(unit_info,'(a24,5x,3(x,E11.5))')   "Super-cell dimensions: ", periodicity*conversion_factors(1)
+        write(unit_info,'(a24,6x,E11.5)')   "Density:               ", density
+        write(unit_info,'(a24,4x,a)')       "Potential:             ", type
+        write(unit_info,'(a24,2x,a)')       "Integrator:            ", integrator
+        write(unit_info,'(a24,11x,I6)')     "Transitory steps:      ", transitory_steps
+        write(unit_info,'(a24,11x,I6)')     "Run steps:             ", MD_steps
+        write(unit_info,'(a24,6x,E11.5)')   "Simulated time:        ", real(MD_steps,pr)*dt*conversion_factors(2)
 
         if (save_observables) then
             call get_stats(energies(1,:), average = energy_avg(1), stddev = energy_stddev(1))

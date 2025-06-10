@@ -129,8 +129,6 @@ program ex1
                 call create_maps()
                 call create_links(positions)
             else
-                print'(a,3I3,a,3I3,a)', "Number of linked cells in each directions = (", dim_linkCell,") > L/int(L/rcut) = (" &
-                    ,int(periodicity/int(periodicity/radius_cutoff)),")   --->   Using 'all-vs-all' integrator instead"
                 summation = "all-vs-all"
                 get_forces =>  get_forces_allVSall
             end if

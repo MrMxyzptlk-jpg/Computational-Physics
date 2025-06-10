@@ -37,6 +37,10 @@ contains
 
 subroutine initialize_parameters()
 
+    if (structure == "random") then
+        cell_dim = 1_int_medium
+        density = num_atoms / product(cell_dim*lattice_constant)
+    end if
     ! Define conversion factors to adimensionalize the variables
     conversion_factors(1) = sigma                           ! Distance      [Bohr = a₀]
     conversion_factors(2) = sigma*sqrt(mass/epsilon)        ! Time          [ℏ/Eh = tₐ]
@@ -93,15 +97,49 @@ subroutine create_file_name(prefix, num, suffix, filename)
 end subroutine create_file_name
 
 subroutine initialize_positions_random(positions) ! Not debugged
-    real(pr), allocatable, intent(out) :: positions(:,:)
-    integer                            :: i
+    real(pr), allocatable, intent(out)  :: positions(:,:)
+    integer                             :: i, j, accepted, attempts
+    real(pr)                            :: r2_min, r2, dx, dy, dz
+    real(pr)                            :: r_min
+    real(pr), allocatable               :: pos_trial(:,:)
 
-    do i = 1, size(cell_dim)
-        num_atoms = num_atoms * cell_dim(i)
+    allocate(positions(3, num_atoms))
+    positions = 0._pr
+    r_min = sigma*0.5_pr   ! Minimum allowed distance between particles
+    r2_min = r_min**2
+
+    accepted = 0
+    attempts = 0
+
+    do while (accepted < num_atoms)
+        ! Generate random position in the supercell
+        pos_trial = reshape( [ (rmzran() * periodicity(i), i = 1, 3) ], [3, 1] )
+
+        ! Check against all previously accepted positions
+        do j = 1, accepted
+            dx = pos_trial(1,1) - positions(1,j)
+            dy = pos_trial(2,1) - positions(2,j)
+            dz = pos_trial(3,1) - positions(3,j)
+
+            r2 = dx*dx + dy*dy + dz*dz
+            if (r2 < r2_min) exit  ! Too close → reject
+        end do
+
+        ! If we made it through the loop, the point is valid
+        if (j > accepted) then
+            accepted = accepted + 1
+            positions(:,accepted) = pos_trial(:,1)
+        end if
+
+        attempts = attempts + 1
+        if (attempts > 100000) then
+            print *, "ERROR: Could not place all atoms with minimum spacing."
+            stop
+        end if
+        print*, "Attempt:", attempts, " Accepted:", accepted
     end do
 
-    ! Need to add a check to avoid collisions
-    positions = reshape( [ (rmzran(), i = 1, size(positions)) ], shape(positions) )  ! Need to redefine this to get random positions in supercell, not unit cell
+    print*, "Random positions initialized after ", attempts, "attempts"
 
 end subroutine initialize_positions_random
 
@@ -177,7 +215,7 @@ subroutine initialize_positions_BCC(positions)
     do h = 0_int_medium, cell_dim(1)-1_int_medium
         do k = 0_int_medium, cell_dim(2)-1_int_medium
             do l = 0_int_medium, cell_dim(3)-1_int_medium
-                do b = 1, 4
+                do b = 1, 2
                     positions(:, atom_id) = [real(h, pr), real(k, pr), real(l, pr)] + basis(:, b)
                     atom_id = atom_id + 1
                 end do
