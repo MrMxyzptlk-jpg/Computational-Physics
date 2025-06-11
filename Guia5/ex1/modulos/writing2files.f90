@@ -107,7 +107,7 @@ subroutine write_observables(time, energies, pressures, temperatures)
             write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4) &
                 , pressures*conversion_factors(6), temperatures
         case('Monte-Carlo')
-            write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4)
+            write(unit_observables, format_style0) time*conversion_factors(2), energies(1)*conversion_factors(4)
     end select
 
 end subroutine write_observables

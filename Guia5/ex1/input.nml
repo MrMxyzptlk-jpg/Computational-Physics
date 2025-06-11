@@ -2,7 +2,7 @@
     ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'
     structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
-    cell_dim            = 5,5,5
+    cell_dim            = 4,4,4
     num_atoms           = 256
     initial_Temp_Adim   = 1.1           ! In units of epsilon/Kb
     density             = 0.8           ! Number of atoms/volume
@@ -21,17 +21,17 @@
 /
 
 &tasks
-    save_transitory          = true
-    save_observables         = true
-    save_positions           = true
+    save_transitory          = false
+    save_observables         = false
+    save_positions           = false
     do_pair_correlation      = true
-    do_structure_factor      = true
-    do_mean_sqr_displacement = true
+    do_structure_factor      = false
+    do_mean_sqr_displacement = false
     Miller_index             = 0,-1,0
 /
 
 &approximation
-    integrator   = 'Monte-Carlo'    ! Options: 'velocity-Verlet', 'Monte-Carlo'
+    integrator   = 'Monte-Carlo'   ! Options: 'velocity-Verlet', 'Monte-Carlo'
     type         = 'lennard_jones'
     sigma        = 1                    ! In Bohr
     epsilon      = 1                    ! In hartree

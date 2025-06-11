@@ -321,7 +321,7 @@ subroutine get_force_contribution(particle1_position, particle2_position, partic
         particle2_forces = particle2_forces - force_contribution
     endif
 
-    if (do_pair_correlation .and. measure) call update_pair_correlation(particle_distance_squared, pair_corr)
+    if (do_pair_correlation .and. .not. transitory) call update_pair_correlation(particle_distance_squared, pair_corr)
 
 end subroutine get_force_contribution
 
@@ -412,7 +412,7 @@ subroutine get_E_potential_contribution(positions, random_particle_id, dE)
         if (i /= random_particle_id) then
             call get_distance_squared(positions(:,random_particle_id), positions(:,i), particle_distance_squared)
             if (particle_distance_squared <= radius_cutoff_squared) then
-                dE = dE + potential_function(particle_distance_squared) - potential_cutoff
+                dE = dE + potential_function(particle_distance_squared) ! The term "- potential_cutoff" is irrelevant to the change in potential energy
             end if
         end if
     end do
@@ -481,9 +481,11 @@ subroutine update_pair_correlation(particle_distance_squared, pair_corr)
     real(pr), intent(inout)     :: pair_corr(:)
     integer(int_large)          :: radius_bin
 
-    if (particle_distance_squared <= pair_corr_cutoff_sqr) then
-        radius_bin = int(sqrt(particle_distance_squared) / dr) + 1
-        pair_corr(radius_bin) = pair_corr(radius_bin) + 1._pr
+    if (measure) then
+        if (particle_distance_squared <= pair_corr_cutoff_sqr) then
+            radius_bin = int(sqrt(particle_distance_squared) / dr) + 1
+            pair_corr(radius_bin) = pair_corr(radius_bin) + 1._pr
+        end if
     end if
 
 end subroutine update_pair_correlation
@@ -498,7 +500,7 @@ subroutine normalize_pair_correlation(pair_corr, real_steps)
         r_upper = r_lower + dr
         shell_vol = (4.0_pr*pi / 3.0_pr) * (r_upper**3 - r_lower**3)
         ideal_pair_corr = density * shell_vol * real(num_atoms,pr)
-        pair_corr(i) = pair_corr(i) / ideal_pair_corr / measuring_steps
+        pair_corr(i) = pair_corr(i) * 2._pr / ideal_pair_corr / real(measuring_steps,pr)
     end do
 
 end subroutine normalize_pair_correlation

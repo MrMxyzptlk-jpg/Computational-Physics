@@ -144,6 +144,7 @@ program ex1
     end select
 
     if (summation == "linked-lists") call check_linkCell(do_linkCell)
+
     if (do_linkCell) then
         get_forces =>  get_forces_linkedList
         call create_maps()
@@ -155,13 +156,9 @@ program ex1
         if (integrator == 'Monte-Carlo' .and. do_pair_correlation) get_pair_correlation => get_pair_correlation_allVSall
     end if
 
-    if (do_structure_factor) then
-        call get_reciprocal_vec(Miller_index, reciprocal_vec)
-    end if
+    if (do_structure_factor) call get_reciprocal_vec(Miller_index, reciprocal_vec)
 
-    if (do_mean_sqr_displacement) then
-        call initialize_msd(meanSqrDisplacement)
-    end if
+    if (do_mean_sqr_displacement) call initialize_msd(meanSqrDisplacement)
 
     if (do_pair_correlation) then
         allocate(pair_corr(pair_corr_bins))
@@ -199,15 +196,14 @@ program ex1
                     , pressures(i_measure), temperatures(i_measure), structure_factor)
             end if
 
-            if (save_transitory .and. save_positions) call write_XYZfile(0._pr, positions, velocities)
             do i = -transitory_steps/thermostat_steps , -1, 1
                 do j = 1, thermostat_steps
                     if (save_transitory) call check_measuring(i*thermostat_steps + j)    ! Checks if there will be measurements in this iteration
                     if (measure) i_measure = i_measure + 1
 
                     call update_positions_velVer(positions, velocities, forces)
-                    if (do_linkCell) call create_links(positions)
                     previous_forces = forces
+                    if (do_linkCell) call create_links(positions)
                     call get_forces(positions, forces, Energies(1,i_measure), pressures(i_measure), pair_corr)  ! If measure = .False. the observables are ignored
 
                     call update_velocities_velVer(velocities, forces, previous_forces)
@@ -264,7 +260,6 @@ program ex1
                     call update_positions_random(positions, Energies(1,i_measure), MC_accepted)
 
                     if (measure) then
-                        if (do_linkCell) call create_links(positions)
                         if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
                         call write_tasks(real(i_measure,pr)*dt, positions, velocities, energies(:,i_measure), pressures(1) &
                             , temperatures(1) , structure_factor)
@@ -281,9 +276,9 @@ program ex1
                 if (measure) i_measure = i_measure + 1
 
                 call update_positions_random(positions, Energies(1,i_measure), MC_accepted)
-                if (do_linkCell) call create_links(positions)
 
                 if (measure) then
+                    if (do_linkCell) call create_links(positions)
                     if (do_pair_correlation) call get_pair_correlation(positions, pair_corr)
                     if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
                     if (do_mean_sqr_displacement) call update_msd(positions, meanSqrDisplacement)
