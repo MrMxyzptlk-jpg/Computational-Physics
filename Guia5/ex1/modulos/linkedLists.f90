@@ -19,7 +19,13 @@ subroutine check_linkCell(do_linkCell)
     integer                 :: i, max_cells(3)
 
     do_linkCell = .False.
-    max_cells = int(periodicity/radius_cutoff)  ! There must be less cells than the number of radius_cutoff that fit in any given direction
+
+    if (integrator /= 'Monte-Carlo') then
+        max_cells = int(periodicity/radius_cutoff)  ! There must be less cells than the number of radius_cutoff that fit in any given direction
+    else
+        max_cells = int(periodicity/pair_corr_cutoff)  ! There must be less cells than the number of pair_corr_cutoff that fit in any given direction
+    end if
+
     if (any((/(max_cells(i) == 0 , i=1,3)/))) then
         print'(a,3I3,a)', "Radius cutoff greater than the super-cell dimensions --->   Using 'all-vs-all' integrator instead"
         return

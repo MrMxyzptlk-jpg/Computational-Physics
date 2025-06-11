@@ -2,7 +2,7 @@
     ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'
     structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
-    cell_dim            = 4,4,4
+    cell_dim            = 5,5,5
     num_atoms           = 256
     initial_Temp_Adim   = 1.1           ! In units of epsilon/Kb
     density             = 0.8           ! Number of atoms/volume
@@ -11,12 +11,12 @@
 
 &calculation
     dt               = 0.005            ! In units of [ℏ/Eh = tₐ]
-    real_steps       = 3000
+    real_steps       = 10000
     transitory_steps = 1000
     thermostat_steps = 50               ! Rescales every 50 steps the thermostat is applied
     radius_cutoff    = 2.5              ! In Bohr
     summation        = 'linked-lists'   ! Options: 'all-vs-all', 'linked-lists'
-    dim_linkCell     = 3,3,3
+    dim_linkCell     = 4,4,4
     measuring_jump   = 10
 /
 
@@ -50,5 +50,5 @@
 
 &pair_correlation
     pair_corr_cutoff = 4.0              ! In Bohr
-    pair_corr_bins   = 100
+    pair_corr_bins   = 200
 /
