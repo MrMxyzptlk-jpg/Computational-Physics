@@ -47,19 +47,19 @@ program ex1
 !##################################################################################################
 
     call init_structure()
+    call initialize_parameters()                ! subrutinas module
+    call init_positions()
     call init_potential()
     call init_thermostat()
     call init_observables()
-    call init_summation()
     call init_tasks()
-    call initialize_parameters()                ! subrutinas module
-    call initialize_XYZ_data()                  ! writing2flies module
-    call initialize_positions()
+    call init_summation()
     if (integrator /= 'Monte-Carlo') then
         call initialize_velocities()
         call initialize_rest()                  ! subrutinas module
         call thermostat_rescale(velocities)     ! subrutinas module
     end if
+    call initialize_XYZ_data()                  ! writing2flies module
 
 !##################################################################################################
 !      Start of the calculations
@@ -67,6 +67,7 @@ program ex1
 
     if (save_transitory) then
         i_measure = transitory_minIndex
+        measure = .true.
     else
         i_measure = 0
     end if
@@ -120,9 +121,9 @@ program ex1
                 previous_forces = forces
                 call get_forces(positions, forces, Energies(1,i_measure), pressures(i_measure), pair_corr)
                 call update_velocities_velVer(velocities, forces, previous_forces)
-                call get_observables(velocities, Energies(2,i_measure), pressures(i_measure), temperatures(i_measure))
 
                 if (measure) then
+                    call get_observables(velocities, Energies(2,i_measure), pressures(i_measure), temperatures(i_measure))
                     if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
                     if (do_mean_sqr_displacement) call update_msd(positions, meanSqrDisplacement)
                     call write_tasks(real(i_measure,pr)*dt, positions, velocities, energies(:,i_measure), pressures(i_measure)  &
@@ -192,6 +193,6 @@ program ex1
     CPU_t_end = omp_get_wtime()
     CPU_elapsed_time = CPU_t_end - CPU_t_start
 
-    call write_output(CPU_elapsed_time, energies, pressures, temperatures)
+    call write_output(CPU_elapsed_time, energies(:,1:), pressures(1:), temperatures(1:))
 
 end program ex1

@@ -149,8 +149,8 @@ end subroutine write_pair_corr
 
 subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
     real (pr), intent (in)  :: CPU_elapsed_time, energies(:,:), pressures(:), temperatures(:)
-    real (pr)               :: energy_avg(2), pressure_avg, temperature_avg
-    real (pr)               :: energy_stddev(2), pressure_stddev, temperature_stddev
+    real (pr)               :: energy_avg(3), E_total(size(energies,2)), pressure_avg, temperature_avg
+    real (pr)               :: energy_stddev(3), pressure_stddev, temperature_stddev
     integer                 :: unit_info
 
     open(newunit=unit_info, file="datos/INFO.out", status="replace")
@@ -160,10 +160,12 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
         write(unit_info,'(a24,5x,3(x,E11.5))')   "Super-cell dimensions: ", periodicity*conversion_factors(1)
         write(unit_info,'(a24,6x,E11.5)')   "Density:               ", density
         write(unit_info,'(a24,4x,a)')       "Summation:             ", summation
+        write(unit_info,'(a24,4x,a)')       "Initial velocities:    ", initial_velocities
         write(unit_info,'(a24,4x,a)')       "Potential:             ", type
         write(unit_info,'(a24,2x,a)')       "Integrator:            ", integrator
         write(unit_info,'(a24,11x,I6)')     "Transitory steps:      ", transitory_steps
         write(unit_info,'(a24,11x,I6)')     "Run steps:             ", real_steps
+        write(unit_info,'(a24,11x,I6)')     "Measuring steps:       ", measuring_steps
         write(unit_info,'(a24,6x,E11.5)')   "Simulated time:        ", real(real_steps,pr)*dt*conversion_factors(2)
 
         if (save_observables) then
@@ -181,6 +183,10 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
                 call get_stats(temperatures(1:), average = temperature_avg, stddev = temperature_stddev)
                 write(unit_info,format_observables)     "Temperature:       ", " Average = ",temperature_avg*conversion_factors(3) &
                     , " Standard deviation = ", temperature_stddev*conversion_factors(3)
+                E_total = energies(1,:) + energies(2,:)
+                call get_stats(E_total, average = energy_avg(3), stddev = energy_stddev(3))
+                write(unit_info,format_observables)     "Total Energy:      ", " Average = ", energy_avg(3)*conversion_factors(4)  &
+                    , " Standard deviation = ", energy_stddev(3)*conversion_factors(4)
             case('Monte-Carlo')
                 call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1))
                 write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", energy_avg(1)*conversion_factors(4)  &

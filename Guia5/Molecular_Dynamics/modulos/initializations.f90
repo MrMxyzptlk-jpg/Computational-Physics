@@ -35,7 +35,7 @@ MODULE initializations
         end subroutine thermo
     end interface
 
-    procedure(init_pos), pointer         :: initialize_positions    => null()
+    procedure(init_pos), pointer     :: init_positions    => null()
     procedure(force_sub), pointer    :: get_forces              => null()
     procedure(pairCorr_sub), pointer :: get_pair_correlation    => null()
     procedure(thermo), pointer       :: thermostat_chosen       => null()
@@ -46,19 +46,19 @@ subroutine init_structure()
 
     select case (structure)
         case ("FCC")
-            initialize_positions =>  initialize_positions_FCC
+            init_positions =>  initialize_positions_FCC
             if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
         case ("BCC")
-            initialize_positions =>  initialize_positions_BCC
+            init_positions =>  initialize_positions_BCC
             if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
         case ("random")
-            initialize_positions =>  initialize_positions_random
+            init_positions =>  initialize_positions_random
             if (density > 0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
             if (density > 0._pr) then
                 print*, "Random structure selected -> Chosen density is being ignored. Using density = num_atoms/vol instead"
             end if
         case default
-            initialize_positions =>  initialize_positions_FCC
+            init_positions =>  initialize_positions_FCC
             if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
     end select
 
@@ -104,8 +104,8 @@ subroutine init_observables()
                 allocate(Energies(2,0:measuring_steps)) ! Energies = (E_potential, E_kinetic)
                 allocate(Pressures(0:measuring_steps), Temperatures(0:measuring_steps))
             end if
-            allocate(velocities(size(positions,1),size(positions,2)))
-            allocate(forces(size(positions,1),size(positions,2)))
+            allocate(velocities(3,size(positions,2)))
+            allocate(forces(3,size(positions,2)))
         case('Monte-Carlo')
             if (save_transitory) then
                 transitory_minIndex = -int(transitory_steps/measuring_jump)
@@ -306,7 +306,7 @@ subroutine initialize_velocities_Maxwell()
     velocities = reshape([ (real(tmp(i), pr), i = 1, n) ], shape(velocities))
 
     ! Subtract center-of-mass velocity
-    velocity_average = sum(velocities, dim=2) / real(num_atoms, pr)
+    velocity_average = sum(velocities, 2) / real(num_atoms, pr)
 
     do i = 1, 3
         velocities(i,:) = velocities(i,:) - velocity_average(i)

@@ -357,16 +357,19 @@ end subroutine get_observables
 subroutine get_stats(measurements, variance, stddev, average)
     real(pr), intent(in)                :: measurements(:)
     real(pr), optional, intent(out)     :: variance, stddev, average
-    real(pr)                            :: avg, sqr_avg
+    real(pr)                            :: avg, var
 
     if (present(average) .or. present(variance) .or. present(stddev)) then
-        avg = sum(measurements)/size(measurements)
-        sqr_avg = sum(measurements*measurements)/size(measurements)
+        avg = sum(measurements)/real(size(measurements),pr)
     end if
 
-    if  (present(average))   average  = avg
-    if  (present(variance))  variance = sqr_avg - avg*avg
-    if  (present(stddev))     stddev   = sqrt(sqr_avg - avg*avg)
+    if (present(variance) .or. present(stddev)) then
+        var = sum((measurements - avg)**2) / real(size(measurements) - 1, pr)
+    end if
+
+    if (present(average))  average  = avg
+    if (present(variance)) variance = var
+    if (present(stddev))   stddev   = sqrt(var)
 
 end subroutine get_stats
 
