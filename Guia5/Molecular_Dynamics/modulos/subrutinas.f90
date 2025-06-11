@@ -89,168 +89,6 @@ subroutine initialize_rest()
 
 end subroutine initialize_rest
 
-subroutine create_file_name(prefix, num, suffix, filename)
-    character(len=8)                :: fmt  ! Format descriptor
-    character(len=12)               :: x1   ! Temporary string for formatted real
-    character(len=*), intent(in)    :: prefix, suffix
-    character(len=*)                :: filename
-    real(kind=pr), intent(in)       :: num  ! Input real number
-
-    fmt = '(I10)'  ! Format integer
-    write(x1, fmt) num  ! Convert real to string
-
-    ! Trim spaces in formatted number
-    x1 = adjustl(trim(x1))
-
-    ! Concatenate strings
-    filename = prefix // trim(x1) // suffix
-
-end subroutine create_file_name
-
-subroutine initialize_positions_random(positions) ! Not debugged
-    real(pr), allocatable, intent(out)  :: positions(:,:)
-    integer                             :: i, j, accepted, attempts
-    real(pr)                            :: r2_min, r2, dx, dy, dz
-    real(pr)                            :: r_min
-    real(pr), allocatable               :: pos_trial(:,:)
-
-    allocate(positions(3, num_atoms))
-    positions = 0._pr
-    r_min = sigma*0.5_pr   ! Minimum allowed distance between particles
-    r2_min = r_min**2
-
-    accepted = 0
-    attempts = 0
-
-    do while (accepted < num_atoms)
-        ! Generate random position in the supercell
-        pos_trial = reshape( [ (rmzran() * periodicity(i), i = 1, 3) ], [3, 1] )
-
-        ! Check against all previously accepted positions
-        do j = 1, accepted
-            dx = pos_trial(1,1) - positions(1,j)
-            dy = pos_trial(2,1) - positions(2,j)
-            dz = pos_trial(3,1) - positions(3,j)
-
-            r2 = dx*dx + dy*dy + dz*dz
-            if (r2 < r2_min) exit  ! Too close → reject
-        end do
-
-        ! If we made it through the loop, the point is valid
-        if (j > accepted) then
-            accepted = accepted + 1
-            positions(:,accepted) = pos_trial(:,1)
-        end if
-
-        attempts = attempts + 1
-        if (attempts > 100000) then
-            print *, "ERROR: Could not place all atoms with minimum spacing."
-            stop
-        end if
-        print*, "Attempt:", attempts, " Accepted:", accepted
-    end do
-
-    print*, "Random positions initialized after ", attempts, "attempts"
-
-end subroutine initialize_positions_random
-
-subroutine initialize_positions_FCC(positions)
-    real(pr), allocatable, intent(out) :: positions(:,:)
-    integer(int_large)                 :: supercell_atoms
-    integer(int_large)                 :: atom_id
-    integer(int_medium)                :: h, k, l, b
-    integer(int_small)                 :: i
-
-    ! FCC as simple cubic with a basis:
-    real(pr), parameter         :: basis(3,4) = reshape([ &
-        0.0_pr, 0.0_pr, 0.0_pr, &  ! Atom 1
-        0.5_pr, 0.5_pr, 0.0_pr, &  ! Atom 2
-        0.5_pr, 0.0_pr, 0.5_pr, &  ! Atom 3
-        0.0_pr, 0.5_pr, 0.5_pr   & ! Atom 4
-    ], [3,4])
-
-    supercell_atoms = 4
-    do i = 1_int_small, size(cell_dim)
-        supercell_atoms = supercell_atoms * cell_dim(i)
-    end do
-    if (supercell_atoms/=num_atoms .and. num_atoms/=0) then
-        print'(a,I5,a,I5)', "Number of atoms mismatch: selected number of atoms = ", num_atoms &
-            , " and atoms in the FCC supercell = ",supercell_atoms
-        print*, "Ignoring number of atoms specified"
-        num_atoms = supercell_atoms
-    end if
-    allocate(positions(3, num_atoms))
-
-    atom_id = 1
-    do h = 0_int_medium, cell_dim(1)-1_int_medium
-        do k = 0_int_medium, cell_dim(2)-1_int_medium
-            do l = 0_int_medium, cell_dim(3)-1_int_medium
-                do b = 1, 4
-                    positions(:, atom_id) = [real(h, pr), real(k, pr), real(l, pr)] + basis(:, b)
-                    atom_id = atom_id + 1
-                end do
-            end do
-        end do
-    end do
-
-    positions = positions*lattice_constant
-
-end subroutine initialize_positions_FCC
-
-subroutine initialize_positions_BCC(positions)
-    real(pr), allocatable, intent(out) :: positions(:,:)
-    integer(int_large)                 :: supercell_atoms
-    integer(int_large)                 :: atom_id
-    integer(int_medium)                :: h, k, l, b
-    integer(int_small)                 :: i
-
-    ! BCC as simple cubic with a basis:
-    real(pr), parameter         :: basis(3,2) = reshape([ &
-        0.0_pr, 0.0_pr, 0.0_pr, &  ! Atom 1
-        0.5_pr, 0.5_pr, 0.5_pr  &  ! Atom 2
-    ], [3,2])
-
-    supercell_atoms = 2
-    do i = 1_int_small, size(cell_dim)
-        supercell_atoms = supercell_atoms * cell_dim(i)
-    end do
-    if (supercell_atoms/=num_atoms .and. num_atoms/=0) then
-        print'(a,I5,a,I5)', "Number of atoms mismatch: selected number of atoms = ", num_atoms &
-            , " and atoms in the BCC supercell = ",supercell_atoms
-        print*, "Ignoring number of atoms specified"
-        num_atoms = supercell_atoms
-    end if
-    allocate(positions(3, num_atoms))
-
-    atom_id = 1
-    do h = 0_int_medium, cell_dim(1)-1_int_medium
-        do k = 0_int_medium, cell_dim(2)-1_int_medium
-            do l = 0_int_medium, cell_dim(3)-1_int_medium
-                do b = 1, 2
-                    positions(:, atom_id) = [real(h, pr), real(k, pr), real(l, pr)] + basis(:, b)
-                    atom_id = atom_id + 1
-                end do
-            end do
-        end do
-    end do
-
-end subroutine initialize_positions_BCC
-
-subroutine initialize_velocities(velocities)
-    real(pr), allocatable, intent(out)      :: velocities(:,:)
-    real(pr)                                :: velocity_average(size(velocities,1))
-    integer                                 :: i
-
-    velocities = reshape( [ (rmzran() - 0.5_pr, i = 1, size(velocities)) ], shape(velocities) )
-
-    velocity_average = sum(velocities,2)/real(num_atoms,pr)
-
-    do i = 1, 3
-        velocities(i,:) = (velocities(i,:) - velocity_average(i))   ! Removing center of mass displacement
-    end do
-
-end subroutine initialize_velocities
-
 subroutine thermostat_rescale(velocities)
     real(pr), allocatable, intent(inout)    :: velocities(:,:)
     real(pr)                                :: instant_Temp, scaling_factor
@@ -404,7 +242,7 @@ end subroutine update_positions_random
 subroutine get_E_potential_contribution(positions, random_particle_id, dE)
     real(pr), intent(in)    :: positions(:,:)
     real(pr), intent(out)   :: dE
-    real(pr)                :: particle_distance_squared, particle_separation(3)
+    real(pr)                :: particle_distance_squared
     integer                 :: random_particle_id, i
 
     dE = 0._pr
@@ -490,9 +328,9 @@ subroutine update_pair_correlation(particle_distance_squared, pair_corr)
 
 end subroutine update_pair_correlation
 
-subroutine normalize_pair_correlation(pair_corr, real_steps)
+subroutine normalize_pair_correlation(pair_corr)
     real(pr), intent(inout)     :: pair_corr(:)
-    integer                     :: i, real_steps
+    integer                     :: i
     real(pr)                    :: r_lower, r_upper, shell_vol, ideal_pair_corr
 
     do i = 1, pair_corr_bins
@@ -647,18 +485,80 @@ subroutine check_measuring(index)
 
 end subroutine check_measuring
 
+subroutine gasdev_v(harvest)
+    real(pr), dimension(:), intent(out) :: harvest
+    real(pr), allocatable, save         :: g(:)
+    logical, save                       :: gaus_stored = .false.
+    integer, save                       :: last_allocated = 0
+    real(pr)                            :: rsq, v1, v2
+    integer                             :: i, n
+
+    n = size(harvest)
+
+    if (n /= last_allocated) then
+        if (last_allocated > 0) deallocate(g)
+        allocate(g(n))
+        last_allocated = n
+        gaus_stored = .false.
+    end if
+
+    if (gaus_stored) then
+        harvest = g
+        gaus_stored = .false.
+    else
+        i = 1
+        do while (i <= n)
+            call random_number(v1)
+            call random_number(v2)
+            v1 = 2.0_pr * v1 - 1.0_pr
+            v2 = 2.0_pr * v2 - 1.0_pr
+            rsq = v1*v1 + v2*v2
+
+            if (rsq > 0.0_pr .and. rsq < 1.0_pr) then
+                rsq = sqrt(-2.0_pr * log(rsq) / rsq)
+                harvest(i) = v1 * rsq
+                if (i < n) then
+                    g(i+1) = v2 * rsq
+                end if
+                i = i + 2
+            end if
+        end do
+        gaus_stored = .true.
+    end if
+
+end subroutine gasdev_v
+
 !##################################################################################################
 !     Not used / Not implemented
 !##################################################################################################
 
-subroutine Coulomb(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
-    , potential_cutoff)
-    real(pr), intent(in)       :: particle_distance_squared, particle_separation(3)
-    real(pr), intent(out)      :: force_contribution(3)
-    real(pr), intent(inout)    :: E_potential, pressure_virial
-    real(pr), intent(in)       :: potential_cutoff
 
+    !subroutine create_file_name(prefix, num, suffix, filename)
+    !    character(len=8)                :: fmt  ! Format descriptor
+    !    character(len=12)               :: x1   ! Temporary string for formatted real
+    !    character(len=*), intent(in)    :: prefix, suffix
+    !    character(len=*)                :: filename
+    !    real(kind=pr), intent(in)       :: num  ! Input real number
+    !
+    !    fmt = '(I10)'  ! Format integer
+    !    write(x1, fmt) num  ! Convert real to string
+    !
+    !    ! Trim spaces in formatted number
+    !    x1 = adjustl(trim(x1))
+    !
+    !    ! Concatenate strings
+    !    filename = prefix // trim(x1) // suffix
+    !
+    !end subroutine create_file_name
 
-end subroutine Coulomb
+    !subroutine Coulomb(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
+    !    , potential_cutoff)
+    !    real(pr), intent(in)       :: particle_distance_squared, particle_separation(3)
+    !    real(pr), intent(out)      :: force_contribution(3)
+    !    real(pr), intent(inout)    :: E_potential, pressure_virial
+    !    real(pr), intent(in)       :: potential_cutoff
+    !
+    !
+    !end subroutine Coulomb
 
 END MODULE

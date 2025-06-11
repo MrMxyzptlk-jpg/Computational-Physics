@@ -5,14 +5,14 @@ MODULE parsing
 
     character (len=15)  :: integrator, type
     character (len=6)   :: ensemble
-    character (len=12)  :: summation, thermostat_type
+    character (len=12)  :: summation, thermostat_type, initial_velocities
     logical             :: save_observables, save_positions, do_structure_factor, do_mean_sqr_displacement
     integer(int_large)  :: transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, mass, cell_dim, ensemble
     namelist /calculation/ real_steps, transitory_steps, thermostat_steps, dt, radius_cutoff, summation, dim_linkCell &
-        , measuring_jump
+        , measuring_jump, initial_velocities
     namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
         , do_structure_factor, Miller_index
     namelist /approximation/ integrator, type, sigma, epsilon, MC_adjust_step, MC_delta
@@ -42,6 +42,7 @@ subroutine set_defaults()
         summation        = 'all-vs-all'
         dim_linkCell     = (/3,3,3/)
         measuring_jump   = 50
+        initial_velocities = 'random'
 
         ! Tasks
         save_transitory  = .False.

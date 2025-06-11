@@ -12,7 +12,7 @@
 !
 !
 !
-! Room for improvement: add check to the random initialization of positions in order to avoid collisions. Check cutoff_radius units (and relation to sigma).
+! Room for improvement:
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
@@ -26,150 +26,40 @@ program ex1
     use linkedLists
     use omp_lib
     use writing2files
+    use initializations
     implicit none
 
-    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, meanSqrDisplacement
-    real(pr)                                :: reciprocal_vec(3), structure_factor
-    real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
+    real(pr), dimension(:,:), allocatable   :: previous_forces
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
 !    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
-    integer(int_large)                      :: i, j, i_measure, transitory_minIndex, MC_accepted
-    logical                                 :: do_linkCell = .False.
+    integer(int_large)                      :: i, j, i_measure
 
-    abstract interface
-        subroutine init_pos(positions)
-            use precision
-            real(pr), allocatable, intent(out) :: positions(:,:)
-        end subroutine init_pos
-
-        subroutine force_sub(positions, forces, E_potential, pressure_virial, pair_corr)
-            use precision
-            real(pr), intent(in)    :: positions(:,:)
-            real(pr), intent(out)   :: forces(:,:)
-            real(pr), intent(out)   :: E_potential, pressure_virial
-            real(pr), intent(inout) :: pair_corr(:)
-        end subroutine force_sub
-
-        subroutine pairCorr_sub(positions, pair_corr)
-            use precision
-            real(pr), intent(in)        :: positions(:,:)
-            real(pr), intent(inout)     :: pair_corr(:)
-        end subroutine pairCorr_sub
-
-        subroutine thermo(velocities)
-            use precision
-            real(pr), allocatable, intent(inout)    :: velocities(:,:)
-        end subroutine thermo
-    end interface
-
-    procedure(init_pos), pointer    :: initialize_positions => null()
-    procedure(force_sub), pointer   :: get_forces => null()
-    procedure(pairCorr_sub), pointer   :: get_pair_correlation => null()
-    procedure(thermo), pointer      :: thermostat_chosen => null()
 
 !###################################################################################################
-!   Set default values and parse input file
+!   Set default values and parse input file (parsing module)
 !###################################################################################################
 
     call set_defaults()
     call parse_input()
 
 !##################################################################################################
-!      Necessary definitions, pointers, initializations and conversion factors
+!      Necessary definitions, pointers, initializations and conversion factors (initializations module unless specified otherwise)
 !##################################################################################################
 
-    select case (structure)
-        case ("FCC")
-            initialize_positions =>  initialize_positions_FCC
-            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
-        case ("BCC")
-            initialize_positions =>  initialize_positions_BCC
-            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
-        case ("random")
-            initialize_positions =>  initialize_positions_random
-            if (density > 0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
-            if (density > 0._pr) then
-                print*, "Random structure selected -> Chosen density is being ignored. Using density = num_atoms/vol instead"
-            end if
-        case default
-            initialize_positions =>  initialize_positions_FCC
-            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
-    end select
-
-    select case (type)
-        case ("Coulomb")
-            potential =>  Coulomb
-        case ("lannard_jones")
-            potential =>  Lennard_Jones
-            potential_function => Lennard_Jones_potential
-        case default
-            potential =>  Lennard_Jones
-            potential_function => Lennard_Jones_potential
-    end select
-
-    select case (thermostat_type)
-        case ("rescale")
-            thermostat_chosen =>  thermostat_rescale
-        case ("Berendsen")
-            thermostat_chosen =>  thermostat_Berendsen
-        case default
-            thermostat_chosen =>  thermostat_rescale
-    end select
-
-    call initialize_parameters()
-    call initialize_XYZ_data()
-    call initialize_positions(positions)
-
-    select case(integrator)
-        case ('velocity-Verlet')
-            if (save_transitory) then
-                transitory_minIndex = -int(transitory_steps/measuring_jump)
-                allocate(Energies(2,transitory_minIndex:measuring_steps)) ! Energies = (E_potential, E_kinetic)
-                allocate(Pressures(transitory_minIndex:measuring_steps), Temperatures(transitory_minIndex:measuring_steps))
-            else
-                allocate(Energies(2,0:measuring_steps)) ! Energies = (E_potential, E_kinetic)
-                allocate(Pressures(0:measuring_steps), Temperatures(0:measuring_steps))
-            end if
-            allocate(velocities(size(positions,1),size(positions,2)))
-            allocate(forces(size(positions,1),size(positions,2)))
-            call initialize_velocities(velocities)
-        case('Monte-Carlo')
-            if (save_transitory) then
-                transitory_minIndex = -int(transitory_steps/measuring_jump)
-                allocate(Energies(1,transitory_minIndex:measuring_steps)) ! Energies = (E_potential, E_kinetic)
-            else
-                allocate(Energies(1,0:measuring_steps)) ! Energies = (E_potential, E_kinetic)
-            end if
-            allocate(Pressures(1), Temperatures(1))
-    end select
-
-    if (summation == "linked-lists") call check_linkCell(do_linkCell)
-
-    if (do_linkCell) then
-        get_forces =>  get_forces_linkedList
-        call create_maps()
-        call create_links(positions)
-        if (integrator == 'Monte-Carlo' .and. do_pair_correlation) get_pair_correlation => get_pair_correlation_linkedlist
-    else
-        summation = "all-vs-all"
-        get_forces =>  get_forces_allVSall
-        if (integrator == 'Monte-Carlo' .and. do_pair_correlation) get_pair_correlation => get_pair_correlation_allVSall
+    call init_structure()
+    call init_potential()
+    call init_thermostat()
+    call init_observables()
+    call init_summation()
+    call init_tasks()
+    call initialize_parameters()                ! subrutinas module
+    call initialize_XYZ_data()                  ! writing2flies module
+    call initialize_positions()
+    if (integrator /= 'Monte-Carlo') then
+        call initialize_velocities()
+        call initialize_rest()                  ! subrutinas module
+        call thermostat_rescale(velocities)     ! subrutinas module
     end if
-
-    if (do_structure_factor) call get_reciprocal_vec(Miller_index, reciprocal_vec)
-
-    if (do_mean_sqr_displacement) call initialize_msd(meanSqrDisplacement)
-
-    if (do_pair_correlation) then
-        allocate(pair_corr(pair_corr_bins))
-        pair_corr = 0._pr
-    else
-        allocate(pair_corr(1)) ! Must be allocated to avoid issues in parallelized subroutines
-        pair_corr = 0._pr
-    end if
-
-    call initialize_rest()
-    if (integrator /= 'Monte-Carlo') call thermostat_rescale(velocities)
 
 !##################################################################################################
 !      Start of the calculations
@@ -290,7 +180,7 @@ program ex1
     end if
 
     if (do_pair_correlation) then
-        call normalize_pair_correlation(pair_corr, real_steps)
+        call normalize_pair_correlation(pair_corr)
         call write_pair_corr(pair_corr)
     end if
 
