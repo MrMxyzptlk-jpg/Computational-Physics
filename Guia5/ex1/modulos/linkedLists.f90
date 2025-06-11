@@ -2,7 +2,7 @@ MODULE linkedlists
     use precision
     use funciones
     use subrutinas
-    use parsing, only : dim_linkCell
+    use parsing, only : dim_linkCell, integrator
     use omp_lib
     implicit none
 
@@ -16,8 +16,7 @@ contains
 
 subroutine check_linkCell(do_linkCell)
     logical, intent(out)    :: do_linkCell
-    real(pr)                :: max_cells(3)
-    integer                 :: i
+    integer                 :: i, max_cells(3)
 
     do_linkCell = .False.
     max_cells = int(periodicity/radius_cutoff)  ! There must be less cells than the number of radius_cutoff that fit in any given direction
@@ -38,7 +37,7 @@ subroutine check_linkCell(do_linkCell)
             ,max_cells,")   --->   Using 'all-vs-all' integrator instead"
     end if
 
- end subroutine check_linkCell
+end subroutine check_linkCell
 
 subroutine create_maps()
     integer(int_large)  :: ix, iy, iz, imap
@@ -90,6 +89,7 @@ subroutine create_links(positions)
         list(i) = head(jcell)
         head(jcell) = i
     end do
+
 end subroutine create_links
 
 subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial, pair_corr)
@@ -100,7 +100,7 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
     integer                 :: i, j, icell, jcell, jcell0, neighbor
 
     forces = 0._pr
-    if (.not. transitory .or. save_transitory) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+    if (measure) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell) &
     !$omp shared(positions, head, map, list, N_linkedCells) &
@@ -132,5 +132,45 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
     end do
     !$omp end parallel do
 end subroutine get_forces_linkedlist
+
+subroutine get_pair_correlation_linkedlist(positions, pair_corr)
+    real(pr), intent(in)    :: positions(:,:)
+    real(pr), intent(inout) :: pair_corr(:)
+    real(pr)                :: particle_distance_squared
+    integer                 :: i, j, icell, jcell, jcell0, neighbor
+
+    if (measure) then
+        !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell, particle_distance_squared) &
+        !$omp shared(positions, head, map, list, N_linkedCells) &
+        !$omp schedule(dynamic) reduction(+: pair_corr)
+        do icell = 1, N_linkedCells ! Go through all cells
+            i = head(icell)
+            do while (i /= 0)
+                j = list(i)
+                do while (j /= 0) ! All pairs in the cell
+                    call get_distance_squared(positions(:,i), positions(:,j), particle_distance_squared)
+                    call update_pair_correlation(particle_distance_squared, pair_corr)
+                    j = list(j)
+                end do
+                jcell0 = N_neighbors*(icell - 1)
+
+
+                do neighbor = 1, N_neighbors ! Go through all neighbor cells
+                    jcell = map(jcell0 + neighbor)
+                    j = head(jcell)
+
+                    do while (j /= 0) ! For all particles in a neighbor cell
+                        call get_distance_squared(positions(:,i), positions(:,j), particle_distance_squared)
+                        call update_pair_correlation(particle_distance_squared, pair_corr)
+                        j = list(j)
+                    end do
+                end do
+                i = list(i)
+            end do
+        end do
+        !$omp end parallel do
+    end if
+
+end subroutine get_pair_correlation_linkedlist
 
 END MODULE linkedlists

@@ -73,25 +73,42 @@ subroutine write_XYZfile(time, positions, velocities)
     ! Line 1: number of particles
     write(unit_positions, '(i6)') num_atoms
 
-    ! Line 2: extended XYZ header with box info and time
-    write(unit_positions,'(A)') 'Lattice="' // &
-         size_x // ' 0.0  0.0  0.0 ' // &
-         size_y // ' 0.0  0.0  0.0 ' // &
-         size_z // '" Properties=species:S:1:pos:R:3:vel:R:3 Time=' // &
-         time_tmp
+    if (integrator == 'Monte-Carlo') then      ! Monte Carlo method does not consider velocities
+        ! Line 2: extended XYZ header with box info and time
+        write(unit_positions,'(A)') 'Lattice="' // &
+            size_x // ' 0.0  0.0  0.0 ' // &
+            size_y // ' 0.0  0.0  0.0 ' // &
+            size_z // '" Properties=species:S:1:pos:R:3 Time=' // &
+            time_tmp
 
+        do i = 1, num_atoms
+            write(unit_positions, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1)
+        end do
+    else
+        ! Line 2: extended XYZ header with box info and time
+        write(unit_positions,'(A)') 'Lattice="' // &
+            size_x // ' 0.0  0.0  0.0 ' // &
+            size_y // ' 0.0  0.0  0.0 ' // &
+            size_z // '" Properties=species:S:1:pos:R:3:vel:R:3 Time=' // &
+            time_tmp
 
-    do i = 1, num_atoms
-        write(unit_positions, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1), velocities(:,i)*conversion_factors(5)
-    end do
+        do i = 1, num_atoms
+            write(unit_positions,fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1), velocities(:,i)*conversion_factors(5)
+        end do
+    end if
 
 end subroutine write_XYZfile
 
 subroutine write_observables(time, energies, pressures, temperatures)
     real (pr), intent (in)  :: time, energies(2), pressures, temperatures
 
-    write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4) &
-        , pressures*conversion_factors(6), temperatures
+    select case(integrator)
+        case ('velocity-Verlet')
+            write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4) &
+                , pressures*conversion_factors(6), temperatures
+        case('Monte-Carlo')
+            write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4)
+    end select
 
 end subroutine write_observables
 
@@ -146,24 +163,30 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
         write(unit_info,'(a24,4x,a)')       "Potential:             ", type
         write(unit_info,'(a24,2x,a)')       "Integrator:            ", integrator
         write(unit_info,'(a24,11x,I6)')     "Transitory steps:      ", transitory_steps
-        write(unit_info,'(a24,11x,I6)')     "Run steps:             ", MD_steps
-        write(unit_info,'(a24,6x,E11.5)')   "Simulated time:        ", real(MD_steps,pr)*dt*conversion_factors(2)
+        write(unit_info,'(a24,11x,I6)')     "Run steps:             ", real_steps
+        write(unit_info,'(a24,6x,E11.5)')   "Simulated time:        ", real(real_steps,pr)*dt*conversion_factors(2)
 
         if (save_observables) then
-            call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1))
-            write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", energy_avg(1)*conversion_factors(4)  &
-                , " Standard deviation = ", energy_stddev(1)*conversion_factors(4)
-            call get_stats(energies(2,1:), average = energy_avg(2), stddev = energy_stddev(2))
-            write(unit_info,format_observables)     "Kinetic Energy:    ", " Average = ", energy_avg(2)*conversion_factors(4)  &
-                , " Standard deviation = ", energy_stddev(2)*conversion_factors(4)
-            call get_stats(pressures(1:), average = pressure_avg, stddev = pressure_stddev)
-            write(unit_info,format_observables)     "Pressure:          ", " Average = ", pressure_avg*conversion_factors(6)  &
-                , " Standard deviation = ", pressure_stddev*conversion_factors(6)
-            call get_stats(temperatures(1:), average = temperature_avg, stddev = temperature_stddev)
-            write(unit_info,format_observables)     "Temperature:       ", " Average = ", temperature_avg*conversion_factors(3)  &
-                , " Standard deviation = ", temperature_stddev*conversion_factors(3)
+            select case(integrator)
+            case ('velocity-Verlet')
+                call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1))
+                write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", energy_avg(1)*conversion_factors(4)  &
+                    , " Standard deviation = ", energy_stddev(1)*conversion_factors(4)
+                call get_stats(energies(2,1:), average = energy_avg(2), stddev = energy_stddev(2))
+                write(unit_info,format_observables)     "Kinetic Energy:    ", " Average = ", energy_avg(2)*conversion_factors(4)  &
+                    , " Standard deviation = ", energy_stddev(2)*conversion_factors(4)
+                call get_stats(pressures(1:), average = pressure_avg, stddev = pressure_stddev)
+                write(unit_info,format_observables)     "Pressure:          ", " Average = ", pressure_avg*conversion_factors(6)  &
+                    , " Standard deviation = ", pressure_stddev*conversion_factors(6)
+                call get_stats(temperatures(1:), average = temperature_avg, stddev = temperature_stddev)
+                write(unit_info,format_observables)     "Temperature:       ", " Average = ",temperature_avg*conversion_factors(3) &
+                    , " Standard deviation = ", temperature_stddev*conversion_factors(3)
+            case('Monte-Carlo')
+                call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1))
+                write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", energy_avg(1)*conversion_factors(4)  &
+                    , " Standard deviation = ", energy_stddev(1)*conversion_factors(4)
+            end select
         end if
-
         write(unit_info,'(a)')"-----------------------------------------------------------------------------"
         write(unit_info,'(a20,5x,F11.5, a)')"Elapsed time:          ", CPU_elapsed_time,"s"
     close(unit_info)
