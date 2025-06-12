@@ -536,24 +536,24 @@ end subroutine gasdev_v
 !     Not used / Not implemented
 !##################################################################################################
 
+subroutine get_forces_allVSall_serial(positions, forces, E_potential, pressure_virial, pair_corr) ! Worst performing algorithm
+    real(pr), intent(in)    :: positions(:,:)
+    real(pr), intent(out)   :: forces(:,:)
+    real(pr), intent(out)   :: E_potential, pressure_virial
+    real(pr), intent(inout) :: pair_corr(:)
+    integer(int_huge)       :: i, j
 
-    !subroutine create_file_name(prefix, num, suffix, filename)
-    !    character(len=8)                :: fmt  ! Format descriptor
-    !    character(len=12)               :: x1   ! Temporary string for formatted real
-    !    character(len=*), intent(in)    :: prefix, suffix
-    !    character(len=*)                :: filename
-    !    real(kind=pr), intent(in)       :: num  ! Input real number
-    !
-    !    fmt = '(I10)'  ! Format integer
-    !    write(x1, fmt) num  ! Convert real to string
-    !
-    !    ! Trim spaces in formatted number
-    !    x1 = adjustl(trim(x1))
-    !
-    !    ! Concatenate strings
-    !    filename = prefix // trim(x1) // suffix
-    !
-    !end subroutine create_file_name
+    forces = 0._pr
+    if (measure) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+
+    do i=1,num_atoms-1
+        do j = i+1, num_atoms
+            call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
+                pressure_virial, pair_corr)
+        end do
+    end do
+
+end subroutine get_forces_allVSall_serial
 
     !subroutine Coulomb(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
     !    , potential_cutoff)
