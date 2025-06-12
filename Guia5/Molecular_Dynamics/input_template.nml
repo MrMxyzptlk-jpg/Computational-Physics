@@ -2,7 +2,7 @@
     ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'
     structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
-    cell_dim             = 4,4,4
+    cell_dim             = 8,8,8 
     num_atoms           = 256
     initial_Temp_Adim   = 1.1           ! In units of epsilon/Kb
     density             = 0.8           ! Number of atoms/volume

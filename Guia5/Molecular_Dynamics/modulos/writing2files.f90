@@ -150,7 +150,7 @@ end subroutine write_pair_corr
 subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
     real (pr), intent (in)  :: CPU_elapsed_time, energies(:,:), pressures(:), temperatures(:)
     real (pr)               :: energy_avg(3), E_total(size(energies,2)), pressure_avg, temperature_avg
-    real (pr)               :: energy_stddev(3), pressure_stddev, temperature_stddev
+    real (pr)               :: energy_stddev(3), pressure_stddev, temperature_stddev, error
     integer                 :: unit_info
 
     open(newunit=unit_info, file="datos/INFO.out", status="replace")
@@ -171,26 +171,32 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures)
         if (save_observables) then
             select case(integrator)
             case ('velocity-Verlet')
-                call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1))
+                call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1), error = error)
                 write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", energy_avg(1)*conversion_factors(4)  &
-                    , " Standard deviation = ", energy_stddev(1)*conversion_factors(4)
-                call get_stats(energies(2,1:), average = energy_avg(2), stddev = energy_stddev(2))
+                    , " Standard deviation = ", energy_stddev(1)*conversion_factors(4), &
+                    " Standard error = ", error
+                call get_stats(energies(2,1:), average = energy_avg(2), stddev = energy_stddev(2), error = error)
                 write(unit_info,format_observables)     "Kinetic Energy:    ", " Average = ", energy_avg(2)*conversion_factors(4)  &
-                    , " Standard deviation = ", energy_stddev(2)*conversion_factors(4)
-                call get_stats(pressures(1:), average = pressure_avg, stddev = pressure_stddev)
+                    , " Standard deviation = ", energy_stddev(2)*conversion_factors(4), &
+                    " Standard error = ", error
+                call get_stats(pressures(1:), average = pressure_avg, stddev = pressure_stddev, error = error)
                 write(unit_info,format_observables)     "Pressure:          ", " Average = ", pressure_avg*conversion_factors(6)  &
-                    , " Standard deviation = ", pressure_stddev*conversion_factors(6)
-                call get_stats(temperatures(1:), average = temperature_avg, stddev = temperature_stddev)
+                    , " Standard deviation = ", pressure_stddev*conversion_factors(6), &
+                    " Standard error = ", error
+                call get_stats(temperatures(1:), average = temperature_avg, stddev = temperature_stddev, error = error)
                 write(unit_info,format_observables)     "Temperature:       ", " Average = ",temperature_avg*conversion_factors(3) &
-                    , " Standard deviation = ", temperature_stddev*conversion_factors(3)
+                    , " Standard deviation = ", temperature_stddev*conversion_factors(3), &
+                    " Standard error = ", error
                 E_total = energies(1,:) + energies(2,:)
-                call get_stats(E_total, average = energy_avg(3), stddev = energy_stddev(3))
+                call get_stats(E_total, average = energy_avg(3), stddev = energy_stddev(3), error = error)
                 write(unit_info,format_observables)     "Total Energy:      ", " Average = ", energy_avg(3)*conversion_factors(4)  &
-                    , " Standard deviation = ", energy_stddev(3)*conversion_factors(4)
+                    , " Standard deviation = ", energy_stddev(3)*conversion_factors(4), &
+                    " Standard error = ", error
             case('Monte-Carlo')
-                call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1))
+                call get_stats(energies(1,1:), average = energy_avg(1), stddev = energy_stddev(1), error = error)
                 write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", energy_avg(1)*conversion_factors(4)  &
-                    , " Standard deviation = ", energy_stddev(1)*conversion_factors(4)
+                    , " Standard deviation = ", energy_stddev(1)*conversion_factors(4), &
+                    " Standard error = ", error
             end select
         end if
         write(unit_info,'(a)')"-----------------------------------------------------------------------------"

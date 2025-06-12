@@ -30,14 +30,15 @@ subroutine check_linkCell(do_linkCell)
         print'(a,3I3,a)', "Radius cutoff greater than the super-cell dimensions --->   Using 'all-vs-all' integrator instead"
         return
     end if
-    if (any((/(dim_linkCell(i) < 2 , i=1,3)/))) then
+
+    if (any((/(dim_linkCell(i) < 3 , i=1,3)/))) then
         print'(a,3I3,a)', "Number of linked cells in each directions = (", dim_linkCell,") < (3 3 3)   ---> "// &
             "  Using 'all-vs-all' integrator instead"
         return
     end if
 
-    if ((dim_linkCell(1)<=max_cells(1)).and.(dim_linkCell(2)<=max_cells(2)).and.(dim_linkCell(3)<=max_cells(3)))  then
-        do_linkCell=.True.
+    if (all(dim_linkCell <= max_cells)) then
+            do_linkCell=.True.
     else
         print'(a,3I3,a,3I3,a)', "Number of linked cells in each directions = (", dim_linkCell,") > L/int(L/rcut) = (" &
             ,max_cells,")   --->   Using 'all-vs-all' integrator instead"
@@ -137,6 +138,7 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
         end do
     end do
     !$omp end parallel do
+
 end subroutine get_forces_linkedlist
 
 subroutine get_pair_correlation_linkedlist(positions, pair_corr)

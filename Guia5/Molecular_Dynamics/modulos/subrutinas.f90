@@ -354,9 +354,9 @@ subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
 
 end subroutine get_observables
 
-subroutine get_stats(measurements, variance, stddev, average)
+subroutine get_stats(measurements, variance, stddev, average, error)
     real(pr), intent(in)                :: measurements(:)
-    real(pr), optional, intent(out)     :: variance, stddev, average
+    real(pr), optional, intent(out)     :: variance, stddev, average, error
     real(pr)                            :: avg, var
 
     if (present(average) .or. present(variance) .or. present(stddev)) then
@@ -370,6 +370,7 @@ subroutine get_stats(measurements, variance, stddev, average)
     if (present(average))  average  = avg
     if (present(variance)) variance = var
     if (present(stddev))   stddev   = sqrt(var)
+    if (present(error))   error   = sqrt(var/real(size(measurements),pr))
 
 end subroutine get_stats
 
