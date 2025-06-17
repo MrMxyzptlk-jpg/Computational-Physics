@@ -438,6 +438,7 @@ subroutine initialize_msd(msd)
 
     positions_buffer = 0._pr
     msd_counts = 0
+    msd_count = 0
     msd = 0._pr
 
 end subroutine initialize_msd
@@ -445,7 +446,7 @@ end subroutine initialize_msd
 subroutine update_msd(positions, msd)
     real(pr), intent(in)    :: positions(:,:)
     real(pr), intent(inout) :: msd(0:)
-    integer                 :: j, ilast, inext
+    integer                 :: i, j, ilast, inext
     real(pr)                :: displacements(3,num_atoms)
 
     msd_count = msd_count + 1
@@ -457,6 +458,10 @@ subroutine update_msd(positions, msd)
         inext = mod(msd_count - j, max_correlation + 1)
 
         displacements = positions_buffer(:,:,ilast) - positions_buffer(:,:,inext)
+        ! Apply MIC
+        do i = 1, 3  ! x, y, z
+            displacements(i,:) = displacements(i,:) - periodicity(i) * nint(displacements(i,:) / periodicity(i))
+        end do
 
         msd (j) = msd(j) + sum(displacements*displacements)
         msd_counts(j) = msd_counts(j) + 1

@@ -82,9 +82,14 @@ program ex1
             if (save_transitory) then
                 call get_observables(velocities, Energies(2,i_measure), pressures(i_measure) &
                     , temperatures(i_measure))
-                if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
-                call write_tasks(i_measure*dt, positions, velocities, energies(:,i_measure) &
-                    , pressures(i_measure), temperatures(i_measure), structure_factor)
+                if (do_structure_factor) then
+                    call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
+                    call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                        , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
+                else
+                    call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                        , pressures(i_measure), temperatures(i_measure), structure_factor(1))
+                end if
             end if
 
             do i = -transitory_steps/thermostat_steps , -1, 1
@@ -101,9 +106,14 @@ program ex1
 
                     if (measure) then
                         call get_observables(velocities, Energies(2,i_measure), pressures(i_measure), temperatures(i_measure))
-                        if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
-                        call write_tasks(real(i_measure,pr)*dt, positions, velocities, energies(:,i_measure), pressures(i_measure) &
-                            , temperatures(i_measure), structure_factor)
+                        if (do_structure_factor) then
+                            call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
+                            call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                                , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
+                        else
+                            call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                                , pressures(i_measure), temperatures(i_measure), structure_factor(1))
+                        end if
                     end if
                 end do
                 call thermostat_chosen(velocities)
@@ -124,10 +134,15 @@ program ex1
 
                 if (measure) then
                     call get_observables(velocities, Energies(2,i_measure), pressures(i_measure), temperatures(i_measure))
-                    if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
                     if (do_mean_sqr_displacement) call update_msd(positions, meanSqrDisplacement)
-                    call write_tasks(real(i_measure,pr)*dt, positions, velocities, energies(:,i_measure), pressures(i_measure)  &
-                        , temperatures(i_measure), structure_factor)
+                    if (do_structure_factor) then
+                        call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
+                        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure)  &
+                            , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
+                    else
+                        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure)  &
+                            , pressures(i_measure), temperatures(i_measure), structure_factor(1))
+                    end if
                 end if
                 if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
             end do
@@ -139,9 +154,14 @@ program ex1
 
         call open_files(reciprocal_vec)
             if (save_transitory) then
-                if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
-                call write_tasks(i_measure*dt, positions, velocities, energies(:,i_measure), pressures(1), temperatures(1) &
-                    , structure_factor)
+                if (do_structure_factor) then
+                    call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
+                    call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                        , pressures(1), temperatures(1), structure_factor(i_measure))
+                else
+                    call write_tasks(i_measure*dt, positions, velocities, energies(:,i_measure), pressures(1), temperatures(1) &
+                        , structure_factor(1))
+                end if
             end if
             do i = -transitory_steps/MC_adjust_step , -1, 1
                 do j = 1, MC_adjust_step
@@ -151,9 +171,14 @@ program ex1
                     call update_positions_random(positions, Energies(1,i_measure), MC_accepted)
 
                     if (measure) then
-                        if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
-                        call write_tasks(real(i_measure,pr)*dt, positions, velocities, energies(:,i_measure), pressures(1) &
-                            , temperatures(1) , structure_factor)
+                        if (do_structure_factor) then
+                            call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
+                            call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                                , pressures(1), temperatures(1) , structure_factor(i_measure))
+                        else
+                            call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                                , pressures(1), temperatures(1) , structure_factor(1))
+                        end if
                     end if
                 end do
                 call update_random_step(MC_accepted)
@@ -171,10 +196,15 @@ program ex1
                 if (measure) then
                     if (do_linkCell) call create_links(positions)
                     if (do_pair_correlation) call get_pair_correlation(positions, pair_corr)
-                    if (do_structure_factor) call get_structure_factor(positions, structure_factor, reciprocal_vec)
                     if (do_mean_sqr_displacement) call update_msd(positions, meanSqrDisplacement)
-                    call write_tasks(real(i_measure,pr)*dt, positions, velocities, energies(:,i_measure), pressures(1) &
-                        , temperatures(1), structure_factor)
+                    if (do_structure_factor) then
+                        call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
+                        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                            , pressures(1), temperatures(1), structure_factor(i_measure))
+                    else
+                        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+                            , pressures(1), temperatures(1), structure_factor(1))
+                    end if
                 end if
             end do
         call close_files()
@@ -193,6 +223,6 @@ program ex1
     CPU_t_end = omp_get_wtime()
     CPU_elapsed_time = CPU_t_end - CPU_t_start
 
-    call write_output(CPU_elapsed_time, energies(:,1:), pressures(1:), temperatures(1:))
+    call write_output(CPU_elapsed_time, energies(:,1:), pressures(1:), temperatures(1:), structure_factor(1:))
 
 end program ex1

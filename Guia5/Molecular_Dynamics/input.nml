@@ -1,23 +1,23 @@
 &physical
-    ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'
+    ensemble            = 'NVT'         ! Options: 'NVE', 'NVT'
     structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
-    cell_dim            = 4,4,4
+    cell_dim            = 5,5,5
     num_atoms           = 256
-    initial_Temp_Adim   = 1.1           ! In units of epsilon/Kb
-    density             = 0.8           ! Number of atoms/volume
+    initial_Temp_Adim   = 0.75           ! In units of epsilon/Kb
+    density             = .88           ! Number of atoms/volume
     mass                = 1             ! In a.m.u.
 /
 
 &calculation
-    dt                 = 0.005            ! In units of [ℏ/Eh = tₐ]
-    real_steps         = 2000
-    transitory_steps   = 1000
-    thermostat_steps   = 50               ! Rescales every 50 steps the thermostat is applied
-    radius_cutoff      = 2.5              ! In Bohr
-    summation          = 'all-vs-all'     ! Options: 'all-vs-all', 'linked-lists'
+    dt                 = 0.0005          ! In units of [ℏ/Eh = tₐ]
+    real_steps         = 100000
+    transitory_steps   = 10000
+    thermostat_steps   = 1              ! Rescales every 50 steps the thermostat is applied
+    radius_cutoff      = 2.5            ! In Bohr
+    summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists'
     dim_linkCell       = 3,3,3
-    measuring_jump     = 1
+    measuring_jump     = 10
     initial_velocities = 'random'       ! Options: 'random', 'Maxwell'
 /
 
@@ -26,17 +26,17 @@
     save_observables         = true
     save_positions           = false
     do_pair_correlation      = false
-    do_structure_factor      = false
-    do_mean_sqr_displacement = false
+    do_structure_factor      = true
+    do_mean_sqr_displacement = true
     Miller_index             = 0,-1,0
 /
 
 &approximation
-    integrator   = 'velocity-Verlet'   ! Options: 'velocity-Verlet', 'Monte-Carlo'
+    integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Monte-Carlo'
     type         = 'lennard_jones'
     sigma        = 1                    ! In Bohr
     epsilon      = 1                    ! In hartree
-    MC_adjust_step  = 50
+    MC_adjust_step  = 10
     MC_delta        = 1
 /
 
@@ -46,7 +46,7 @@
 /
 
 &MSD
-    max_correlation  = 100
+    max_correlation  = 10000
 /
 
 &pair_correlation

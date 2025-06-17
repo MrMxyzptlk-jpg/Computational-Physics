@@ -99,7 +99,7 @@ subroutine create_links(positions)
 
 end subroutine create_links
 
-subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial, pair_corr)
+subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial, pair_corr) ! Performs worse than serial version
     real(pr), intent(in)    :: positions(:,:)
     real(pr), intent(out)   :: forces(:,:)
     real(pr), intent(out)   :: E_potential, pressure_virial
@@ -109,6 +109,9 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
     forces = 0._pr
     if (measure) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
+    !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell) &
+    !$omp shared(positions, head, map, list, N_linkedCells) &
+    !$omp schedule(dynamic) reduction(+: forces, E_potential, pressure_virial, pair_corr)
     do icell = 1, N_linkedCells ! Go through all cells
         i = head(icell)
         do while (i /= 0)
@@ -134,6 +137,7 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
             i = list(i)
         end do
     end do
+    !$omp end parallel do
 
 end subroutine get_forces_linkedlist
 
@@ -182,7 +186,8 @@ end subroutine get_pair_correlation_linkedlist
 !     Not used / Not implemented
 !##################################################################################################
 
-subroutine get_forces_linkedlist_parallel(positions, forces, E_potential, pressure_virial, pair_corr) ! Performs worse than serial version
+
+subroutine get_forces_linkedlist_serial(positions, forces, E_potential, pressure_virial, pair_corr)
     real(pr), intent(in)    :: positions(:,:)
     real(pr), intent(out)   :: forces(:,:)
     real(pr), intent(out)   :: E_potential, pressure_virial
@@ -192,9 +197,6 @@ subroutine get_forces_linkedlist_parallel(positions, forces, E_potential, pressu
     forces = 0._pr
     if (measure) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
-    !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell) &
-    !$omp shared(positions, head, map, list, N_linkedCells) &
-    !$omp schedule(dynamic) reduction(+: forces, E_potential, pressure_virial, pair_corr)
     do icell = 1, N_linkedCells ! Go through all cells
         i = head(icell)
         do while (i /= 0)
@@ -220,8 +222,7 @@ subroutine get_forces_linkedlist_parallel(positions, forces, E_potential, pressu
             i = list(i)
         end do
     end do
-    !$omp end parallel do
 
-end subroutine get_forces_linkedlist_parallel
+end subroutine get_forces_linkedlist_serial
 
 END MODULE linkedlists

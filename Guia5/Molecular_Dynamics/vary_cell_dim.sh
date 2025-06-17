@@ -1,6 +1,6 @@
 #!/bin/bash
 
-start=5
+start=3
 end=8
 increment=1
 

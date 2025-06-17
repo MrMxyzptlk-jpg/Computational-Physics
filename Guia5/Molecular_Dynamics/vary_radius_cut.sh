@@ -45,6 +45,8 @@ while (( $(echo "$current <= $end" | bc -l) )); do
 
     echo "$current  $Epot_avg  $Epot_std  $Ekin_avg  $Ekin_std  $Etot_avg  $Etot_std" >> "$stats_file"
 
+    gnuplot plot_errors.gp
+
     current=$(echo "$current + $increment" | bc -l)
 done
 

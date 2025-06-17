@@ -5,9 +5,9 @@ MODULE initializations
     use linkedLists
     implicit none
 
-    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, meanSqrDisplacement
+    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, meanSqrDisplacement, structure_factor
     real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, Energies
-    real(pr)                                :: reciprocal_vec(3), structure_factor
+    real(pr)                                :: reciprocal_vec(3)
     integer(int_large)                      :: transitory_minIndex, MC_accepted
     logical                                 :: do_linkCell = .False.
 
@@ -100,9 +100,11 @@ subroutine init_observables()
                 transitory_minIndex = -int(transitory_steps/measuring_jump)
                 allocate(Energies(2,transitory_minIndex:measuring_steps)) ! Energies = (E_potential, E_kinetic)
                 allocate(Pressures(transitory_minIndex:measuring_steps), Temperatures(transitory_minIndex:measuring_steps))
+                if (do_structure_factor) allocate(structure_factor(transitory_minIndex:measuring_steps))
             else
                 allocate(Energies(2,0:measuring_steps)) ! Energies = (E_potential, E_kinetic)
                 allocate(Pressures(0:measuring_steps), Temperatures(0:measuring_steps))
+                if (do_structure_factor) allocate(structure_factor(0:measuring_steps))
             end if
             allocate(velocities(3,size(positions,2)))
             allocate(forces(3,size(positions,2)))
@@ -115,6 +117,7 @@ subroutine init_observables()
             end if
             allocate(Pressures(1), Temperatures(1))
     end select
+    if (.not. do_structure_factor) allocate(structure_factor(1))
 
 end subroutine init_observables
 
