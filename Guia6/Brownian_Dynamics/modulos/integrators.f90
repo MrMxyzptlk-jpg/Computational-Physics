@@ -18,6 +18,7 @@ subroutine MC_step(i_measure)
     if (do_linkCell) call create_links(positions)
     call get_forces(positions, forces, Energies(1,i_measure), pressures(i_measure), pair_corr)
     call update_positions_random(positions, Energies(1,i_measure), MC_accepted)
+
 end subroutine MC_step
 
 subroutine velVerlet_step(i_measure)
@@ -29,10 +30,12 @@ subroutine velVerlet_step(i_measure)
     call get_forces(positions, forces, Energies(1,i_measure), pressures(i_measure), pair_corr)  ! If measure = .False. the observables are ignored
 
     call update_velocities_velVer(velocities, forces, previous_forces)
+
 end subroutine velVerlet_step
 
 subroutine get_measurements(i_measure)
     integer(int_large)      :: i_measure
+
     call get_observables(velocities, Energies(2,i_measure), pressures(i_measure), temperatures(i_measure))
     if (do_structure_factor) then
         call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
@@ -42,6 +45,7 @@ subroutine get_measurements(i_measure)
         call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
             , pressures(i_measure), temperatures(i_measure), structure_factor(1))
     end if
+
 end subroutine get_measurements
 
 END MODULE

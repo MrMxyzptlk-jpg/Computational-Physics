@@ -133,21 +133,9 @@ program ex1
             do i = 1 , real_steps
                 call check_measuring(i,i_measure)    ! Checks if there will be measurements in this iteration
 
-                call update_positions_random(positions, Energies(1,i_measure), MC_accepted)
+                call MC_step(i_measure)
 
-                if (measure) then
-                    if (do_linkCell) call create_links(positions)
-                    if (do_pair_correlation) call get_pair_correlation(positions, pair_corr)
-                    if (do_mean_sqr_displacement) call update_msd(positions, meanSqrDisplacement)
-                    if (do_structure_factor) then
-                        call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
-                        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                            , pressures(1), temperatures(1), structure_factor(i_measure))
-                    else
-                        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                            , pressures(1), temperatures(1), structure_factor(1))
-                    end if
-                end if
+                if (measure) call get_measurements(i_measure)
             end do
         call close_files()
     end if
