@@ -12,7 +12,7 @@
 !
 !
 !
-! Room for improvement:
+! Room for improvement:  further modularization for comprehension and ease of use should be done in the 'subrutinas' modue. That is, to subdivide it into smaller modules in the 'modulos' folder
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
@@ -27,9 +27,9 @@ program ex1
     use omp_lib
     use writing2files
     use initializations
+    use integrators
     implicit none
 
-    real(pr), dimension(:,:), allocatable   :: previous_forces
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
 !    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
     integer(int_large)                      :: i, j, i_measure
@@ -79,42 +79,16 @@ program ex1
         call open_files(reciprocal_vec)
             call get_forces(positions, forces,  Energies(1,i_measure), pressures(i_measure), pair_corr)
 
-            if (save_transitory) then
-                call get_observables(velocities, Energies(2,i_measure), pressures(i_measure) &
-                    , temperatures(i_measure))
-                if (do_structure_factor) then
-                    call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
-                    call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                        , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
-                else
-                    call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                        , pressures(i_measure), temperatures(i_measure), structure_factor(1))
-                end if
-            end if
+            if (save_transitory) call get_measurements(i_measure)
 
             do i = -transitory_steps/thermostat_steps , -1, 1
                 do j = 1, thermostat_steps
-                    if (save_transitory) call check_measuring(i*thermostat_steps + j)    ! Checks if there will be measurements in this iteration
-                    if (measure) i_measure = i_measure + 1
+                    if (save_transitory) call check_measuring(i*thermostat_steps + j, i_measure)    ! Checks if there will be measurements in this iteration
 
-                    call update_positions_velVer(positions, velocities, forces)
-                    previous_forces = forces
-                    if (do_linkCell) call create_links(positions)
-                    call get_forces(positions, forces, Energies(1,i_measure), pressures(i_measure), pair_corr)  ! If measure = .False. the observables are ignored
+                    call velVerlet_step(i_measure)
 
-                    call update_velocities_velVer(velocities, forces, previous_forces)
+                    if (measure) call get_measurements(i_measure)
 
-                    if (measure) then
-                        call get_observables(velocities, Energies(2,i_measure), pressures(i_measure), temperatures(i_measure))
-                        if (do_structure_factor) then
-                            call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
-                            call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                                , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
-                        else
-                            call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                                , pressures(i_measure), temperatures(i_measure), structure_factor(1))
-                        end if
-                    end if
                 end do
                 call thermostat_chosen(velocities)
             end do
@@ -123,27 +97,12 @@ program ex1
             measure     = .False.
             i_measure   = 0
             do i = 1 , real_steps
-                call check_measuring(i)    ! Checks if there will be measurements in this iteration
-                if (measure) i_measure = i_measure + 1
+                call check_measuring(i, i_measure)    ! Checks if there will be measurements in this iteration
 
-                call update_positions_velVer(positions, velocities, forces)
-                if (do_linkCell) call create_links(positions)
-                previous_forces = forces
-                call get_forces(positions, forces, Energies(1,i_measure), pressures(i_measure), pair_corr)
-                call update_velocities_velVer(velocities, forces, previous_forces)
+                call velVerlet_step(i_measure)
 
-                if (measure) then
-                    call get_observables(velocities, Energies(2,i_measure), pressures(i_measure), temperatures(i_measure))
-                    if (do_mean_sqr_displacement) call update_msd(positions, meanSqrDisplacement)
-                    if (do_structure_factor) then
-                        call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
-                        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure)  &
-                            , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
-                    else
-                        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure)  &
-                            , pressures(i_measure), temperatures(i_measure), structure_factor(1))
-                    end if
-                end if
+                if (measure) call get_measurements(i_measure)
+
                 if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
             end do
         call close_files()
@@ -153,33 +112,17 @@ program ex1
     if (integrator == 'Monte-Carlo') then
 
         call open_files(reciprocal_vec)
-            if (save_transitory) then
-                if (do_structure_factor) then
-                    call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
-                    call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                        , pressures(1), temperatures(1), structure_factor(i_measure))
-                else
-                    call write_tasks(i_measure*dt, positions, velocities, energies(:,i_measure), pressures(1), temperatures(1) &
-                        , structure_factor(1))
-                end if
-            end if
+            call get_forces(positions, forces,  Energies(1,i_measure), pressures(i_measure), pair_corr)
+            if (save_transitory) call get_measurements(i_measure)
+
             do i = -transitory_steps/MC_adjust_step , -1, 1
                 do j = 1, MC_adjust_step
-                    if (save_transitory) call check_measuring(i*MC_adjust_step + j)    ! Checks if there will be measurements in this iteration
-                    if (measure) i_measure = i_measure + 1
+                    if (save_transitory) call check_measuring(i*MC_adjust_step + j, i_measure)    ! Checks if there will be measurements in this iteration
 
-                    call update_positions_random(positions, Energies(1,i_measure), MC_accepted)
+                    call MC_step(i_measure)
 
-                    if (measure) then
-                        if (do_structure_factor) then
-                            call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
-                            call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                                , pressures(1), temperatures(1) , structure_factor(i_measure))
-                        else
-                            call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
-                                , pressures(1), temperatures(1) , structure_factor(1))
-                        end if
-                    end if
+                    if (measure) call get_measurements(i_measure)
+
                 end do
                 call update_random_step(MC_accepted)
             end do
@@ -188,8 +131,7 @@ program ex1
             measure     = .False.
             i_measure   = 0
             do i = 1 , real_steps
-                call check_measuring(i)    ! Checks if there will be measurements in this iteration
-                if (measure) i_measure = i_measure + 1
+                call check_measuring(i,i_measure)    ! Checks if there will be measurements in this iteration
 
                 call update_positions_random(positions, Energies(1,i_measure), MC_accepted)
 

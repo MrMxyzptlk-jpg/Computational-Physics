@@ -9,12 +9,14 @@ MODULE subrutinas
 
     private     radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
     private     positions_buffer, msd_counts, msd_count
+
     real(pr)                :: radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
     real(pr), allocatable   :: positions_buffer(:,:,:)
     integer, allocatable    :: msd_counts(:)
     integer                 :: msd_count
 
     integer(int_medium)     :: cell_dim(3)
+    character (len=15)      :: integrator
     character (len=6)       :: structure
     integer(int_large)      :: real_steps, measuring_jump, measuring_steps
     integer(int_large)      :: num_atoms, pair_corr_bins, max_correlation, MC_adjust_step
@@ -289,7 +291,7 @@ subroutine update_velocities_velVer(velocities, forces, previous_forces)
 
 end subroutine update_velocities_velVer
 
-subroutine get_pair_correlation_allVSall(positions, pair_corr)
+subroutine get_pair_correlation(positions, pair_corr)
     real(pr), intent(in)        :: positions(:,:)
     real(pr), intent(inout)     :: pair_corr(:)
     real(pr)                    :: particle_distance_squared
@@ -312,7 +314,7 @@ subroutine get_pair_correlation_allVSall(positions, pair_corr)
         !$omp end parallel
     end if
 
-end subroutine get_pair_correlation_allVSall
+end subroutine get_pair_correlation
 
 subroutine update_pair_correlation(particle_distance_squared, pair_corr)
     real(pr), intent(in)        :: particle_distance_squared
@@ -348,9 +350,13 @@ subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
     real(pr), intent(inout) :: Pressure  ! Comes in as Pressure_virial
     real(pr), intent(out)   :: E_kinetic, Temperature
 
-    E_kinetic = 0.5_pr*sum(velocities*velocities)
-    Temperature = Temp_factor*E_kinetic
-    Pressure = density*Temperature + Pressure*Pressure_factor
+    if (.not. (integrator=='Monte-Carlo')) then
+        E_kinetic = 0.5_pr*sum(velocities*velocities)
+        Temperature = Temp_factor*E_kinetic
+        Pressure = density*Temperature + Pressure*Pressure_factor
+    else
+        Pressure = Pressure*Pressure_factor
+    end if
 
 end subroutine get_observables
 
@@ -483,11 +489,13 @@ subroutine normalize_msd(msd)
 
 end subroutine normalize_msd
 
-subroutine check_measuring(index)
+subroutine check_measuring(index, i_measure)
     integer, intent(in)         :: index
+    integer, intent(inout)      :: i_measure
 
     if (mod(index,measuring_jump) == 0 ) then
         measure = .true.
+        i_measure = i_measure + 1
     else
         measure = .false.
     end if
@@ -541,33 +549,33 @@ end subroutine gasdev_v
 !     Not used / Not implemented
 !##################################################################################################
 
-subroutine get_forces_allVSall_serial(positions, forces, E_potential, pressure_virial, pair_corr) ! Worst performing algorithm
-    real(pr), intent(in)    :: positions(:,:)
-    real(pr), intent(out)   :: forces(:,:)
-    real(pr), intent(out)   :: E_potential, pressure_virial
-    real(pr), intent(inout) :: pair_corr(:)
-    integer(int_huge)       :: i, j
+!subroutine get_forces_allVSall_serial(positions, forces, E_potential, pressure_virial, pair_corr) ! Worst performing algorithm
+!    real(pr), intent(in)    :: positions(:,:)
+!    real(pr), intent(out)   :: forces(:,:)
+!    real(pr), intent(out)   :: E_potential, pressure_virial
+!    real(pr), intent(inout) :: pair_corr(:)
+!    integer(int_huge)       :: i, j
+!
+!    forces = 0._pr
+!    if (measure) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+!
+!    do i=1,num_atoms-1
+!        do j = i+1, num_atoms
+!            call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
+!                pressure_virial, pair_corr)
+!        end do
+!    end do
+!
+!end subroutine get_forces_allVSall_serial
 
-    forces = 0._pr
-    if (measure) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
-
-    do i=1,num_atoms-1
-        do j = i+1, num_atoms
-            call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
-                pressure_virial, pair_corr)
-        end do
-    end do
-
-end subroutine get_forces_allVSall_serial
-
-    !subroutine Coulomb(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
-    !    , potential_cutoff)
-    !    real(pr), intent(in)       :: particle_distance_squared, particle_separation(3)
-    !    real(pr), intent(out)      :: force_contribution(3)
-    !    real(pr), intent(inout)    :: E_potential, pressure_virial
-    !    real(pr), intent(in)       :: potential_cutoff
-    !
-    !
-    !end subroutine Coulomb
+!subroutine Coulomb(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
+!    , potential_cutoff)
+!    real(pr), intent(in)       :: particle_distance_squared, particle_separation(3)
+!    real(pr), intent(out)      :: force_contribution(3)
+!    real(pr), intent(inout)    :: E_potential, pressure_virial
+!    real(pr), intent(in)       :: potential_cutoff
+!
+!
+!end subroutine Coulomb
 
 END MODULE
