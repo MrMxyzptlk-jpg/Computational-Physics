@@ -3,7 +3,7 @@ MODULE parsing
     use subrutinas
     implicit none
 
-    character (len=15)  :: integrator, type
+    character (len=15)  :: type
     character (len=6)   :: ensemble
     character (len=12)  :: summation, thermostat_type, initial_velocities
     logical             :: save_observables, save_positions, do_structure_factor, do_mean_sqr_displacement

@@ -6,7 +6,7 @@ MODULE initializations
     implicit none
 
     real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, meanSqrDisplacement, structure_factor
-    real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, Energies
+    real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
     real(pr)                                :: reciprocal_vec(3)
     integer(int_large)                      :: transitory_minIndex, MC_accepted
     logical                                 :: do_linkCell = .False.
@@ -35,9 +35,8 @@ MODULE initializations
         end subroutine thermo
     end interface
 
-    procedure(init_pos), pointer     :: init_positions    => null()
+    procedure(init_pos), pointer     :: init_positions          => null()
     procedure(force_sub), pointer    :: get_forces              => null()
-    procedure(pairCorr_sub), pointer :: get_pair_correlation    => null()
     procedure(thermo), pointer       :: thermostat_chosen       => null()
 
 CONTAINS
@@ -93,30 +92,21 @@ subroutine init_thermostat()
 end subroutine init_thermostat
 
 subroutine init_observables()
+    if (save_transitory) then
+        transitory_minIndex = -int(transitory_steps/measuring_jump)
+        allocate(Energies(2,transitory_minIndex:measuring_steps)) ! Energies = (E_potential, E_kinetic)
+        allocate(Pressures(transitory_minIndex:measuring_steps), Temperatures(transitory_minIndex:measuring_steps))
+        if (do_structure_factor) allocate(structure_factor(transitory_minIndex:measuring_steps))
+    else
+        allocate(Energies(2,0:measuring_steps)) ! Energies = (E_potential, E_kinetic)
+        allocate(Pressures(0:measuring_steps), Temperatures(0:measuring_steps))
+        if (do_structure_factor) allocate(structure_factor(0:measuring_steps))
+    end if
+    allocate(forces(3,size(positions,2)))
 
-    select case(integrator)
-        case ('velocity-Verlet')
-            if (save_transitory) then
-                transitory_minIndex = -int(transitory_steps/measuring_jump)
-                allocate(Energies(2,transitory_minIndex:measuring_steps)) ! Energies = (E_potential, E_kinetic)
-                allocate(Pressures(transitory_minIndex:measuring_steps), Temperatures(transitory_minIndex:measuring_steps))
-                if (do_structure_factor) allocate(structure_factor(transitory_minIndex:measuring_steps))
-            else
-                allocate(Energies(2,0:measuring_steps)) ! Energies = (E_potential, E_kinetic)
-                allocate(Pressures(0:measuring_steps), Temperatures(0:measuring_steps))
-                if (do_structure_factor) allocate(structure_factor(0:measuring_steps))
-            end if
-            allocate(velocities(3,size(positions,2)))
-            allocate(forces(3,size(positions,2)))
-        case('Monte-Carlo')
-            if (save_transitory) then
-                transitory_minIndex = -int(transitory_steps/measuring_jump)
-                allocate(Energies(1,transitory_minIndex:measuring_steps)) ! Energies = (E_potential, E_kinetic)
-            else
-                allocate(Energies(1,0:measuring_steps)) ! Energies = (E_potential, E_kinetic)
-            end if
-            allocate(Pressures(1), Temperatures(1))
-    end select
+    if (integrator == 'velocity-Verlet') allocate(previous_forces(3,size(positions,2)))
+
+    if (.not. (integrator=='Monte-Carlo')) allocate(velocities(3,size(positions,2)))
     if (.not. do_structure_factor) allocate(structure_factor(1))
 
 end subroutine init_observables
@@ -129,11 +119,9 @@ subroutine init_summation()
         get_forces =>  get_forces_linkedList
         call create_maps()
         call create_links(positions)
-        if (integrator == 'Monte-Carlo' .and. do_pair_correlation) get_pair_correlation => get_pair_correlation_linkedlist
     else
         summation = "all-vs-all"
         get_forces =>  get_forces_allVSall
-        if (integrator == 'Monte-Carlo' .and. do_pair_correlation) get_pair_correlation => get_pair_correlation_allVSall
     end if
 
 end subroutine init_summation
