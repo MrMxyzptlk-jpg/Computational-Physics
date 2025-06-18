@@ -1,7 +1,7 @@
 #!/bin/bash
 
 start=0.1
-end=0.88
+end=1.2
 increment=0.02
 
 input_file="input.nml"
