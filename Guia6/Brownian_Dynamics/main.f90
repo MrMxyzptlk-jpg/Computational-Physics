@@ -43,9 +43,9 @@ program ex1
 !##################################################################################################
 
     call init_structure()
+    call init_potential()
     call initialize_parameters()                ! parametersMod module
     call init_positions()
-    call init_potential()
     call init_thermostat()
     call init_observables()
     call init_tasks()

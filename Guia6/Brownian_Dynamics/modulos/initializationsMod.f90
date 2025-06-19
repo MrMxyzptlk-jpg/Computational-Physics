@@ -5,6 +5,7 @@ MODULE initializationsMod
     use forcesMod
     use thermostatsMod
     use subroutinesMod
+    use functionsMod
     use parsingMod
     use observablesMod
     implicit none
@@ -75,6 +76,9 @@ subroutine init_potential()
         case ("lannard_jones")
             potential =>  Lennard_Jones
             potential_function => Lennard_Jones_potential
+        case ("reaction_field")
+            potential =>  reaction_field
+            potential_function => reaction_field_potential
         case default
             potential =>  Lennard_Jones
             potential_function => Lennard_Jones_potential

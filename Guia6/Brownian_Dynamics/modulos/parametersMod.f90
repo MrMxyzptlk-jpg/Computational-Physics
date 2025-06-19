@@ -48,7 +48,7 @@ subroutine initialize_parameters()
     dtdt = dt*dt
 
     radius_cutoff_squared = radius_cutoff*radius_cutoff
-    potential_cutoff = Lennard_Jones_potential(radius_cutoff_squared)
+    potential_cutoff = potential_function(radius_cutoff_squared)
 
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
 

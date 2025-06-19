@@ -5,7 +5,6 @@ MODULE potentialsMod
     implicit none
 
     procedure(pot), pointer :: potential => null()
-    procedure(pot_func), pointer :: potential_function => null()
 
     abstract interface ! Intended to allow for the implementation of a different potential later on
         subroutine pot(particle_distance_squared, particle_separation, force_contribution, E_potential, pressure_virial &
@@ -16,14 +15,28 @@ MODULE potentialsMod
             real(pr), intent(inout)            :: E_potential, pressure_virial
             real(pr), intent(in)               :: potential_cutoff
         end subroutine pot
-        function pot_func(particle_distance_squared)
-            use precisionMod
-            real(pr), intent(in)    :: particle_distance_squared
-            real(pr)                :: pot_func
-        end function pot_func
     end interface
 
 CONTAINS
+
+function Lennard_Jones_potential(particle_distance_squared) ! Lennard-Jones potential
+    real(pr), intent(in)   :: particle_distance_squared
+    real(pr)               :: Lennard_Jones_potential
+    real(pr)               :: r2inv, r6inv
+
+    r2inv = 1._pr/particle_distance_squared
+    r6inv = r2inv*r2inv*r2inv
+    Lennard_Jones_potential =  4.0_pr *r6inv * (r6inv - 1.0_pr)
+
+end function Lennard_Jones_potential
+
+function reaction_field_potential(particle_distance_squared) ! Coulomb potential with reaction field approximation (charges should be initialized outside)
+    real(pr), intent(in)   :: particle_distance_squared
+    real(pr)               :: reaction_field_potential
+
+    reaction_field_potential =  1._pr/sqrt(particle_distance_squared)
+
+end function reaction_field_potential
 
 subroutine Lennard_Jones(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
     , potential_cutoff)
@@ -52,17 +65,16 @@ subroutine reaction_field(particle_distance_squared, particle_separation, force_
     real(pr), intent(inout)    :: E_potential, pressure_virial
     real(pr), intent(in)       :: potential_cutoff
 
-    real(pr) :: r, r2, r3, rcut, rcut3, rcut2
+    real(pr) :: particle_distance, particle_distance_cubed
+    real(pr) :: radius_cutoff, radius_cutoff_cubed
     real(pr) :: q_i, q_j, prefac, V_coulomb, V_rf
     real(pr) :: F_coulomb, F_rf, force_magnitude
     real(pr) :: dielectric_factor
 
-    r2 = particle_distance_squared
-    r = sqrt(r2)
-    r3 = r2 * r
-    rcut = sqrt(radius_cutoff_squared)
-    rcut3 = rcut**3
-    rcut2 = rcut**2
+    particle_distance = sqrt(particle_distance_squared)
+    particle_distance_cubed = particle_distance * particle_distance_squared
+    radius_cutoff = sqrt(radius_cutoff_squared)
+    radius_cutoff_cubed = radius_cutoff*radius_cutoff_squared
 
     ! Charges (unit charges)
     q_i = 1._pr
@@ -75,12 +87,12 @@ subroutine reaction_field(particle_distance_squared, particle_separation, force_
     dielectric_factor = 1.0_pr
 
     ! Coulomb energy and force
-    V_coulomb = prefac / r
-    F_coulomb = prefac / r3
+    V_coulomb = prefac / particle_distance
+    F_coulomb = prefac / particle_distance_cubed
 
     ! Reaction field energy and force correction
-    V_rf = prefac * dielectric_factor * (r2 - 3*rcut2) / (2 * rcut3)
-    F_rf = prefac * dielectric_factor * r / rcut3
+    V_rf = prefac * dielectric_factor * (particle_distance_squared - 3._pr*radius_cutoff_squared) / (2._pr * radius_cutoff_cubed)
+    F_rf = prefac * dielectric_factor * particle_distance / radius_cutoff_cubed
 
     ! Total force magnitude
     force_magnitude = F_coulomb + F_rf
@@ -88,7 +100,7 @@ subroutine reaction_field(particle_distance_squared, particle_separation, force_
 
     if (measure .and. save_observables) then
         E_potential = E_potential + V_coulomb + V_rf - potential_cutoff
-        pressure_virial = pressure_virial + r2 * force_magnitude
+        pressure_virial = pressure_virial + particle_distance_squared * force_magnitude
     end if
 
 end subroutine reaction_field

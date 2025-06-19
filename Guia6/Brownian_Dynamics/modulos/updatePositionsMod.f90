@@ -63,4 +63,27 @@ subroutine update_positions_velVer(positions, velocities, forces)
 
 end subroutine update_positions_velVer
 
+subroutine update_positions_Brownian(positions, forces)
+    real(pr), dimension(:,:), intent(inout)     :: positions, forces
+    real(pr)                                    :: D0, xi(3), eta_sigma, coeff
+    real(pr)                                    :: random_noise(3,num_atoms)
+
+    ! Set constants
+    eta_sigma = viscosity * sigma       ! ησ product
+    D0 = T_actual / eta_sigma      ! D₀ = k_B T / (3πησ)
+    coeff = 1.0_pr / eta_sigma          ! 1 / (3πησ), assuming π and 3 absorbed in eta
+
+
+    ! Update positions with force drift + random Gaussian noise
+    call random_gaussian_vec(random_noise)  ! 3D Gaussian vector with mean 0 and stddev 1
+    positions = positions + coeff * forces * dt + sqrt(2.0_pr * D0 * dt) * random_noise
+
+    ! Apply periodic boundary conditions
+    !positions = mod(positions, spread(periodicity, dim=2, ncopies=size(positions,2)))
+    positions(1,:) = modulo(positions(1,:), periodicity(1))
+    positions(2,:) = modulo(positions(2,:), periodicity(2))
+    positions(3,:) = modulo(positions(3,:), periodicity(3))
+
+end subroutine update_positions_Brownian
+
 END MODULE updatePositionsMod

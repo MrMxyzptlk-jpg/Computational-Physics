@@ -1,11 +1,9 @@
 MODULE integratorsMod
     use precisionMod
-    use functionsMod
     use subroutinesMod
     use constantsMod
     use mzranMod
     use parsingMod
-    use omp_lib
     use writing2filesMod
     use updatePositionsMod
     use observablesMod
@@ -42,7 +40,15 @@ subroutine velVerlet_step(i_measure)
 end subroutine velVerlet_step
 
 subroutine Brownian_step(i_measure)
-    integer(int_large)                  :: i_measure
+    use random_module  ! <-- You need a random number generator that gives Gaussian-distributed numbers
+    integer(int_large), intent(in) :: i_measure
+
+    ! Optional: build linked list
+    if (do_linkCell) call create_links(positions)
+
+    ! Compute forces (only conservative part)
+    call get_forces(positions, forces, Energies(1, i_measure), pressures(i_measure), pair_corr)
+    call update_positions_velVer(positions, forces)
 
 end subroutine Brownian_step
 
