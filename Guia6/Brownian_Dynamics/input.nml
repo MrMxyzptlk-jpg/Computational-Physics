@@ -32,7 +32,7 @@
 /
 
 &approximation
-    integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Monte-Carlo'
+    integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
     type         = 'lennard_jones'
     sigma        = 1                    ! In Bohr
     epsilon      = 1                    ! In hartree

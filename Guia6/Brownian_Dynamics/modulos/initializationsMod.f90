@@ -1,8 +1,12 @@
-MODULE initializations
-    use precision
-    use subrutinas
-    use parsing
-    use linkedLists
+MODULE initializationsMod
+    use precisionMod
+    use parametersMod
+    use potentialsMod
+    use forcesMod
+    use thermostatsMod
+    use subroutinesMod
+    use parsingMod
+    use observablesMod
     implicit none
 
     real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, meanSqrDisplacement, structure_factor
@@ -16,7 +20,7 @@ MODULE initializations
         end subroutine init_pos
 
         subroutine force_sub(positions, forces, E_potential, pressure_virial, pair_corr)
-            use precision
+            use precisionMod
             real(pr), intent(in)    :: positions(:,:)
             real(pr), intent(out)   :: forces(:,:)
             real(pr), intent(out)   :: E_potential, pressure_virial
@@ -24,13 +28,13 @@ MODULE initializations
         end subroutine force_sub
 
         subroutine pairCorr_sub(positions, pair_corr)
-            use precision
+            use precisionMod
             real(pr), intent(in)        :: positions(:,:)
             real(pr), intent(inout)     :: pair_corr(:)
         end subroutine pairCorr_sub
 
         subroutine thermo(velocities)
-            use precision
+            use precisionMod
             real(pr), allocatable, intent(inout)    :: velocities(:,:)
         end subroutine thermo
     end interface
@@ -318,4 +322,4 @@ subroutine initialize_velocities()
 
 end subroutine initialize_velocities
 
-END MODULE initializations
+END MODULE initializationsMod

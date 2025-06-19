@@ -1,4 +1,4 @@
-module mzranmod
+module mzranMod
     INTEGER,PARAMETER :: K4B=selected_int_kind(9)
     INTEGER,PARAMETER :: DP =KIND(1.0D0)
   contains
@@ -89,4 +89,4 @@ module mzranmod
       print*, "ERROR: ", char
       stop
     end subroutine nrerror
-end module mzranmod
+end module mzranMod

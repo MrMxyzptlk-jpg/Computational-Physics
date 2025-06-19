@@ -17,17 +17,13 @@
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************
 program ex1
-    use precision
-    use funciones
-    use subrutinas
-    use constantes
-    use mzranmod
-    use parsing
-    use linkedLists
+    use precisionMod
+    use parsingMod
     use omp_lib
-    use writing2files
-    use initializations
-    use integrators
+    use writing2filesMod
+    use initializationsMod
+    use integratorsMod
+    use observablesMod
     implicit none
 
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
@@ -47,7 +43,7 @@ program ex1
 !##################################################################################################
 
     call init_structure()
-    call initialize_parameters()                ! subrutinas module
+    call initialize_parameters()                ! parametersMod module
     call init_positions()
     call init_potential()
     call init_thermostat()
@@ -56,10 +52,10 @@ program ex1
     call init_summation()
     if (integrator /= 'Monte-Carlo') then
         call initialize_velocities()
-        call initialize_rest()                  ! subrutinas module
-        call thermostat_rescale(velocities)     ! subrutinas module
+        call initialize_rest()                  ! parametersMod module
+        call thermostat_rescale(velocities)     ! thermostatsMod module
     end if
-    call initialize_XYZ_data()                  ! writing2flies module
+    call initialize_XYZ_data()                  ! writing2fliesMod module
 
 !##################################################################################################
 !      Start of the calculations
@@ -108,6 +104,39 @@ program ex1
         call close_files()
     end if
 
+    if (integrator == 'Brownian') then
+
+        call open_files(reciprocal_vec)
+            call get_forces(positions, forces,  Energies(1,i_measure), pressures(i_measure), pair_corr)
+
+            if (save_transitory) call get_measurements(i_measure)
+
+            do i = -transitory_steps/thermostat_steps , -1, 1
+                do j = 1, thermostat_steps
+                    if (save_transitory) call check_measuring(i*thermostat_steps + j, i_measure)    ! Checks if there will be measurements in this iteration
+
+                    call Brownian_step(i_measure)
+
+                    if (measure) call get_measurements(i_measure)
+
+                end do
+                call thermostat_chosen(velocities)
+            end do
+
+            transitory  = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory
+            measure     = .False.
+            i_measure   = 0
+            do i = 1 , real_steps
+                call check_measuring(i, i_measure)    ! Checks if there will be measurements in this iteration
+
+                call Brownian_step(i_measure)
+
+                if (measure) call get_measurements(i_measure)
+
+                if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
+            end do
+        call close_files()
+    end if
 
     if (integrator == 'Monte-Carlo') then
 

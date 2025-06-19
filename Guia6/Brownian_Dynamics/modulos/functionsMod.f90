@@ -1,6 +1,6 @@
-MODULE funciones
-    USE precision
-    USE constantes
+MODULE functionsMod
+    USE precisionMod
+    USE constantsMod
     implicit none
 
     contains
@@ -31,4 +31,4 @@ MODULE funciones
 
     end function index_cell
 
-    END module
+END module functionsMod

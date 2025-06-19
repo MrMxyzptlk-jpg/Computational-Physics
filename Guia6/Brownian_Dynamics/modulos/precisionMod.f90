@@ -1,4 +1,4 @@
-module precision
+module precisionMod
 implicit none
 INTEGER, PARAMETER :: int_small             = SELECTED_INT_KIND(2)
 INTEGER, PARAMETER :: int_medium            = SELECTED_INT_KIND(4)
@@ -10,4 +10,4 @@ INTEGER, PARAMETER :: real_large            = SELECTED_REAL_KIND(p = 30)
 
 integer, parameter :: pr=real_double
 
-END MODULE precision
+END MODULE precisionMod

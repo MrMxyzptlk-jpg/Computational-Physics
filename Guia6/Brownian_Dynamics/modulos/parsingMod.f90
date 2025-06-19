@@ -1,12 +1,12 @@
-MODULE parsing
-    use precision
-    use subrutinas
+MODULE parsingMod
+    use precisionMod
+    use subroutinesMod
     implicit none
 
     character (len=15)  :: type
     character (len=6)   :: ensemble
     character (len=12)  :: summation, thermostat_type, initial_velocities
-    logical             :: save_observables, save_positions, do_structure_factor, do_mean_sqr_displacement
+    logical             :: save_positions, do_structure_factor, do_mean_sqr_displacement
     integer(int_large)  :: transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
 
     ! Namelist blocks
@@ -98,4 +98,4 @@ subroutine parse_input()
 
 end subroutine parse_input
 
-END MODULE parsing
+END MODULE parsingMod

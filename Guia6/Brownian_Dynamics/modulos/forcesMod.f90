@@ -1,9 +1,12 @@
-MODULE linkedlists
-    use precision
-    use funciones
-    use subrutinas
-    use parsing, only : dim_linkCell, integrator
+MODULE forcesMod
+    use precisionMod
+    use functionsMod
+    use subroutinesMod
+    use parsingMod, only : dim_linkCell, integrator
     use omp_lib
+    use parametersMod
+    use observablesMod
+    use potentialsMod
     implicit none
 
     private  head, list, map, N_linkedCells, N_neighbors
@@ -12,7 +15,58 @@ MODULE linkedlists
     integer                 :: N_linkedCells
     integer, allocatable    :: head(:), list(:), map(:) ! M: debe ser menor o igual que L/int(L/rc
 
-contains
+CONTAINS
+
+subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial, pair_corr)
+    real(pr), intent(in)    :: positions(:,:)
+    real(pr), intent(out)   :: forces(:,:)
+    real(pr), intent(out)   :: E_potential, pressure_virial
+    real(pr), intent(inout) :: pair_corr(:)
+    integer(int_huge)       :: i, j
+
+    forces = 0._pr
+    if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+
+    !$omp parallel private(j, i) &
+    !$omp shared(positions, num_atoms) &
+    !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
+
+        !$omp do schedule(dynamic)
+        do i=1,num_atoms-1
+            do j = i+1, num_atoms
+                call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
+                    pressure_virial, pair_corr)
+            end do
+        end do
+        !$omp end do
+
+    !$omp end parallel
+
+end subroutine get_forces_allVSall
+
+subroutine get_force_contribution(particle1_position, particle2_position, particle1_forces, particle2_forces, E_potential &
+    , pressure_virial, pair_corr)
+    real(pr), dimension(3), intent(in)      :: particle1_position, particle2_position
+    real(pr), dimension(3), intent(out)     :: particle1_forces, particle2_forces
+    real(pr), intent(out)                   :: E_potential, pressure_virial
+    real(pr), intent(inout)                 :: pair_corr(:)
+    real(pr), dimension(3)                  :: particle_separation, force_contribution
+    real(pr)                                :: particle_distance_squared
+
+    particle_separation = particle1_position - particle2_position ! Separation vector
+    particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
+    particle_distance_squared = sum(particle_separation*particle_separation)
+
+    if (particle_distance_squared <= radius_cutoff_squared) then
+        call potential(particle_distance_squared, particle_separation, force_contribution, E_potential &
+            , pressure_virial, potential_cutoff)
+        particle1_forces = particle1_forces + force_contribution
+        particle2_forces = particle2_forces - force_contribution
+    endif
+
+    if (do_pair_correlation .and. .not. transitory) call update_pair_correlation(particle_distance_squared, pair_corr)
+
+end subroutine get_force_contribution
 
 subroutine check_linkCell(do_linkCell)
     logical, intent(out)    :: do_linkCell
@@ -104,7 +158,7 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
     integer                 :: i, j, icell, jcell, jcell0, neighbor
 
     forces = 0._pr
-    if (measure) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+    if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell) &
     !$omp shared(positions, head, map, list, N_linkedCells) &
@@ -220,4 +274,23 @@ end subroutine get_forces_linkedlist
 !
 !end subroutine get_pair_correlation_linkedlist
 
-END MODULE linkedlists
+!subroutine get_forces_allVSall_serial(positions, forces, E_potential, pressure_virial, pair_corr) ! Worst performing algorithm
+!    real(pr), intent(in)    :: positions(:,:)
+!    real(pr), intent(out)   :: forces(:,:)
+!    real(pr), intent(out)   :: E_potential, pressure_virial
+!    real(pr), intent(inout) :: pair_corr(:)
+!    integer(int_huge)       :: i, j
+!
+!    forces = 0._pr
+!    if (measure) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+!
+!    do i=1,num_atoms-1
+!        do j = i+1, num_atoms
+!            call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
+!                pressure_virial, pair_corr)
+!        end do
+!    end do
+!
+!end subroutine get_forces_allVSall_serial
+
+END MODULE forcesMod

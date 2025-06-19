@@ -1,7 +1,8 @@
-MODULE writing2files
-    use precision
-    use subrutinas
-    use parsing
+MODULE writing2filesMod
+    use precisionMod
+    use subroutinesMod
+    use formatsMod
+    use parsingMod
     implicit none
 
     private     size_x, size_y, size_z, symbol
@@ -214,4 +215,4 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
 
 end subroutine write_output
 
-END MODULE writing2files
+END MODULE writing2filesMod
