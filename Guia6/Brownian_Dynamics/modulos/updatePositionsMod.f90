@@ -2,6 +2,7 @@ MODULE updatePositionsMod
     use parametersMod
     use potentialsMod
     use subroutinesMod
+    use randomMod
     implicit none
 CONTAINS
 
@@ -38,7 +39,7 @@ subroutine update_positions_MC(positions, E_potential, N_accepted)
             if (measure .and. save_observables) E_potential = E_potential_new
             N_accepted = N_accepted + 1
             return
-        else if ( rmzran() < exp(-dE / initial_Temp_Adim)) then
+        else if ( rmzran() < exp(-dE / ref_Temp)) then
             if (measure .and. save_observables) E_potential = E_potential_new
             N_accepted = N_accepted + 1
             return
@@ -65,18 +66,15 @@ end subroutine update_positions_velVer
 
 subroutine update_positions_Brownian(positions, forces)
     real(pr), dimension(:,:), intent(inout)     :: positions, forces
-    real(pr)                                    :: D0, xi(3), eta_sigma, coeff
-    real(pr)                                    :: random_noise(3,num_atoms)
-
-    ! Set constants
-    eta_sigma = viscosity * sigma       ! ησ product
-    D0 = T_actual / eta_sigma      ! D₀ = k_B T / (3πησ)
-    coeff = 1.0_pr / eta_sigma          ! 1 / (3πησ), assuming π and 3 absorbed in eta
-
+    real(pr)                                    :: random_noise(3)
+    integer                                     :: i, j
 
     ! Update positions with force drift + random Gaussian noise
-    call random_gaussian_vec(random_noise)  ! 3D Gaussian vector with mean 0 and stddev 1
-    positions = positions + coeff * forces * dt + sqrt(2.0_pr * D0 * dt) * random_noise
+    do i = 1, num_atoms
+        random_noise = (/(rnd_normal(brownian_stddev), j=1, 3)/)
+        positions(:,i) = positions(:,i) + reduced_viscosity_inv * forces(:,i) * dt + random_noise
+        !print'(*(E9.3,2x))',reduced_viscosity_inv * forces(:,i) * dt, random_noise, brownian_stddev
+    end do
 
     ! Apply periodic boundary conditions
     !positions = mod(positions, spread(periodicity, dim=2, ncopies=size(positions,2)))

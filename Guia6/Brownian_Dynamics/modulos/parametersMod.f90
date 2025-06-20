@@ -19,7 +19,8 @@ MODULE parametersMod
     integer(int_large)      :: real_steps, measuring_jump, measuring_steps
     integer(int_large)      :: num_atoms, pair_corr_bins, max_correlation, MC_adjust_step
     real(pr)                :: conversion_factors(6), periodicity(3), lattice_constant, sigma, epsilon, dt, dtdt, Berendsen_time
-    real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, initial_Temp_Adim, density, mass, MC_delta
+    real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, ref_Temp, density, reduced_viscosity, viscosity, mass, MC_delta
+    real(pr)                :: diffusion_coeff, reduced_viscosity_inv, brownian_stddev
     logical                 :: transitory, save_transitory, do_pair_correlation, save_observables, measure
 
 CONTAINS
@@ -40,7 +41,7 @@ subroutine initialize_parameters()
     conversion_factors(6) = epsilon/(sigma*sigma*sigma)     ! Pressure      [hartree / bohr³]
 
     lattice_constant = lattice_constant/conversion_factors(1)
-    initial_Temp_Adim = initial_Temp_Adim*conversion_factors(3)    ! Already non-dimensional!!
+    ref_Temp = ref_Temp*conversion_factors(3)    ! Already non-dimensional!!
     periodicity = cell_dim*lattice_constant
     radius_cutoff = radius_cutoff/conversion_factors(1)
 
@@ -63,13 +64,6 @@ subroutine initialize_parameters()
     measuring_steps = real_steps/measuring_jump
 
 end subroutine initialize_parameters
-
-subroutine initialize_rest()
-
-    Temp_factor = 2.0_pr / (3.0_pr * real(num_atoms,pr))
-    Pressure_factor = 1._pr / (3._pr * product(cell_dim)*lattice_constant*lattice_constant*lattice_constant)
-
-end subroutine initialize_rest
 
 
 

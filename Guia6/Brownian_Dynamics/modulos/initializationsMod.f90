@@ -1,5 +1,7 @@
 MODULE initializationsMod
     use precisionMod
+    use constantsMod
+    use randomMod
     use parametersMod
     use potentialsMod
     use forcesMod
@@ -325,5 +327,27 @@ subroutine initialize_velocities()
     end select
 
 end subroutine initialize_velocities
+
+subroutine init_internal_constants()
+
+    if (integrator == 'Brownian') then
+        if ((viscosity == 0._pr) .and. (reduced_viscosity == 0._pr)) then
+            print*, "No viscosity of reduced viscosity specified. Setting reduced_viscosity = 1"
+            reduced_viscosity = 1._pr
+        else if (viscosity/=0._pr) then
+            reduced_viscosity = 3._pr*pi*viscosity * sigma      ! 3πησ product
+        else if(reduced_viscosity/=0._pr) then
+            viscosity = 3._pr*pi * sigma / reduced_viscosity    ! 3πησ product
+        end if
+
+        diffusion_coeff = ref_Temp / reduced_viscosity          ! D₀ = k_B T / (3πησ)
+        reduced_viscosity_inv = 1._pr / reduced_viscosity       ! 1 / (3πησ)
+        brownian_stddev = sqrt(2.0_pr * diffusion_coeff * dt)
+    end if
+
+    Temp_factor = 2.0_pr / (3.0_pr * real(num_atoms,pr))
+    Pressure_factor = 1._pr / (3._pr * product(cell_dim)*lattice_constant*lattice_constant*lattice_constant)
+
+end subroutine init_internal_constants
 
 END MODULE initializationsMod

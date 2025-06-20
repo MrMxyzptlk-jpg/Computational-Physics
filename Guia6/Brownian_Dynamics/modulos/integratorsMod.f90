@@ -40,7 +40,6 @@ subroutine velVerlet_step(i_measure)
 end subroutine velVerlet_step
 
 subroutine Brownian_step(i_measure)
-    use random_module  ! <-- You need a random number generator that gives Gaussian-distributed numbers
     integer(int_large), intent(in) :: i_measure
 
     ! Optional: build linked list
@@ -48,7 +47,7 @@ subroutine Brownian_step(i_measure)
 
     ! Compute forces (only conservative part)
     call get_forces(positions, forces, Energies(1, i_measure), pressures(i_measure), pair_corr)
-    call update_positions_velVer(positions, forces)
+    call update_positions_Brownian(positions, forces)
 
 end subroutine Brownian_step
 

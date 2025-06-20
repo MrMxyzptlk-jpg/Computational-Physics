@@ -10,7 +10,8 @@ MODULE parsingMod
     integer(int_large)  :: transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
 
     ! Namelist blocks
-    namelist /physical/ structure, lattice_constant, density, initial_Temp_Adim, num_atoms, mass, cell_dim, ensemble
+    namelist /physical/ structure, lattice_constant, density, reduced_viscosity, viscosity, ref_Temp, num_atoms, mass, cell_dim &
+        , ensemble
     namelist /calculation/ real_steps, transitory_steps, thermostat_steps, dt, radius_cutoff, summation, dim_linkCell &
         , measuring_jump, initial_velocities
     namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
@@ -29,12 +30,14 @@ subroutine set_defaults()
         lattice_constant    = 1._pr
         cell_dim            = (/1_int_small,1_int_small,1_int_small/)
         num_atoms           = 0
-        initial_Temp_Adim        = 1.1_pr
+        ref_Temp            = 1.0_pr
         density             = 0._pr
+        viscosity           = 0._pr
+        reduced_viscosity   = 0._pr
         mass                = 1._pr
 
         !Calculation settings
-        real_steps         = 1000
+        real_steps       = 1000
         transitory_steps = 1000
         thermostat_steps = 50
         dt               = 0.005_pr

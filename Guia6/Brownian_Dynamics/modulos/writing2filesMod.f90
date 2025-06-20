@@ -74,7 +74,7 @@ subroutine write_XYZfile(time, positions, velocities)
     ! Line 1: number of particles
     write(unit_positions, '(i6)') num_atoms
 
-    if (integrator == 'Monte-Carlo') then      ! Monte Carlo method does not consider velocities
+    if (integrator /= 'velocity-Verlet') then      ! Monte Carlo method does not consider velocities
         ! Line 2: extended XYZ header with box info and time
         write(unit_positions,'(A)') 'Lattice="' // &
             size_x // ' 0.0  0.0  0.0 ' // &

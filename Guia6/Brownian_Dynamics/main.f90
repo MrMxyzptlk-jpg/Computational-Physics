@@ -27,7 +27,6 @@ program ex1
     implicit none
 
     real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
-!    character (len=:), allocatable          :: filename, prefix, file_root_word, suffix
     integer(int_large)                      :: i, j, i_measure
 
 
@@ -50,11 +49,9 @@ program ex1
     call init_observables()
     call init_tasks()
     call init_summation()
-    if (integrator /= 'Monte-Carlo') then
-        call initialize_velocities()
-        call initialize_rest()                  ! parametersMod module
-        call thermostat_rescale(velocities)     ! thermostatsMod module
-    end if
+    if (integrator == 'velocity-Verlet') call initialize_velocities()
+    call init_internal_constants()
+    if (integrator == 'velocity-Verlet') call thermostat_rescale(velocities)     ! thermostatsMod module
     call initialize_XYZ_data()                  ! writing2fliesMod module
 
 !##################################################################################################
@@ -120,7 +117,6 @@ program ex1
                     if (measure) call get_measurements(i_measure)
 
                 end do
-                call thermostat_chosen(velocities)
             end do
 
             transitory  = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory
@@ -133,7 +129,6 @@ program ex1
 
                 if (measure) call get_measurements(i_measure)
 
-                if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
             end do
         call close_files()
     end if

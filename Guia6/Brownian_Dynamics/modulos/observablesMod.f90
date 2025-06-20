@@ -183,5 +183,17 @@ subroutine normalize_msd(msd)
 
 end subroutine normalize_msd
 
+subroutine check_measuring(index, i_measure)
+    integer, intent(in)         :: index
+    integer, intent(inout)      :: i_measure
+
+    if (mod(index,measuring_jump) == 0 ) then
+        measure = .true.
+        i_measure = i_measure + 1
+    else
+        measure = .false.
+    end if
+
+end subroutine check_measuring
 
 END MODULE observablesMod
