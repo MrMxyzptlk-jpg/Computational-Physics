@@ -5,18 +5,18 @@
 
     KbT_user    =   2.2676    ! T_critical = 2.2676
 
-    T_range     = false
+    T_range     = true
     KbT_min     = 2.2
-    KbT_max     = 2.35
-    KbT_steps   = 50
+    KbT_max     = 2.269
+    KbT_steps   = 25
 
 /
 
 &calculation
-    MC_steps  = 10000
+    MC_steps  = 100000
     step_jump = 10
     transitory_steps = 5000,  ! Will be subtracted from MC_steps
-    use_absolute_magnetization = false
+    use_absolute_magnetization = true
 /
 
 &tasks
@@ -28,6 +28,6 @@
     do_autocorrelation      = false
     autocorrelation_len_max = 500
 
-    save_lattice_evolution  = true
+    save_lattice_evolution  = false
     lattice_frames          = 100
 /
