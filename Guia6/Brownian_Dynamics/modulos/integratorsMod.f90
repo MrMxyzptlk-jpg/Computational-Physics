@@ -42,11 +42,9 @@ end subroutine velVerlet_step
 subroutine Brownian_step(i_measure)
     integer(int_large), intent(in) :: i_measure
 
-    ! Optional: build linked list
     if (do_linkCell) call create_links(positions)
-
-    ! Compute forces (only conservative part)
     call get_forces(positions, forces, Energies(1, i_measure), pressures(i_measure), pair_corr)
+
     call update_positions_Brownian(positions, forces)
 
 end subroutine Brownian_step
@@ -56,6 +54,7 @@ subroutine MC_step(i_measure)
 
     if (do_linkCell) call create_links(positions)
     call get_forces(positions, forces, Energies(1,i_measure), pressures(i_measure), pair_corr)
+
     call update_positions_MC(positions, Energies(1,i_measure), MC_accepted)
 
 end subroutine MC_step

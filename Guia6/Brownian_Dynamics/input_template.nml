@@ -27,7 +27,7 @@
     save_observables         = true
     save_positions           = false
     do_pair_correlation      = false
-    do_structure_factor      = true
+    do_structure_factor      = false
     do_mean_sqr_displacement = true
     Miller_index             = 0,-1,0
 /

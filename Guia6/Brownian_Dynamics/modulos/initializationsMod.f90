@@ -114,9 +114,7 @@ subroutine init_observables()
     end if
     allocate(forces(3,size(positions,2)))
 
-    if (integrator == 'velocity-Verlet') allocate(previous_forces(3,size(positions,2)))
-
-    if (.not. (integrator=='Monte-Carlo')) allocate(velocities(3,size(positions,2)))
+    if (integrator == 'velocity-Verlet') allocate(previous_forces(3,size(positions,2)), velocities(3,size(positions,2)))
     if (.not. do_structure_factor) allocate(structure_factor(1))
 
 end subroutine init_observables

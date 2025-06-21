@@ -64,7 +64,7 @@ subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
     real(pr), intent(inout) :: Pressure  ! Comes in as Pressure_virial
     real(pr), intent(out)   :: E_kinetic, Temperature
 
-    if (.not. (integrator=='Monte-Carlo')) then
+    if (integrator=='velocity-Verlet') then
         E_kinetic = 0.5_pr*sum(velocities*velocities)
         Temperature = Temp_factor*E_kinetic
         Pressure = density*Temperature + Pressure*Pressure_factor
