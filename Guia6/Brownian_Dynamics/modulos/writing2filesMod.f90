@@ -32,7 +32,11 @@ subroutine open_files(reciprocal_vec)
 
     if (save_observables) then
         open(newunit=unit_observables, file="datos/observables.out", status="replace")
-        write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    |   Temperature"
+        if (integrator == 'velocity-Verlet') then
+            write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    |   Temperature"
+        else
+            write(unit_observables,*) "##    t[s]    |    E_pot    |     Pressure    "
+        end if
     end if
 
     if (do_structure_factor) then
@@ -108,7 +112,14 @@ subroutine write_observables(time, energies, pressures, temperatures)
             write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4) &
                 , pressures*conversion_factors(6), temperatures
         case('Monte-Carlo')
-            write(unit_observables, format_style0) time*conversion_factors(2), energies(1)*conversion_factors(4)
+            write(unit_observables, format_style0) time*conversion_factors(2), energies(1)*conversion_factors(4) &
+                , pressures*conversion_factors(6)
+        case('Brownian')
+            write(unit_observables, format_style0) time*conversion_factors(2), energies(1)*conversion_factors(4) &
+                , pressures*conversion_factors(6)
+        case default
+            write(unit_observables, format_style0) time*conversion_factors(2), energies(1)*conversion_factors(4) &
+                , pressures*conversion_factors(6)
     end select
 
 end subroutine write_observables
@@ -201,6 +212,35 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
             case('Monte-Carlo')
                 call get_stats(energies(1,1:)*conversion_factors(4), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", avg &
+                    , " Standard deviation = ", stddev, " Standard error = ", error
+                call get_stats(pressures(1:)*conversion_factors(6), average = avg, stddev = stddev, error = error)
+                write(unit_info,format_observables)     "Pressure:          ", " Average = ", avg &
+                    , " Standard deviation = ", stddev, " Standard error = ", error
+                if (do_structure_factor) then
+                    call get_stats(structure_factor, average = avg, stddev = stddev, error = error)
+                write(unit_info,format_observables)     "Structure Factor:  ", " Average = ", avg &
+                    , " Standard deviation = ", stddev, " Standard error = ", error
+                end if
+
+            case('Brownian')
+                call get_stats(energies(1,1:)*conversion_factors(4), average = avg, stddev = stddev, error = error)
+                write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", avg &
+                    , " Standard deviation = ", stddev, " Standard error = ", error
+                call get_stats(pressures(1:)*conversion_factors(6), average = avg, stddev = stddev, error = error)
+                write(unit_info,format_observables)     "Pressure:          ", " Average = ", avg &
+                    , " Standard deviation = ", stddev, " Standard error = ", error
+                if (do_structure_factor) then
+                    call get_stats(structure_factor, average = avg, stddev = stddev, error = error)
+                write(unit_info,format_observables)     "Structure Factor:  ", " Average = ", avg &
+                    , " Standard deviation = ", stddev, " Standard error = ", error
+                end if
+
+            case default
+                call get_stats(energies(1,1:)*conversion_factors(4), average = avg, stddev = stddev, error = error)
+                write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", avg &
+                    , " Standard deviation = ", stddev, " Standard error = ", error
+                call get_stats(pressures(1:)*conversion_factors(6), average = avg, stddev = stddev, error = error)
+                write(unit_info,format_observables)     "Pressure:          ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
                 if (do_structure_factor) then
                     call get_stats(structure_factor, average = avg, stddev = stddev, error = error)
