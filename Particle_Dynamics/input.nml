@@ -1,0 +1,56 @@
+&physical
+    ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'  - Only 'NVT' in Monte-Carlo
+    structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random'
+    lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
+    cell_dim            = 4,4,4
+    num_atoms           = 256
+    ref_Temp            = 1.1           ! In units of epsilon/Kb
+    density             = 1.0           ! Number of atoms/volume
+    reduced_viscosity   = 2.87          ! REDUCED viscosity
+    mass                = 1             ! In a.m.u.
+/
+
+&calculation
+    dt                 = 0.0005          ! In units of [ℏ/Eh = tₐ]
+    real_steps         = 10000
+    transitory_steps   = 10000
+    thermostat_steps   = 50             ! Rescales every 50 steps the thermostat is applied
+    radius_cutoff      = 2.5            ! In Bohr
+    summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists'
+    dim_linkCell       = 3,3,3
+    measuring_jump     = 10
+    initial_velocities = 'random'       ! Options: 'random', 'Maxwell'
+/
+
+&tasks
+    save_transitory          = true
+    save_observables         = true
+    save_positions           = false
+    do_pair_correlation      = false
+    do_structure_factor      = true
+    do_mean_sqr_displacement = true
+    Miller_index             = 0,-1,0
+/
+
+&approximation
+    integrator   = 'Brownian'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
+    type         = 'lennard_jones'
+    sigma        = 1                    ! In Bohr
+    epsilon      = 1                    ! In hartree
+    MC_adjust_step  = 10
+    MC_delta        = 1
+/
+
+&thermostat
+    thermostat_type = 'rescale'         ! Options: 'rescale', 'Berendsen'
+    Berendsen_time  = 0.01              ! In units of [ℏ/Eh = tₐ]
+/
+
+&MSD
+    max_correlation  = 1000
+/
+
+&pair_correlation
+    pair_corr_cutoff = 4.0              ! In Bohr
+    pair_corr_bins   = 200
+/
