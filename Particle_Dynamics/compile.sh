@@ -4,7 +4,6 @@ gfortran ./modulos/precisionMod.f90\
         ./modulos/randomMod.f90\
         ./modulos/formatsMod.f90\
         ./modulos/constantsMod.f90\
-        ./modulos/functionsMod.f90\
         ./modulos/parametersMod.f90\
         ./modulos/subroutinesMod.f90\
         ./modulos/potentialsMod.f90\

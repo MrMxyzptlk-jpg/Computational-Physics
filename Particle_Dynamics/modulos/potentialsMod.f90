@@ -4,19 +4,6 @@ MODULE potentialsMod
     use subroutinesMod
     implicit none
 
-    procedure(pot), pointer :: potential => null()
-
-    abstract interface ! Intended to allow for the implementation of a different potential later on
-        subroutine pot(particle_distance_squared, particle_separation, force_contribution, E_potential, pressure_virial &
-            , potential_cutoff)
-            use precisionMod
-            real(pr), intent(in)               :: particle_distance_squared, particle_separation(3)
-            real(pr), intent(out)              :: force_contribution(3)
-            real(pr), intent(inout)            :: E_potential, pressure_virial
-            real(pr), intent(in)               :: potential_cutoff
-        end subroutine pot
-    end interface
-
 CONTAINS
 
 function Lennard_Jones_potential(particle_distance_squared) ! Lennard-Jones potential
@@ -29,14 +16,6 @@ function Lennard_Jones_potential(particle_distance_squared) ! Lennard-Jones pote
     Lennard_Jones_potential =  4.0_pr *r6inv * (r6inv - 1.0_pr)
 
 end function Lennard_Jones_potential
-
-function reaction_field_potential(particle_distance_squared) ! Coulomb potential with reaction field approximation (charges should be initialized outside)
-    real(pr), intent(in)   :: particle_distance_squared
-    real(pr)               :: reaction_field_potential
-
-    reaction_field_potential =  1._pr/sqrt(particle_distance_squared)
-
-end function reaction_field_potential
 
 subroutine Lennard_Jones(particle_distance_squared, particle_separation,  force_contribution, E_potential, pressure_virial &
     , potential_cutoff)
@@ -57,6 +36,32 @@ subroutine Lennard_Jones(particle_distance_squared, particle_separation,  force_
     end if
 
 end subroutine Lennard_Jones
+
+subroutine get_E_potential_contribution(positions, random_particle_id, dE) ! For MC implementation in short-range potentials
+    real(pr), intent(in)    :: positions(:,:)
+    real(pr), intent(out)   :: dE
+    real(pr)                :: particle_distance_squared
+    integer                 :: random_particle_id, i
+
+    dE = 0._pr
+    do i = 1, num_atoms
+        if (i /= random_particle_id) then
+            call get_distance_squared(positions(:,random_particle_id), positions(:,i), particle_distance_squared)
+            if (particle_distance_squared <= radius_cutoff_squared) then
+                dE = dE + potential_function(particle_distance_squared) ! The term "- potential_cutoff" is irrelevant to the change in potential energy
+            end if
+        end if
+    end do
+
+end subroutine get_E_potential_contribution
+
+function reaction_field_potential(particle_distance_squared) ! Coulomb potential with reaction field approximation
+    real(pr), intent(in)   :: particle_distance_squared
+    real(pr)               :: reaction_field_potential
+
+    reaction_field_potential =  1._pr/sqrt(particle_distance_squared)
+
+end function reaction_field_potential
 
 subroutine reaction_field(particle_distance_squared, particle_separation, force_contribution, E_potential, pressure_virial &
     , potential_cutoff)
@@ -104,23 +109,5 @@ subroutine reaction_field(particle_distance_squared, particle_separation, force_
     end if
 
 end subroutine reaction_field
-
-subroutine get_E_potential_contribution(positions, random_particle_id, dE)
-    real(pr), intent(in)    :: positions(:,:)
-    real(pr), intent(out)   :: dE
-    real(pr)                :: particle_distance_squared
-    integer                 :: random_particle_id, i
-
-    dE = 0._pr
-    do i = 1, num_atoms
-        if (i /= random_particle_id) then
-            call get_distance_squared(positions(:,random_particle_id), positions(:,i), particle_distance_squared)
-            if (particle_distance_squared <= radius_cutoff_squared) then
-                dE = dE + potential_function(particle_distance_squared) ! The term "- potential_cutoff" is irrelevant to the change in potential energy
-            end if
-        end if
-    end do
-
-end subroutine get_E_potential_contribution
 
 END MODULE potentialsMod

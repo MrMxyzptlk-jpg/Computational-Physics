@@ -7,7 +7,6 @@ MODULE initializationsMod
     use forcesMod
     use thermostatsMod
     use subroutinesMod
-    use functionsMod
     use parsingMod
     use observablesMod
     implicit none

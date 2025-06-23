@@ -1,6 +1,6 @@
 MODULE forcesMod
     use precisionMod
-    use functionsMod
+    use constantsMod
     use subroutinesMod
     use parsingMod, only : dim_linkCell, integrator
     use omp_lib
@@ -149,6 +149,19 @@ subroutine create_links(positions)
     end do
 
 end subroutine create_links
+
+integer(int_large) function index_cell(ix,iy,iz, dim_linkCell)  ! For indexing Linked-Lists
+    integer(int_large), intent(in)   :: dim_linkCell(3)
+    integer(int_large), intent(in)   :: ix, iy, iz
+    integer(int_large)               :: Mx, My, Mz
+
+    Mx = dim_linkCell(1)
+    My = dim_linkCell(2)
+    Mz = dim_linkCell(3)
+
+    index_cell = 1 + mod(ix - 1 + Mx, Mx) + mod(iy - 1 + My, My)*Mx  + mod(iz - 1 + Mz, Mz)*Mx*My
+
+end function index_cell
 
 subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial, pair_corr) ! Performs worse than serial version
     real(pr), intent(in)    :: positions(:,:)

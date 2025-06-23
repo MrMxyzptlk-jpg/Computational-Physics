@@ -1,7 +1,6 @@
 MODULE parametersMod
     use precisionMod
     use constantsMod
-    use functionsMod
     use mzranMod
     implicit none
 
@@ -22,6 +21,25 @@ MODULE parametersMod
     real(pr)                :: radius_cutoff, pair_corr_cutoff, dr, ref_Temp, density, reduced_viscosity, viscosity, mass, MC_delta
     real(pr)                :: diffusion_coeff, reduced_viscosity_inv, brownian_stddev
     logical                 :: transitory, save_transitory, do_pair_correlation, save_observables, measure
+
+    procedure(pot), pointer :: potential => null()
+    procedure(pot_func), pointer :: potential_function => null()
+
+    abstract interface ! Intended to allow for the implementation of a different potential later on
+        subroutine pot(particle_distance_squared, particle_separation, force_contribution, E_potential, pressure_virial &
+            , potential_cutoff)
+            use precisionMod
+            real(pr), intent(in)               :: particle_distance_squared, particle_separation(3)
+            real(pr), intent(out)              :: force_contribution(3)
+            real(pr), intent(inout)            :: E_potential, pressure_virial
+            real(pr), intent(in)               :: potential_cutoff
+        end subroutine pot
+        function pot_func(particle_distance_squared)
+            use precisionMod
+            real(pr), intent(in)    :: particle_distance_squared
+            real(pr)                :: pot_func
+        end function pot_func
+    end interface
 
 CONTAINS
 
