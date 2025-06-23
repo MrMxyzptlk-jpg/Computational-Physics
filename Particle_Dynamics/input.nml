@@ -1,5 +1,5 @@
 &physical
-    ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'  - Only 'NVT' in Monte-Carlo
+    ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'  -- Only 'NVT' in Monte-Carlo
     structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
     cell_dim            = 4,4,4
@@ -33,8 +33,8 @@
 /
 
 &approximation
-    integrator   = 'Brownian'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
-    type         = 'lennard_jones'
+    integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
+    type         = 'lennard_jones'      ! Options: 'lennard_jones', 'Coulomb_Ewald'
     sigma        = 1                    ! In Bohr
     epsilon      = 1                    ! In hartree
     MC_adjust_step  = 10

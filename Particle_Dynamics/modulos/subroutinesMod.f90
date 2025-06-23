@@ -41,18 +41,22 @@ subroutine get_stats(measurements, variance, stddev, average, error)
     real(pr), optional, intent(out)     :: variance, stddev, average, error
     real(pr)                            :: avg, var
 
-    if (present(average) .or. present(variance) .or. present(stddev)) then
-        avg = sum(measurements)/real(size(measurements),pr)
+    if (.not. any((/present(average), present(variance), present(stddev), present(error)/))) then
+        print*, "Unspecified stat inquiry"
+        return
     end if
 
-    if (present(variance) .or. present(stddev)) then
-        var = sum((measurements - avg)**2) / real(size(measurements) - 1, pr)
-    end if
+    avg = sum(measurements)/real(size(measurements),pr)
 
     if (present(average))  average  = avg
-    if (present(variance)) variance = var
-    if (present(stddev))   stddev   = sqrt(var)
-    if (present(error))   error   = sqrt(var/real(size(measurements),pr))
+
+    if (any((/present(variance), present(stddev), present(error)/))) then
+        var = sum((measurements - avg)**2) / real(size(measurements) - 1, pr)
+        if (present(variance)) variance = var
+        if (present(stddev))   stddev   = sqrt(var)
+        if (present(error))   error   = sqrt(var/real(size(measurements),pr))
+    end if
+
 
 end subroutine get_stats
 

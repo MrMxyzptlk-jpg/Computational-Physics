@@ -51,23 +51,63 @@ subroutine init_structure()
 
     select case (structure)
         case ("FCC")
-            init_positions =>  initialize_positions_FCC
+            init_positions =>  init_positions_FCC
             if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
         case ("BCC")
-            init_positions =>  initialize_positions_BCC
+            init_positions =>  init_positions_BCC
             if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
         case ("random")
-            init_positions =>  initialize_positions_random
+            init_positions =>  init_positions_random
             if (density > 0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
             if (density > 0._pr) then
                 print*, "Random structure selected -> Chosen density is being ignored. Using density = num_atoms/vol instead"
             end if
         case default
-            init_positions =>  initialize_positions_FCC
+            init_positions =>  init_positions_FCC
             if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
     end select
 
 end subroutine init_structure
+
+subroutine init_parameters()
+
+    if (structure == "random") then
+        cell_dim = 1_int_medium
+        density = num_atoms / product(cell_dim*lattice_constant)
+    end if
+
+    ! Define conversion factors to adimensionalize the variables
+    conversion_factors(1) = sigma                           ! Distance      [Bohr = a₀]
+    conversion_factors(2) = sigma*sqrt(mass/epsilon)        ! Time          [ℏ/Eh = tₐ]
+    conversion_factors(3) = 1._pr                           ! Temperature   [epsilon / kB]
+    conversion_factors(4) = epsilon                         ! Energy        [hartree = Eh]
+    conversion_factors(5) = sqrt(epsilon/mass)              ! Velocity      [a₀ / tₐ]
+    conversion_factors(6) = epsilon/(sigma*sigma*sigma)     ! Pressure      [hartree / bohr³]
+
+    lattice_constant = lattice_constant/conversion_factors(1)
+    ref_Temp = ref_Temp*conversion_factors(3)    ! Already non-dimensional!!
+    periodicity = cell_dim*lattice_constant
+    radius_cutoff = radius_cutoff/conversion_factors(1)
+
+    dt = dt/conversion_factors(2)
+    dtdt = dt*dt
+
+    radius_cutoff_squared = radius_cutoff*radius_cutoff
+    potential_cutoff = potential_function(radius_cutoff_squared)
+
+    transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
+
+    if(do_pair_correlation) then
+        pair_corr_cutoff_sqr = pair_corr_cutoff*pair_corr_cutoff
+        dr = pair_corr_cutoff/real(pair_corr_bins,pr)
+    end if
+
+    call mzran_init() ! Initialize random number generator
+
+    measure = .False.
+    measuring_steps = real_steps/measuring_jump
+
+end subroutine init_parameters
 
 subroutine init_potential()
 
@@ -77,6 +117,9 @@ subroutine init_potential()
         case ("lannard_jones")
             potential =>  Lennard_Jones
             potential_function => Lennard_Jones_potential
+        case ("Coulomb_Ewald")
+            Ewald_factor = 2._pr/sqrt(pi)
+            potential =>  Lennard_Jones
         case ("reaction_field")
             potential =>  reaction_field
             potential_function => reaction_field_potential
@@ -149,7 +192,7 @@ subroutine init_tasks()
 
 end subroutine init_tasks
 
-subroutine initialize_positions_random() ! Not debugged
+subroutine init_positions_random() ! Not debugged
     integer                             :: i, j, accepted, attempts
     real(pr)                            :: r2_min, r2, dx, dy, dz
     real(pr)                            :: r_min
@@ -193,9 +236,9 @@ subroutine initialize_positions_random() ! Not debugged
 
     print*, "Random positions initialized after ", attempts, "attempts"
 
-end subroutine initialize_positions_random
+end subroutine init_positions_random
 
-subroutine initialize_positions_FCC()
+subroutine init_positions_FCC()
     integer(int_large)                 :: supercell_atoms
     integer(int_large)                 :: atom_id
     integer(int_medium)                :: h, k, l, b
@@ -235,9 +278,9 @@ subroutine initialize_positions_FCC()
 
     positions = positions*lattice_constant
 
-end subroutine initialize_positions_FCC
+end subroutine init_positions_FCC
 
-subroutine initialize_positions_BCC()
+subroutine init_positions_BCC()
     integer(int_large)                 :: supercell_atoms
     integer(int_large)                 :: atom_id
     integer(int_medium)                :: h, k, l, b
@@ -273,9 +316,9 @@ subroutine initialize_positions_BCC()
         end do
     end do
 
-end subroutine initialize_positions_BCC
+end subroutine init_positions_BCC
 
-subroutine initialize_velocities_random()
+subroutine init_velocities_random()
     real(pr)                                :: velocity_average(size(velocities,1))
     integer                                 :: i
 
@@ -287,9 +330,9 @@ subroutine initialize_velocities_random()
         velocities(i,:) = (velocities(i,:) - velocity_average(i))   ! Removing center of mass displacement
     end do
 
-end subroutine initialize_velocities_random
+end subroutine init_velocities_random
 
-subroutine initialize_velocities_Maxwell()
+subroutine init_velocities_Maxwell()
     real(pr)                           :: velocity_average(3)
     real(pr), allocatable              :: tmp(:)
     integer                            :: i, n
@@ -312,18 +355,18 @@ subroutine initialize_velocities_Maxwell()
 
     deallocate(tmp)
 
-end subroutine initialize_velocities_Maxwell
+end subroutine init_velocities_Maxwell
 
-subroutine initialize_velocities()
+subroutine init_velocities()
 
     select case (initial_velocities)
         case('random')
-            call initialize_velocities_random()
+            call init_velocities_random()
         case('Maxwell')
-            call initialize_velocities_Maxwell()
+            call init_velocities_Maxwell()
     end select
 
-end subroutine initialize_velocities
+end subroutine init_velocities
 
 subroutine init_internal_constants()
 

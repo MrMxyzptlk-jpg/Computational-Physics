@@ -3,6 +3,13 @@ MODULE observablesMod
     use parametersMod
     use subroutinesMod
     implicit none
+
+    private     positions_buffer, msd_counts, msd_count
+
+    real(pr), allocatable   :: positions_buffer(:,:,:)
+    integer, allocatable    :: msd_counts(:)
+    integer                 :: msd_count
+
 CONTAINS
 
 subroutine get_pair_correlation(positions, pair_corr)

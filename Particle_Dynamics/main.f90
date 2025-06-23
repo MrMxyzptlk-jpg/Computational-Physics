@@ -43,13 +43,13 @@ program ex1
 
     call init_structure()
     call init_potential()
-    call initialize_parameters()                ! parametersMod module
+    call init_parameters()
     call init_positions()
     call init_thermostat()
     call init_observables()
     call init_tasks()
     call init_summation()
-    if (integrator == 'velocity-Verlet') call initialize_velocities()
+    if (integrator == 'velocity-Verlet') call init_velocities()
     call init_internal_constants()
     if (integrator == 'velocity-Verlet') call thermostat_rescale(velocities)     ! thermostatsMod module
     call initialize_XYZ_data()                  ! writing2fliesMod module
