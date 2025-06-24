@@ -16,7 +16,7 @@ MODULE parsingMod
         , measuring_jump, initial_velocities
     namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
         , do_structure_factor, Miller_index
-    namelist /approximation/ integrator, type, sigma, epsilon, MC_adjust_step, MC_delta
+    namelist /approximation/ integrator, type, sigma, epsilon, kgrid, MC_adjust_step, MC_delta
     namelist /thermostat/ thermostat_type, Berendsen_time
     namelist /MSD/ max_correlation
     namelist /pair_correlation/pair_corr_cutoff, pair_corr_bins
@@ -60,6 +60,7 @@ subroutine set_defaults()
         integrator  = 'velocity-Verlet'
         sigma   = 1._pr
         epsilon = 1._pr
+        kgrid   = (/5, 5, 5/)
         MC_adjust_step  = 50
         MC_delta        = 0.01
 

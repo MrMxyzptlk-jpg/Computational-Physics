@@ -205,6 +205,39 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
 
 end subroutine get_forces_linkedlist
 
+subroutine get_forces_Ewald(positions, forces, E_potential, pressure_virial, pair_corr)
+    real(pr), intent(in)    :: positions(:,:)
+    real(pr), intent(out)   :: forces(:,:)
+    real(pr), intent(out)   :: E_potential, pressure_virial
+    real(pr), intent(inout) :: pair_corr(:)
+    integer(int_huge)       :: i, j
+    real(pr)                :: box_dipole(3), surface_potential
+
+    forces = 0._pr
+    if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
+
+    !$omp parallel private(j, i) &
+    !$omp shared(positions, num_atoms) &
+    !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
+
+        !$omp do schedule(dynamic)
+        do i=1,num_atoms-1
+            do j = i+1, num_atoms
+                call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
+                    pressure_virial, pair_corr)
+            end do
+        end do
+        !$omp end do
+
+    !$omp end parallel
+
+    box_dipole = sum(positions,2) ! Net box dipole, when all charges are equal. Else the charges q must multiply each position
+    surface_potential  = (pi/1.5_pr) * sum(box_dipole*box_dipole)   ! Surface term
+
+    E_potential = E_potential + surface_potential
+
+end subroutine get_forces_Ewald
+
 !##################################################################################################
 !     Not used / Not implemented
 !##################################################################################################

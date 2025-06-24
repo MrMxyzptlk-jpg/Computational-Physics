@@ -45,24 +45,49 @@ subroutine Coulomb_Ewald_realSpace(particle_distance_sqr, particle_separation, f
 
     particle_distance = sqrt(particle_distance_sqr)
 
-    term1 = ERFC ( epsilon * particle_distance ) / particle_distance ! Screened Coulomb term
-    term2 = Ewald_factor*exp(-epsilon_sqr*particle_distance_sqr)/particle_distance_sqr
+    term1 = ERFC ( sigma * particle_distance ) / particle_distance ! Screened Coulomb term
+    term2 = Ewald_realFactor*exp(-sigma_sqr*particle_distance_sqr)
 
-    force_magnitude = term1/(particle_distance*particle_distance_sqr) + term2
-    force_contribution = particle_separation*force_magnitude
+    force_magnitude = term1 + term2
+    force_contribution = force_magnitude * particle_separation / particle_distance_sqr
 
     if (measure .and. save_observables) then
         E_potential = E_potential + term1
-        pressure_virial = pressure_virial + particle_distance_sqr*force_magnitude
+        pressure_virial = pressure_virial + Pressure_factor*particle_distance_sqr*force_magnitude
     end if
 
 end subroutine Coulomb_Ewald_realSpace
 
 subroutine Coulomb_Ewald_reciprocalSpace(particle_distance_sqr, particle_separation, force_contribution, E_potential &
     , pressure_virial) ! Coulomb potential contribution from other cells in the lattice
-    real(pr), intent(in)       :: particle_distance_sqr, particle_separation(3)
-    real(pr), intent(out)      :: force_contribution(3)
-    real(pr), intent(inout)    :: E_potential, pressure_virial
+    real(pr), intent(in)        :: particle_distance_sqr, particle_separation(3)
+    real(pr), intent(out)       :: force_contribution(3)
+    real(pr), intent(inout)     :: E_potential, pressure_virial
+    real(pr)                    :: force_magnitude, term1(3), term2(3), term3(3), term4(3), krx, kry, krz, k_factor
+    integer                     :: i
+
+    do i = 1, num_kvec
+        krx = kvectors(i)%kvec(1) * particle_separation(1)
+        kry = kvectors(i)%kvec(2) * particle_separation(2)
+        krz = kvectors(i)%kvec(3) * particle_separation(3)
+        k_factor = kvectors(i)%k_factor
+
+        ! Every inequivalent contribution (four octants)
+        term1 = (/  krx,  kry,  krz/) * sin(  krx + kry + krz)
+        term2 = (/ -krx,  kry,  krz/) * sin( -krx + kry + krz)
+        term3 = (/  krx, -kry,  krz/) * sin(  krx - kry + krz)
+        term4 = (/  krx,  kry, -krz/) * sin(  krx + kry - krz)
+
+        force_contribution = force_contribution + k_factor * (term1 + term2 + term3 + term4)
+        if (measure .and. save_observables) E_potential = E_potential + k_factor
+    end do
+
+    force_contribution = 2._pr * force_contribution * Ewald_forceReciprocalFactor  ! Accounting for symmetry
+
+    if (measure .and. save_observables) then
+        E_potential = Ewald_potentialReciprocalFactor * E_potential
+        pressure_virial = pressure_virial + Pressure_factor*dot_product(force_contribution, particle_separation)  ! Verify!!
+    end if
 
 
 end subroutine Coulomb_Ewald_reciprocalSpace
@@ -72,18 +97,18 @@ subroutine Coulomb_Ewald(particle_distance_sqr, particle_separation,  force_cont
     real(pr), intent(in)       :: particle_distance_sqr, particle_separation(3)
     real(pr), intent(out)      :: force_contribution(3)
     real(pr), intent(inout)    :: E_potential, pressure_virial
-    real(pr), intent(in)       :: potential_cutoff
-    real(pr)                   :: r2inv, r6inv, force_magnitude
+    real(pr), intent(in)       :: potential_cutoff  ! Irrelevant in Ewald summation, but needed for the interface
+    real(pr), dimension(3)     :: force_real, force_reciprocal
+    real(pr)                   :: potential_real, potential_reciprocal
 
-    r2inv = 1._pr/particle_distance_sqr
-    r6inv = r2inv*r2inv*r2inv
-    force_magnitude = 48._pr*r2inv*r6inv*(r6inv-0.5_pr)
-    force_contribution = force_magnitude*particle_separation
-
-    if (measure .and. save_observables) then
-        E_potential = E_potential + 4._pr*r6inv*(r6inv-1._pr) - potential_cutoff
-        pressure_virial = pressure_virial + particle_distance_sqr*force_magnitude
-    end if
+    force_real = 0._pr
+    force_reciprocal = 0._pr
+    potential_real = 0._pr
+    potential_reciprocal = 0._pr
+    call Coulomb_Ewald_realSpace(particle_distance_sqr, particle_separation, force_real, potential_real, pressure_virial)
+    call Coulomb_Ewald_reciprocalSpace(particle_distance_sqr, particle_separation, force_reciprocal, potential_reciprocal &
+        , pressure_virial)
+    force_contribution = force_real + force_reciprocal
 
 end subroutine Coulomb_Ewald
 

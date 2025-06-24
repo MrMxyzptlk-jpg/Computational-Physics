@@ -26,7 +26,13 @@ MODULE parametersMod
 
     ! Potential variables and internal variables
     real(pr)                :: sigma, epsilon               ! User variables
-    real(pr)                :: epsilon_sqr, Ewald_factor    ! Internal variables (for Coulomb_Ewald)
+    real(pr)                :: sigma_sqr, Ewald_realFactor, Ewald_forceReciprocalFactor, Ewald_potentialReciprocalFactor  ! Internal variables (for Coulomb_Ewald)
+    integer                 :: num_kvec, kgrid(3)           ! Internal variables (for Coulomb_Ewald)
+    type :: kvector_data
+        real(pr)    :: k_squared, kvec(3)
+        real(pr)    :: k_factor
+    end type kvector_data
+    type(kvector_data), allocatable :: kvectors(:)   ! Internal variables (for Coulomb_Ewald)
 
     ! Monte Carlo specific variables
     integer(int_large)      :: MC_adjust_step

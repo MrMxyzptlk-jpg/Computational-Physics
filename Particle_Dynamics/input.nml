@@ -6,14 +6,14 @@
     num_atoms           = 256
     ref_Temp            = 1.1           ! In units of epsilon/Kb
     density             = 1.0           ! Number of atoms/volume
-    reduced_viscosity   = 2.87          ! REDUCED viscosity
+    reduced_viscosity   = 2.87          ! REDUCED viscosity (only for BD)
     mass                = 1             ! In a.m.u.
 /
 
 &calculation
-    dt                 = 0.0005          ! In units of [ℏ/Eh = tₐ]
-    real_steps         = 10000
-    transitory_steps   = 10000
+    dt                 = 0.005          ! In units of [ℏ/Eh = tₐ]
+    real_steps         = 1000
+    transitory_steps   = 1000
     thermostat_steps   = 50             ! Rescales every 50 steps the thermostat is applied
     radius_cutoff      = 2.5            ! In Bohr
     summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists'
@@ -25,7 +25,7 @@
 &tasks
     save_transitory          = true
     save_observables         = true
-    save_positions           = false
+    save_positions           = true
     do_pair_correlation      = false
     do_structure_factor      = true
     do_mean_sqr_displacement = true
@@ -34,9 +34,10 @@
 
 &approximation
     integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
-    type         = 'lennard_jones'      ! Options: 'lennard_jones', 'Coulomb_Ewald'
-    sigma        = 1                    ! In Bohr
+    type         = 'Coulomb_Ewald'      ! Options: 'lennard_jones', 'Coulomb_Ewald'
+    sigma        = 5                    ! In Bohr
     epsilon      = 1                    ! In hartree
+    kgrid        = 5, 5, 5              ! Reciprocal space grid
     MC_adjust_step  = 10
     MC_delta        = 1
 /
