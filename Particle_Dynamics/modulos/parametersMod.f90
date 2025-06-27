@@ -26,7 +26,8 @@ MODULE parametersMod
 
     ! Potential variables and internal variables
     real(pr)                :: sigma, epsilon               ! User variables
-    real(pr)                :: sigma_sqr, Ewald_realFactor, Ewald_selfTerm, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr ! Internal variables (for Coulomb_Ewald)
+    real(pr)                :: sigma_sqr, Ewald_realFactor, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr ! Internal variables (for Coulomb_Ewald)
+    real(pr)                :: k_periodicity(3), Ewald_selfTerm
     integer                 :: num_kvec, kgrid(3), k_sqr_max    ! Internal variables (for Coulomb_Ewald)
     real(pr), allocatable   :: kfac(:)                          ! Internal variables (for Coulomb_Ewald)
     type :: kvector_data

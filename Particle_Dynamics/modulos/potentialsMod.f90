@@ -83,37 +83,37 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
 
     ! Use recursion to avoid the calculation of exponential by using multiplication instead
     do i = 2, kgrid(1)
-        eikx(:,i) = eikx(:,i-1) * eikx(:,1)
+        eikx(:,i) = eikx(:,i-1)*eikx(:,1)
     end do
     do i = 2, kgrid(2)
-        eiky(:,i) = eiky(:,i-1) * eiky(:,1)
+        eiky(:,i) = eiky(:,i-1)*eiky(:,1)
     end do
     do i = 2, kgrid(3)
-        eikz(:,i) = eikz(:,i-1) * eikz(:,1)
+        eikz(:,i) = eikz(:,i-1)*eikz(:,1)
     end do
 
-    ! Use further symmetries
-    eiky(:,-kgrid(2):-1) = CONJG ( eiky(:,kgrid(2):1:-1) )
-    eikz(:,-kgrid(3):-1) = CONJG ( eikz(:,kgrid(3):1:-1) )
+    ! Use conjugation symmetry
+    eiky(:,-kgrid(2):-1) = conjg(eiky(:,kgrid(2):1:-1))
+    eikz(:,-kgrid(3):-1) = conjg(eikz(:,kgrid(3):1:-1))
 
     E_potential = 0.0_pr
     force_contribution = 0._pr
 
     do kx = 0, kgrid(1)
-        if ( kx == 0 ) then
-            factor = 1.0_pr
+        if (kx == 0) then
+            factor = 1.0_pr ! No reflection with respect to y-z plane
         else
-            factor = 2.0_pr ! Due to reflection symmetry with respect to y-z plane
+            factor = 2.0_pr ! Reflection symmetry with respect to y-z plane
         end if
         ! The same symmetries can be used but might be less efficient (see commented subroutine at the end of this module)
         do ky = -kgrid(2), kgrid(2)
             do kz = -kgrid(3), kgrid(3)
                 call check_kvec(kx, ky, kz, k_sqr, good_kvec)
-                if(good_kvec) then
+                if (good_kvec) then
                     reciprocal_charge = sum(eikx(:,kx)*eiky(:,ky)*eikz(:,kz))
                     do i = 1, num_atoms
                         exp_kr = eikx(i,kx) * eiky(i,ky) * eikz(i,kz)
-                        kvec_real = twoPi * (/kx, ky, kz/) / periodicity  ! real(pr) array(3)
+                        kvec_real = (/kx, ky, kz/) * k_periodicity  ! Real k-space vector
                         force_contribution(:,i) = force_contribution(:,i) &
                             - factor * kfac(k_sqr) * kvec_real * aimag(conjg(reciprocal_charge*exp_kr))
                     end do

@@ -419,9 +419,10 @@ subroutine init_Ewald()
     logical     :: good_kvec
 
     ! Set all constants for Ewald summation
+    k_periodicity = twoPi/periodicity
     Ewald_realFactor    = 2._pr  / (sigma * sqrt(pi))
     eightPi_over_volume = 8._pr*pi/volume
-    twoPi_over_volume   = 2._pr*pi/volume
+    twoPi_over_volume   = twoPi/volume
     radius_cutoff = huge(pr)
     Ewald_selfTerm = num_atoms / (sqrt(pi)*sigma)
 
