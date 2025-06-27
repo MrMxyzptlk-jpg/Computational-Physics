@@ -2,9 +2,9 @@
     ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'  -- Only 'NVT' in Monte-Carlo
     structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
-    cell_dim            = 4,4,4
+    cell_dim            = 3,3,3
     num_atoms           = 256
-    ref_Temp            = 1.1           ! In units of epsilon/Kb
+    ref_Temp            = 1.0           ! In units of epsilon/Kb
     density             = 1.0           ! Number of atoms/volume
     reduced_viscosity   = 2.87          ! REDUCED viscosity (only for BD)
     mass                = 1             ! In a.m.u.
@@ -19,7 +19,7 @@
     summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists'
     dim_linkCell       = 3,3,3
     measuring_jump     = 10
-    initial_velocities = 'random'       ! Options: 'random', 'Maxwell'
+    initial_velocities = 'Maxwell'       ! Options: 'random', 'Maxwell'
 /
 
 &tasks
@@ -35,9 +35,9 @@
 &approximation
     integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
     type         = 'Coulomb_Ewald'      ! Options: 'lennard_jones', 'Coulomb_Ewald'
-    sigma        = 5                    ! In Bohr
+    sigma        = 1.4                    ! In Bohr
     epsilon      = 1                    ! In hartree
-    kgrid        = 5, 5, 5              ! Reciprocal space grid
+    kgrid        = 10,10,10              ! Reciprocal space grid
     MC_adjust_step  = 10
     MC_delta        = 1
 /

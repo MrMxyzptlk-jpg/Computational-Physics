@@ -4,8 +4,8 @@ MODULE parametersMod
     implicit none
 
     ! Internal variables
-    real(pr)                :: radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor, dtdt
-    real(pr)                :: dr
+    real(pr)                :: volume, radius_cutoff_squared, pair_corr_cutoff_sqr, potential_cutoff, Temp_factor, Pressure_factor
+    real(pr)                :: dr, dtdt
 
     ! Observables' variables
     real(pr)                :: pair_corr_cutoff
@@ -26,8 +26,9 @@ MODULE parametersMod
 
     ! Potential variables and internal variables
     real(pr)                :: sigma, epsilon               ! User variables
-    real(pr)                :: sigma_sqr, Ewald_realFactor, Ewald_forceReciprocalFactor, Ewald_potentialReciprocalFactor  ! Internal variables (for Coulomb_Ewald)
-    integer                 :: num_kvec, kgrid(3)           ! Internal variables (for Coulomb_Ewald)
+    real(pr)                :: sigma_sqr, Ewald_realFactor, Ewald_selfTerm, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr ! Internal variables (for Coulomb_Ewald)
+    integer                 :: num_kvec, kgrid(3), k_sqr_max    ! Internal variables (for Coulomb_Ewald)
+    real(pr), allocatable   :: kfac(:)                          ! Internal variables (for Coulomb_Ewald)
     type :: kvector_data
         real(pr)    :: k_squared, kvec(3)
         real(pr)    :: k_factor

@@ -87,6 +87,7 @@ subroutine init_parameters()
     lattice_constant = lattice_constant/conversion_factors(1)
     ref_Temp = ref_Temp*conversion_factors(3)    ! Already non-dimensional!!
     periodicity = cell_dim*lattice_constant
+    volume = product(periodicity)
     radius_cutoff = radius_cutoff/conversion_factors(1)
 
     dt = dt/conversion_factors(2)
@@ -117,7 +118,7 @@ subroutine init_potential()
             potential_function => Lennard_Jones_potential
         case ("Coulomb_Ewald")
             sigma_sqr  = sigma*sigma
-            potential =>  Coulomb_Ewald
+            potential =>  Coulomb_Ewald_realSpace
             if (summation /= 'Ewald') then
                 print*, "Summation = ", summation," not allowed in Coulomb_Ewald type. Switching to 'Ewald' instead."
                 summation = 'Ewald'
@@ -376,21 +377,21 @@ subroutine init_velocities()
 
 end subroutine init_velocities
 
-subroutine init_Ewald()
+subroutine init_Ewald_old()
     integer                         :: kx, ky, kz, kvec_count
-    real(pr)                        :: k_sqr, twoSigma_sqr_inv, fourPi, k_periodicity(3)
+    real(pr)                        :: k_sqr, halfSigma_sqr, fourPi, k_periodicity(3)
     type(kvector_data), allocatable :: temp_kvec(:)
 
-    twoSigma_sqr_inv = 1.0_pr / (4.0_pr * sigma_sqr)
+    halfSigma_sqr = sigma_sqr / 4.0_pr
     fourPi = 4._pr * pi
     k_periodicity = 2._pr*pi/periodicity
 
 
-    allocate(temp_kvec(product(kgrid**2+1)))  ! overestimate, shrink later
+    allocate(temp_kvec(product(2*kgrid+1)))  ! overestimate, shrink later
     kvec_count = 0  ! Counter for the number of reciprocal lattice vectors in the first octant
     do kx = 0, kgrid(1)
-        do ky = -kgrid(2), kgrid(2)
-            do kz = -kgrid(3), kgrid(3)
+        do ky = 0, kgrid(2)
+            do kz = 0, kgrid(3)
                 if (kx == 0 .and. ky == 0 .and. kz == 0) cycle
                 ! Only store kx > 0 or (kx==0 and ky>=0 and kz>=0) to avoid double-counting
                 if (kx > 0 .or. (kx==0 .and. ky >= 0 .and. kz >= 0)) then
@@ -398,8 +399,8 @@ subroutine init_Ewald()
                     temp_kvec(kvec_count)%kvec = real((/kx, ky, kz/),pr)*k_periodicity
                     k_sqr = sum((temp_kvec(kvec_count)%kvec)**2)
                     temp_kvec(kvec_count)%k_squared = k_sqr
-                    temp_kvec(kvec_count)%k_factor = fourPi * exp(-k_sqr*twoSigma_sqr_inv) / k_sqr
-                    if (kx == 0 .and. ky == 0 .and. kz == 1) temp_kvec(kvec_count)%k_factor = temp_kvec(kvec_count)%k_factor*0.5_pr
+                    temp_kvec(kvec_count)%k_factor = exp(-k_sqr*halfSigma_sqr) / k_sqr
+!                    if (kx == 0 .and. ky == 0 .and. kz == 1) temp_kvec(kvec_count)%k_factor = temp_kvec(kvec_count)%k_factor*0.5_pr
                 end if
             end do
         end do
@@ -410,17 +411,41 @@ subroutine init_Ewald()
     kvectors(:) = temp_kvec(:num_kvec)
     deallocate(temp_kvec)
 
+end subroutine init_Ewald_old
+
+subroutine init_Ewald()
+    real(pr)    :: kr_sqr
+    integer     :: kx, ky, kz, k_sqr
+    logical     :: good_kvec
+
+    ! Set all constants for Ewald summation
+    Ewald_realFactor    = 2._pr  / (sigma * sqrt(pi))
+    eightPi_over_volume = 8._pr*pi/volume
+    twoPi_over_volume   = 2._pr*pi/volume
+    radius_cutoff = huge(pr)
+    Ewald_selfTerm = num_atoms / (sqrt(pi)*sigma)
+
+    ! Get k-space factors for the force and potential energy contributions
+    halfSigma_sqr = sigma*sigma / 4.0_pr
+    k_sqr_max = product(kgrid)
+    allocate(kfac(k_sqr_max))
+
+    do kx = 0, kgrid(1)
+        do ky = 0, kgrid(2)
+            do kz = 0, kgrid(3)
+            call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+            if(good_kvec) then
+                kr_sqr      = twoPi_sqr * real( k_sqr )
+                kfac(k_sqr) = fourpi/volume * exp(-halfSigma_sqr * kr_sqr) / kr_sqr
+            end if
+            end do
+        end do
+    end do
 end subroutine init_Ewald
 
 subroutine init_internal_constants()
 
-    if (type == "Coulomb_Ewald") then
-            Ewald_realFactor  = 2._pr/sqrt(pi)
-            Ewald_forceReciprocalFactor     = 8._pr*pi/product(periodicity)
-            Ewald_potentialReciprocalFactor = 2._pr*pi/product(periodicity)
-            radius_cutoff = huge(pr)
-            call init_Ewald()
-    end if
+    if (type == "Coulomb_Ewald") call init_Ewald()
 
     if (integrator == 'Brownian') then
         if ((viscosity == 0._pr) .and. (reduced_viscosity == 0._pr)) then
@@ -438,7 +463,7 @@ subroutine init_internal_constants()
     end if
 
     Temp_factor = 2.0_pr / (3.0_pr * real(num_atoms,pr))
-    Pressure_factor = 1._pr / (3._pr * product(periodicity))
+    Pressure_factor = 1._pr / (3._pr * volume)
 
 end subroutine init_internal_constants
 

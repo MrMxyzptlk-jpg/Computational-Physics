@@ -1,5 +1,6 @@
 MODULE potentialsMod
     use precisionMod
+    use constantsMod
     use parametersMod
     use subroutinesMod
     implicit none
@@ -37,80 +38,97 @@ subroutine Lennard_Jones(particle_distance_sqr, particle_separation,  force_cont
 
 end subroutine Lennard_Jones
 
-subroutine Coulomb_Ewald_realSpace(particle_distance_sqr, particle_separation, force_contribution, E_potential, pressure_virial) ! Coulomb potential contribution from the reference cell in the lattice
+subroutine Coulomb_Ewald_realSpace(particle_distance_sqr, particle_separation, force_contribution, E_potential, pressure_virial&
+    , potential_cutoff) ! Coulomb potential contribution from the reference cell in the lattice
     real(pr), intent(in)        :: particle_distance_sqr, particle_separation(3)
     real(pr), intent(out)       :: force_contribution(3)
     real(pr), intent(inout)     :: E_potential, pressure_virial
+    real(pr), intent(in)        :: potential_cutoff  ! Irrelevant in Ewald summation, but needed for the interface
     real(pr)                    :: force_magnitude, particle_distance, term1, term2
 
     particle_distance = sqrt(particle_distance_sqr)
 
-    term1 = ERFC ( sigma * particle_distance ) / particle_distance ! Screened Coulomb term
-    term2 = Ewald_realFactor*exp(-sigma_sqr*particle_distance_sqr)
+    term1 = ERFC(particle_distance/sigma) / particle_distance ! Screened Coulomb term
+    term2 = Ewald_realFactor*exp(-particle_distance_sqr/sigma_sqr)
 
     force_magnitude = term1 + term2
     force_contribution = force_magnitude * particle_separation / particle_distance_sqr
 
     if (measure .and. save_observables) then
         E_potential = E_potential + term1
-        pressure_virial = pressure_virial + Pressure_factor*particle_distance_sqr*force_magnitude
+!        pressure_virial = pressure_virial + Pressure_factor*particle_distance_sqr*force_magnitude
     end if
 
 end subroutine Coulomb_Ewald_realSpace
 
-subroutine Coulomb_Ewald_reciprocalSpace(particle_distance_sqr, particle_separation, force_contribution, E_potential &
-    , pressure_virial) ! Coulomb potential contribution from other cells in the lattice
-    real(pr), intent(in)        :: particle_distance_sqr, particle_separation(3)
-    real(pr), intent(out)       :: force_contribution(3)
-    real(pr), intent(inout)     :: E_potential, pressure_virial
-    real(pr)                    :: force_magnitude, term1(3), term2(3), term3(3), term4(3), krx, kry, krz, k_factor
-    integer                     :: i
+subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potential) ! Coulomb potential contribution from other cells in the lattice
+    real(pr), intent(out)   :: E_potential, force_contribution(3,num_atoms)
+    real(pr), intent(in)    :: positions(3,num_atoms)
+    integer                 :: kx, ky, kz, k_sqr, i
+    real(pr)                :: halfSigma_sqr, factor, kr_sqr, exp_kr, kvec_real(3), E_contribution
+    complex(pr)             :: eikx(num_atoms,  0:kgrid(1))
+    complex(pr)             :: eiky(num_atoms,-kgrid(2):kgrid(2))
+    complex(pr)             :: eikz(num_atoms,-kgrid(3):kgrid(3))
+    complex(pr)             :: reciprocal_charge
+    logical                 :: good_kvec
 
-    do i = 1, num_kvec
-        krx = kvectors(i)%kvec(1) * particle_separation(1)
-        kry = kvectors(i)%kvec(2) * particle_separation(2)
-        krz = kvectors(i)%kvec(3) * particle_separation(3)
-        k_factor = kvectors(i)%k_factor
+    ! Calculate exponents with kx, ky, kz = {0, 1}
+    eikx(:,0) = (1.0_pr, 0.0_pr)
+    eiky(:,0) = (1.0_pr, 0.0_pr)
+    eikz(:,0) = (1.0_pr, 0.0_pr)
 
-        ! Every inequivalent contribution (four octants)
-        term1 = (/  krx,  kry,  krz/) * sin(  krx + kry + krz)
-        term2 = (/ -krx,  kry,  krz/) * sin( -krx + kry + krz)
-        term3 = (/  krx, -kry,  krz/) * sin(  krx - kry + krz)
-        term4 = (/  krx,  kry, -krz/) * sin(  krx + kry - krz)
+    eikx(:,1) = cmplx(cos(twoPi*positions(1,:)), sin(twoPi*positions(1,:)))
+    eiky(:,1) = cmplx(cos(twoPi*positions(2,:)), sin(twoPi*positions(2,:)))
+    eikz(:,1) = cmplx(cos(twoPi*positions(3,:)), sin(twoPi*positions(3,:)))
 
-        force_contribution = force_contribution + k_factor * (term1 + term2 + term3 + term4)
-        if (measure .and. save_observables) E_potential = E_potential + k_factor
+    ! Use recursion to avoid the calculation of exponential by using multiplication instead
+    do i = 2, kgrid(1)
+        eikx(:,i) = eikx(:,i-1) * eikx(:,1)
+    end do
+    do i = 2, kgrid(2)
+        eiky(:,i) = eiky(:,i-1) * eiky(:,1)
+    end do
+    do i = 2, kgrid(3)
+        eikz(:,i) = eikz(:,i-1) * eikz(:,1)
     end do
 
-    force_contribution = 2._pr * force_contribution * Ewald_forceReciprocalFactor  ! Accounting for symmetry
+    ! Use further symmetries
+    eiky(:,-kgrid(2):-1) = CONJG ( eiky(:,kgrid(2):1:-1) )
+    eikz(:,-kgrid(3):-1) = CONJG ( eikz(:,kgrid(3):1:-1) )
 
-    if (measure .and. save_observables) then
-        E_potential = Ewald_potentialReciprocalFactor * E_potential
-        pressure_virial = pressure_virial + Pressure_factor*dot_product(force_contribution, particle_separation)  ! Verify!!
-    end if
+    E_potential = 0.0_pr
+    force_contribution = 0._pr
 
+    do kx = 0, kgrid(1)
+        if ( kx == 0 ) then
+            factor = 1.0_pr
+        else
+            factor = 2.0_pr ! Due to reflection symmetry with respect to y-z plane
+        end if
+        ! The same symmetries can be used but might be less efficient (see commented subroutine at the end of this module)
+        do ky = -kgrid(2), kgrid(2)
+            do kz = -kgrid(3), kgrid(3)
+                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                if(good_kvec) then
+                    reciprocal_charge = sum(eikx(:,kx)*eiky(:,ky)*eikz(:,kz))
+                    do i = 1, num_atoms
+                        exp_kr = eikx(i,kx) * eiky(i,ky) * eikz(i,kz)
+                        kvec_real = twoPi * (/kx, ky, kz/) / periodicity  ! real(pr) array(3)
+                        force_contribution(:,i) = force_contribution(:,i) &
+                            - factor * kfac(k_sqr) * kvec_real * aimag(conjg(reciprocal_charge*exp_kr))
+                    end do
+                    if (measure .and. save_observables) then
+                        E_contribution = factor * kfac(k_sqr) * real(reciprocal_charge*conjg(reciprocal_charge))
+                        E_potential  = E_potential + E_contribution
+                    end if
+                end if
+            end do
+        end do
+    end do
+
+    if (measure .and. save_observables) E_potential = E_potential - Ewald_selfTerm
 
 end subroutine Coulomb_Ewald_reciprocalSpace
-
-subroutine Coulomb_Ewald(particle_distance_sqr, particle_separation,  force_contribution, E_potential, pressure_virial &
-    , potential_cutoff)
-    real(pr), intent(in)       :: particle_distance_sqr, particle_separation(3)
-    real(pr), intent(out)      :: force_contribution(3)
-    real(pr), intent(inout)    :: E_potential, pressure_virial
-    real(pr), intent(in)       :: potential_cutoff  ! Irrelevant in Ewald summation, but needed for the interface
-    real(pr), dimension(3)     :: force_real, force_reciprocal
-    real(pr)                   :: potential_real, potential_reciprocal
-
-    force_real = 0._pr
-    force_reciprocal = 0._pr
-    potential_real = 0._pr
-    potential_reciprocal = 0._pr
-    call Coulomb_Ewald_realSpace(particle_distance_sqr, particle_separation, force_real, potential_real, pressure_virial)
-    call Coulomb_Ewald_reciprocalSpace(particle_distance_sqr, particle_separation, force_reciprocal, potential_reciprocal &
-        , pressure_virial)
-    force_contribution = force_real + force_reciprocal
-
-end subroutine Coulomb_Ewald
 
 subroutine get_E_potential_contribution(positions, random_particle_id, dE) ! For MC implementation in short-range potentials
     real(pr), intent(in)    :: positions(:,:)
@@ -184,5 +202,58 @@ subroutine reaction_field(particle_distance_sqr, particle_separation, force_cont
     end if
 
 end subroutine reaction_field
+
+!##################################################################################################
+!     Not used / Not implemented
+!##################################################################################################
+
+!subroutine Coulomb_Ewald_reciprocalSpace_old(particle_separation, force_contribution, E_potential &
+!    , pressure_virial)
+!    real(pr), intent(in)        :: particle_separation(3)
+!    real(pr), intent(out)       :: force_contribution(3)
+!    real(pr), intent(inout)     :: E_potential, pressure_virial
+!    real(pr)                    :: force_magnitude, kx, ky, kz, krx, kry, krz, k_factor
+!    real(pr)                    :: term1(3), term2(3), term3(3), term4(3)
+!    integer                     :: i
+!
+!    do i = 1, num_kvec
+!        kx = kvectors(i)%kvec(1)
+!        ky = kvectors(i)%kvec(2)
+!        kz = kvectors(i)%kvec(3)
+!        krx = kx * particle_separation(1)
+!        kry = ky * particle_separation(2)
+!        krz = kz * particle_separation(3)
+!        k_factor = kvectors(i)%k_factor
+!
+!        ! Every inequivalent contribution (four octants)
+!        term1 = (/  kx,  ky,  kz/) * sin(  krx + kry + krz)
+!        if (kx > 0._pr) then
+!            term2 = (/ -kx,  ky,  kz/) * sin( -krx + kry + krz)
+!        else
+!            term2 = 0._pr
+!        end if
+!        if (ky > 0._pr) then
+!            term3 = (/  kx, -ky,  kz/) * sin(  krx - kry + krz)
+!        else
+!            term3 = 0._pr
+!        end if
+!        if (kz > 0._pr) then
+!            term4 = (/  kx,  ky, -kz/) * sin(  krx + kry - krz)
+!        else
+!            term4 = 0._pr
+!        end if
+!
+!        force_contribution = force_contribution + k_factor * (term1 + term2 + term3 + term4)
+!        if (measure .and. save_observables) E_potential = E_potential + k_factor
+!    end do
+!
+!    force_contribution = force_contribution * eightPi_over_volume  ! Accounting for symmetry
+!
+!    if (measure .and. save_observables) then
+!        E_potential = twoPi_over_volume * E_potential
+!    end if
+!
+!
+!end subroutine Coulomb_Ewald_reciprocalSpace_old
 
 END MODULE potentialsMod

@@ -12,7 +12,7 @@
 !
 !
 !
-! Room for improvement:  further modularization for comprehension and ease of use should be done in the 'subrutinas' modue. That is, to subdivide it into smaller modules in the 'modulos' folder
+! Room for improvement:  further modularization for comprehension and ease of use should be done in the 'subrutinas' modue. That is, to subdivide it into smaller modules in the 'modulos' folder. Also, the get_measurements() should be moved to observablesMod but requires too many modifications.
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************

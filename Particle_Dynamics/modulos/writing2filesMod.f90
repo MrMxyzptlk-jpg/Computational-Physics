@@ -15,9 +15,9 @@ contains
 
 subroutine initialize_XYZ_data()
 
-    write (size_x,'(E11.5)') periodicity(1)
-    write (size_y,'(E11.5)') periodicity(2)
-    write (size_z,'(E11.5)') periodicity(3)
+    write (size_x,'(E11.5)') periodicity(1)*conversion_factors(1)
+    write (size_y,'(E11.5)') periodicity(2)*conversion_factors(1)
+    write (size_z,'(E11.5)') periodicity(3)*conversion_factors(1)
 
     size_x = adjustl(trim(size_x))
     size_y = adjustl(trim(size_y))

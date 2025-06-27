@@ -60,4 +60,15 @@ subroutine get_stats(measurements, variance, stddev, average, error)
 
 end subroutine get_stats
 
+subroutine check_kvec(kx, ky, kz, k_sqr, kvec_flag)
+    integer, intent(in)     :: kx, ky, kz
+    integer, intent(out)    :: k_sqr
+    logical, intent(out)    :: kvec_flag
+
+    kvec_flag = .False.
+    k_sqr = kx*kx + ky*ky + kz*kz
+    if ((k_sqr <= k_sqr_max) .and. (k_sqr /= 0)) kvec_flag = .True.
+
+end subroutine check_kvec
+
 END MODULE subroutinesMod
