@@ -1,6 +1,6 @@
 &physical
     ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'  -- Only 'NVT' in Monte-Carlo
-    structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random'
+    structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random', 'fromfile'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
     cell_dim            = 4,4,4
     num_atoms           = 256
@@ -19,7 +19,7 @@
     summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists'
     dim_linkCell       = 3,3,3
     measuring_jump     = 10
-    initial_velocities = 'Maxwell'       ! Options: 'random', 'Maxwell'
+    initial_velocities = 'Maxwell'       ! Options: 'random', 'Maxwell', 'fromfile'
 /
 
 &tasks

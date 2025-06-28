@@ -102,4 +102,33 @@ subroutine parse_input()
 
 end subroutine parse_input
 
+!##################################################################################################
+!     Not used / Not implemented
+!##################################################################################################
+
+!!!subroutine parse_velocities(num_atoms, positions)
+!!!    integer                 :: unit_input
+!!!    ! Read from input file
+!!!    open(newunit=unit_input, file="positions.in", status="old", action="read")
+!!!
+!!!    close(unit_input)
+!!!
+!!!end subroutine parse_velocities
+!!!
+!!!subroutine parse_positions(num_atoms, positions)
+!!!    integer, intent(inout)  :: num_atoms
+!!!    real(pr), intent(inout)   :: position(:)
+!!!    character(5)            :: symbols
+!!!    integer                 :: unit_input, parsed_num_atoms
+!!!    ! Read from input file
+!!!    open(newunit=unit_input, file="STATE.xyz", status="old", action="read")
+!!!        read(*,'(I10)')   parsed_num_atoms
+!!!        if (parsed_num_atoms /= num_atoms) then
+!!!            print*, "Input num_atoms does not coincide with the one parsed from STATE.xyz"
+!!!            print*, "Using parsed num_atoms"
+!!!        end if
+!!!    close(unit_input)
+!!!
+!!!end subroutine parse_positions
+
 END MODULE parsingMod
