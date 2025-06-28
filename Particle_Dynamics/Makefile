@@ -5,9 +5,9 @@ FFLAGS = -cpp -O2 -Wall -g -fbacktrace -fcheck=all -fopenmp \
 DEPFLAGS = -MMD -MP
 
 # Directories
-MODDIR = ./modulos
+SRCDIR = src
+MODDIR = $(SRCDIR)/modulos
 OBJDIR = obj
-SRCDIR = .
 
 # Ensure obj directory exists
 $(shell mkdir -p $(OBJDIR))
