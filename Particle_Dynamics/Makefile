@@ -1,13 +1,16 @@
 # Compiler and flags
 FC = gfortran
 FFLAGS = -cpp -O2 -Wall -g -fbacktrace -fcheck=all -fopenmp \
-         -ffpe-trap=invalid,overflow,zero -fno-range-check
+         -ffpe-trap=invalid,overflow,zero -fno-range-check  \
+         -Iexternal/FoX/install/finclude
+
+LFLAGS = -Lexternal/FoX/install/lib -lFoX_wxml
 DEPFLAGS = -MMD -MP
 
 # Directories
-MODDIR = ./modulos
-OBJDIR = obj
-SRCDIR = .
+SRCDIR = src
+MODDIR = $(SRCDIR)/modulos
+OBJDIR = build
 
 # Ensure obj directory exists
 $(shell mkdir -p $(OBJDIR))
@@ -45,7 +48,7 @@ all: $(TARGET)
 
 # Linking step
 $(TARGET): $(OBJ)
-	$(FC) $(FFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $(LFLAGS) $^ -o $@
 
 # Compile each object file
 $(OBJDIR)/%.o: $(MODDIR)/%.f90

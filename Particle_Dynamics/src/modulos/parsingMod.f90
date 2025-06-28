@@ -1,6 +1,7 @@
 MODULE parsingMod
     use precisionMod
     use subroutinesMod
+    use FoX_dom
     implicit none
 
     character (len=15)  :: type
@@ -101,6 +102,25 @@ subroutine parse_input()
     close(unit_input)
 
 end subroutine parse_input
+
+subroutine parse_inputXML()
+    character(len=9)        :: inputFile = 'input.xml'
+    type(xmlf_t)            :: doc
+    type(xmlf_t), pointer   :: root, element, subelement
+    integer                 :: ios
+    character(len=100)      :: val
+
+    call xml_OpenFile(doc, "input.xml")
+    
+! Get value of an attribute or element
+call parse(doc, "/input/physical/@structure", val)
+
+! Example: convert string to real/integer/logical as needed
+ print*, lattice_constant
+
+    call xml_Close(doc)
+
+end subroutine parse_inputXML
 
 !##################################################################################################
 !     Not used / Not implemented
