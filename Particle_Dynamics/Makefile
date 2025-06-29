@@ -1,10 +1,14 @@
 # Compiler and flags
 FC = gfortran
-FFLAGS = -cpp -O2 -Wall -g -fbacktrace -fcheck=all -fopenmp \
-         -ffpe-trap=invalid,overflow,zero -fno-range-check  \
-         -Iexternal/FoX/install/finclude
 
-LFLAGS = -Lexternal/FoX/install/lib -lFoX_wxml
+FOXCONFIG = external/FoX/FoX-config
+
+FFLAGS = -cpp -O2 -Wall -g -fbacktrace -fcheck=all -fopenmp \
+         -ffpe-trap=invalid,overflow,zero -fno-range-check \
+         $(shell $(FOXCONFIG) --fcflags)
+
+LFLAGS = $(shell $(FOXCONFIG) --libs --dom --wxml) #external/FoX/objs/lib/libFoX_dom_parse.a
+
 DEPFLAGS = -MMD -MP
 
 # Directories
@@ -48,7 +52,7 @@ all: $(TARGET)
 
 # Linking step
 $(TARGET): $(OBJ)
-	$(FC) $(FFLAGS) $(LFLAGS) $^ -o $@
+	$(FC) $(FFLAGS) $^ $(LFLAGS) -o $@
 
 # Compile each object file
 $(OBJDIR)/%.o: $(MODDIR)/%.f90

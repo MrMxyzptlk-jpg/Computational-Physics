@@ -19,6 +19,6 @@ gfortran src/modulos/precisionMod.f90\
          -O3 -march=native -ftree-vectorize -ftree-vectorizer-verbose=2 \
          -O -Wall -fcheck=all -g -fbacktrace \
          -fopenmp -O2 \
-         -Iexternal/FoX/install/finclude -Lexternal/FoX/install/lib -lFoX_wxml   # Include FoX library for parsing XML
+         -Iexternal/FoX/objs/finclude -Lexternal/FoX/objs/lib -lFoX_wxml   # Include FoX library for parsing XML
 
 echo
