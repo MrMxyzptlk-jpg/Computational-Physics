@@ -2,15 +2,27 @@ MODULE parsingMod
     use precisionMod
     use subroutinesMod
     use FoX_dom
-    use m_dom_parse  ! explicitly add to access parseFile
 
     implicit none
+
+    private inputNode
+    type(Node), pointer     :: inputNode
 
     character (len=15)  :: type
     character (len=6)   :: ensemble
     character (len=12)  :: summation, thermostat_type, initial_velocities
     logical             :: save_positions, do_structure_factor, do_mean_sqr_displacement
     integer(int_large)  :: transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
+
+    interface get_parsed_value
+        module procedure get_parsed_string
+        module procedure get_parsed_logical
+        module procedure get_parsed_integerScalar
+        module procedure get_parsed_integerVector
+        module procedure get_parsed_realScalar
+        module procedure get_parsed_realVector
+    end interface
+
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, reduced_viscosity, viscosity, ref_Temp, num_atoms, mass, cell_dim &
@@ -80,7 +92,7 @@ subroutine set_defaults()
 
 end subroutine set_defaults
 
-subroutine parse_input()
+subroutine parse_inputNML()
     integer                 :: unit_input
     ! Read from input file
     open(newunit=unit_input, file="input.nml", status="old", action="read")
@@ -103,24 +115,198 @@ subroutine parse_input()
 
     close(unit_input)
 
-end subroutine parse_input
+end subroutine parse_inputNML
 
 subroutine parse_inputXML()
     character(len=9)        :: inputFile = 'input.xml'
- !   type(xmlf_t)            :: doc
-  !  type(xmlf_t), pointer   :: root, element, subelement
-    integer                 :: ios
-    character(len=100)      :: val
-    type(Node), pointer              :: myDoc
+    type(Node), pointer     :: inputDoc
+    type(NodeList), pointer :: list
 
-    myDoc => parseFile("h2o.xml")
- !   call getDocType(myDoc)
+    call check_fileXML(inputFile, inputDoc)
 
-  !  print*, myDoc
+    !####### PHYSICAL node #######
+    list => getElementsByTagName(inputDoc, "physical")
+    inputNode => item(list, 0)
 
-    !call xml_Close(doc)
+    call get_parsed_value("ensemble", ensemble)
+    call get_parsed_value("structure", structure)
+    call get_parsed_value("lattice_constant", lattice_constant)
+    call get_parsed_value("cell_dim", cell_dim)
+    call get_parsed_value("num_atoms", num_atoms)
+    call get_parsed_value("ref_Temp", ref_Temp)
+    call get_parsed_value("density", density)
+    call get_parsed_value("reduced_viscosity", reduced_viscosity)
+    call get_parsed_value("mass", mass)
+
+
+    !####### CALCULATION node #######
+    list => getElementsByTagName(inputDoc, "calculation")
+    inputNode => item(list, 0)
+
+    call get_parsed_value("dt", dt)
+    call get_parsed_value("real_steps", real_steps)
+    call get_parsed_value("transitory_steps", transitory_steps)
+    call get_parsed_value("thermostat_steps", thermostat_steps)
+    call get_parsed_value("radius_cutoff", radius_cutoff)
+    call get_parsed_value("summation", summation)
+    call get_parsed_value("dim_linkCell", dim_linkCell)
+    call get_parsed_value("measuring_jump", measuring_jump)
+    call get_parsed_value("initial_velocities", initial_velocities)
+    if (initial_velocities == "Maxwell") then
+        print*, "Maxwell not debugged for XML parser. Changing to random"
+        initial_velocities = "random"
+    end if
+
+    !####### TASKS node #######
+    list => getElementsByTagName(inputDoc, "tasks")
+    inputNode => item(list, 0)
+
+    call get_parsed_value("save_transitory", save_transitory)
+    call get_parsed_value("save_observables", save_observables)
+    call get_parsed_value("save_positions", save_positions)
+    call get_parsed_value("do_pair_correlation", do_pair_correlation)
+    call get_parsed_value("do_structure_factor", do_structure_factor)
+    call get_parsed_value("do_mean_sqr_displacement", do_mean_sqr_displacement)
+    call get_parsed_value("Miller_index", Miller_index)
+
+    !####### APPROXIMATION node #######
+    list => getElementsByTagName(inputDoc, "approximation")
+    inputNode => item(list, 0)
+
+    call get_parsed_value("integrator", integrator)
+    call get_parsed_value("type", type)
+    call get_parsed_value("sigma", sigma)
+    call get_parsed_value("epsilon", epsilon)
+    call get_parsed_value("kgrid", kgrid)
+    call get_parsed_value("MC_adjust_step", MC_adjust_step)
+    call get_parsed_value("MC_delta", MC_delta)
+
+    !####### THERMOSTAT node #######
+    if(ensemble=="NVT") then
+        list => getElementsByTagName(inputDoc, "thermostat")
+        inputNode => item(list, 0)
+
+        call get_parsed_value("thermostat_type", thermostat_type)
+        call get_parsed_value("Berendsen_time", Berendsen_time)
+    end if
+
+    !####### MSD node #######
+    if(do_mean_sqr_displacement) then
+        list => getElementsByTagName(inputDoc, "MSD")
+        inputNode => item(list, 0)
+
+        call get_parsed_value("max_correlation", max_correlation)
+    end if
+
+    !####### pair_correlation node #######
+    if(do_pair_correlation) then
+        list => getElementsByTagName(inputDoc, "pair_correlation")
+        inputNode => item(list, 0)
+
+        call get_parsed_value("pair_corr_cutoff", pair_corr_cutoff)
+        call get_parsed_value("pair_corr_bins", pair_corr_bins)
+    end if
+
+    ! Clean up
+    call destroy(inputDoc)
 
 end subroutine parse_inputXML
+
+subroutine check_fileXML(filename, fileDoc)
+    character(len=*), intent(in)        :: filename
+    type(Node), pointer, intent(out)    :: fileDoc
+    type(DOMException)                  :: ex
+    integer                             :: ios
+
+    fileDoc => parseFile(filename, iostat=ios, ex=ex)
+    if (ios /= 0) then
+        print*, "Error reading file. iostat was ", ios
+        stop
+    else if (inException(ex)) then
+        print*,"DOM Parse error ", getExceptionCode(ex)
+        stop
+    else
+        print*, "Read input.xml file."
+    endif
+
+end subroutine check_fileXML
+
+subroutine get_parsed_string(name, value)
+    character(len=*), intent(in)    :: name
+    character(len=*)                :: value
+
+    if (hasAttribute(inputNode, name)) then
+        value = getAttribute(inputNode, name)
+        print*, name, value
+    end if
+
+end subroutine get_parsed_string
+
+subroutine get_parsed_logical(name, value)
+    character(len=*), intent(in)    :: name
+    logical                         :: value
+    character(len=64)               :: attr_string
+
+    if (hasAttribute(inputNode, name)) then
+        attr_string = getAttribute(inputNode, name)
+        read(attr_string, *) value
+        print*, name, value
+    end if
+
+end subroutine get_parsed_logical
+
+subroutine get_parsed_integerScalar(name, value)
+    character(len=*), intent(in)    :: name
+    integer                         :: value
+    character(len=64)               :: attr_string
+
+    if (hasAttribute(inputNode, name)) then
+        attr_string = getAttribute(inputNode, name)
+        read(attr_string, *) value
+        print*, name, value
+    end if
+
+end subroutine get_parsed_integerScalar
+
+subroutine get_parsed_integerVector(name, value)
+    character(len=*), intent(in)    :: name
+    integer                         :: value(3)
+    character(len=64)               :: attr_string
+
+    if (hasAttribute(inputNode, name)) then
+        attr_string = getAttribute(inputNode, name)
+        read(attr_string, *) value(1), value(2), value(3)
+        print*, name, value
+    end if
+
+end subroutine get_parsed_integerVector
+
+subroutine get_parsed_realScalar(name, value)
+    character(len=*), intent(in)    :: name
+    real(pr)                        :: value
+    character(len=64)               :: attr_string
+
+    if (hasAttribute(inputNode, name)) then
+        attr_string = getAttribute(inputNode, name)
+        read(attr_string, *) value
+        print*, name, value
+    end if
+
+end subroutine get_parsed_realScalar
+
+subroutine get_parsed_realVector(name, value)
+    character(len=*), intent(in)    :: name
+    real(pr)                        :: value(3)
+    character(len=64)               :: attr_string
+
+    if (hasAttribute(inputNode, name)) then
+        attr_string = getAttribute(inputNode, name)
+        read(attr_string, *) value(1), value(2), value(3)
+        print*, name, value
+    end if
+
+end subroutine get_parsed_realVector
+
 
 !##################################################################################################
 !     Not used / Not implemented

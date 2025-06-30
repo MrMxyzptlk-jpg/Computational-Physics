@@ -65,11 +65,11 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
     real(pr), intent(out)   :: E_potential, force_contribution(3,num_atoms)
     real(pr), intent(in)    :: positions(3,num_atoms)
     integer                 :: kx, ky, kz, k_sqr, i
-    real(pr)                :: halfSigma_sqr, factor, kr_sqr, exp_kr, kvec_real(3), E_contribution
+    real(pr)                :: factor, kvec_real(3), E_contribution
     complex(pr)             :: eikx(num_atoms,  0:kgrid(1))
     complex(pr)             :: eiky(num_atoms,-kgrid(2):kgrid(2))
     complex(pr)             :: eikz(num_atoms,-kgrid(3):kgrid(3))
-    complex(pr)             :: reciprocal_charge
+    complex(pr)             :: reciprocal_charge, exp_k
     logical                 :: good_kvec
 
     ! Calculate exponents with kx, ky, kz = {0, 1}
@@ -77,9 +77,9 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
     eiky(:,0) = (1.0_pr, 0.0_pr)
     eikz(:,0) = (1.0_pr, 0.0_pr)
 
-    eikx(:,1) = cmplx(cos(twoPi*positions(1,:)), sin(twoPi*positions(1,:)))
-    eiky(:,1) = cmplx(cos(twoPi*positions(2,:)), sin(twoPi*positions(2,:)))
-    eikz(:,1) = cmplx(cos(twoPi*positions(3,:)), sin(twoPi*positions(3,:)))
+    eikx(:,1) = cmplx(cos(twoPi*positions(1,:)), sin(twoPi*positions(1,:)), pr)
+    eiky(:,1) = cmplx(cos(twoPi*positions(2,:)), sin(twoPi*positions(2,:)), pr)
+    eikz(:,1) = cmplx(cos(twoPi*positions(3,:)), sin(twoPi*positions(3,:)), pr)
 
     ! Use recursion to avoid the calculation of exponential by using multiplication instead
     do i = 2, kgrid(1)
@@ -112,10 +112,10 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
                 if (good_kvec) then
                     reciprocal_charge = sum(eikx(:,kx)*eiky(:,ky)*eikz(:,kz))
                     do i = 1, num_atoms
-                        exp_kr = eikx(i,kx) * eiky(i,ky) * eikz(i,kz)
+                        exp_k = eikx(i,kx) * eiky(i,ky) * eikz(i,kz)
                         kvec_real = (/kx, ky, kz/) * k_periodicity  ! Real k-space vector
                         force_contribution(:,i) = force_contribution(:,i) &
-                            - factor * kfac(k_sqr) * kvec_real * aimag(conjg(reciprocal_charge*exp_kr))
+                            - factor * kfac(k_sqr) * kvec_real * aimag(conjg(reciprocal_charge*exp_k))
                     end do
                     if (measure .and. save_observables) then
                         E_contribution = factor * kfac(k_sqr) * real(reciprocal_charge*conjg(reciprocal_charge))

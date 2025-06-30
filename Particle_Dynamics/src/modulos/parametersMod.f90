@@ -14,7 +14,7 @@ MODULE parametersMod
     ! Physical variables
     real(pr)                :: conversion_factors(6), periodicity(3), lattice_constant, radius_cutoff, ref_Temp, density, mass, dt
     integer(int_large)      :: num_atoms
-    integer(int_medium)     :: cell_dim(3)
+    integer                 :: cell_dim(3)
     character (len=6)       :: structure
     character (len=15)      :: integrator
 

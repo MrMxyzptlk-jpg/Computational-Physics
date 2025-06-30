@@ -212,8 +212,8 @@ subroutine get_forces_Ewald(positions, forces, E_potential, pressure_virial, pai
     real(pr), intent(inout) :: pair_corr(:)
     integer(int_huge)       :: i, j
     real(pr)                :: box_dipole(3), surface_potential, pressure_reciprocal
-    real(pr), dimension(3,num_atoms)     :: force_real, force_reciprocal
-    real(pr)                   :: potential_real, potential_reciprocal
+    real(pr)                :: potential_real, potential_reciprocal
+    real(pr)                :: force_reciprocal(3,num_atoms)
 
     force_reciprocal = 0._pr
     potential_reciprocal = 0._pr

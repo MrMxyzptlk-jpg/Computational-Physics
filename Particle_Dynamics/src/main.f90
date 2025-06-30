@@ -26,8 +26,9 @@ program ex1
     use observablesMod
     implicit none
 
-    real(pr)                                :: CPU_t_start, CPU_t_end, CPU_elapsed_time
-    integer(int_large)                      :: i, j, i_measure
+    real(pr)            :: CPU_t_start, CPU_t_end, CPU_elapsed_time
+    integer(int_large)  :: i, j, i_measure
+    character(len=3)    :: parser
 
 
 !###################################################################################################
@@ -35,7 +36,17 @@ program ex1
 !###################################################################################################
 
     call set_defaults()
-    call parse_input()
+
+    print*, "Parser (NML or XML): "
+    read(*,*) parser
+    select case(parser)
+        case("NML")
+            call parse_inputNML()
+        case("XML")
+            call parse_inputXML()
+        case default
+            call parse_inputNML()
+    end select
 
 !##################################################################################################
 !      Necessary definitions, pointers, initializations and conversion factors (initializations module unless specified otherwise)

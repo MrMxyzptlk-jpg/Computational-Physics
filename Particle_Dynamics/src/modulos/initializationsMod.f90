@@ -41,9 +41,9 @@ MODULE initializationsMod
         end subroutine thermo
     end interface
 
-    procedure(init_pos), pointer     :: init_positions          => null()
-    procedure(force_sub), pointer    :: get_forces              => null()
-    procedure(thermo), pointer       :: thermostat_chosen       => null()
+    procedure(init_pos), pointer     :: init_positions      => null()
+    procedure(force_sub), pointer    :: get_forces          => null()
+    procedure(thermo), pointer       :: thermostat_chosen   => null()
 
 CONTAINS
 
@@ -248,10 +248,9 @@ subroutine init_positions_random() ! Not debugged
 end subroutine init_positions_random
 
 subroutine init_positions_FCC()
-    integer(int_large)                 :: supercell_atoms
-    integer(int_large)                 :: atom_id
-    integer(int_medium)                :: h, k, l, b
-    integer(int_small)                 :: i
+    integer(int_large)      :: supercell_atoms
+    integer(int_large)      :: atom_id
+    integer                 :: i, h, k, l, b
 
     ! FCC as simple cubic with a basis:
     real(pr), parameter         :: basis(3,4) = reshape([ &
@@ -290,10 +289,9 @@ subroutine init_positions_FCC()
 end subroutine init_positions_FCC
 
 subroutine init_positions_BCC()
-    integer(int_large)                 :: supercell_atoms
-    integer(int_large)                 :: atom_id
-    integer(int_medium)                :: h, k, l, b
-    integer(int_small)                 :: i
+    integer(int_large)      :: supercell_atoms
+    integer(int_large)      :: atom_id
+    integer                 :: i, h, k, l, b
 
     ! BCC as simple cubic with a basis:
     real(pr), parameter         :: basis(3,2) = reshape([ &
@@ -302,7 +300,7 @@ subroutine init_positions_BCC()
     ], [3,2])
 
     supercell_atoms = 2
-    do i = 1_int_small, size(cell_dim)
+    do i = 1, size(cell_dim)
         supercell_atoms = supercell_atoms * cell_dim(i)
     end do
     if (supercell_atoms/=num_atoms .and. num_atoms/=0) then
@@ -369,49 +367,15 @@ end subroutine init_velocities_Maxwell
 subroutine init_velocities()
 
     select case (initial_velocities)
-        case('random')
-            call init_velocities_random()
         case('Maxwell')
             call init_velocities_Maxwell()
+        case('random')
+            call init_velocities_random()
+        case default
+            call init_velocities_random()
     end select
 
 end subroutine init_velocities
-
-subroutine init_Ewald_old()
-    integer                         :: kx, ky, kz, kvec_count
-    real(pr)                        :: k_sqr, halfSigma_sqr, fourPi, k_periodicity(3)
-    type(kvector_data), allocatable :: temp_kvec(:)
-
-    halfSigma_sqr = sigma_sqr / 4.0_pr
-    fourPi = 4._pr * pi
-    k_periodicity = 2._pr*pi/periodicity
-
-
-    allocate(temp_kvec(product(2*kgrid+1)))  ! overestimate, shrink later
-    kvec_count = 0  ! Counter for the number of reciprocal lattice vectors in the first octant
-    do kx = 0, kgrid(1)
-        do ky = 0, kgrid(2)
-            do kz = 0, kgrid(3)
-                if (kx == 0 .and. ky == 0 .and. kz == 0) cycle
-                ! Only store kx > 0 or (kx==0 and ky>=0 and kz>=0) to avoid double-counting
-                if (kx > 0 .or. (kx==0 .and. ky >= 0 .and. kz >= 0)) then
-                    kvec_count = kvec_count + 1
-                    temp_kvec(kvec_count)%kvec = real((/kx, ky, kz/),pr)*k_periodicity
-                    k_sqr = sum((temp_kvec(kvec_count)%kvec)**2)
-                    temp_kvec(kvec_count)%k_squared = k_sqr
-                    temp_kvec(kvec_count)%k_factor = exp(-k_sqr*halfSigma_sqr) / k_sqr
-!                    if (kx == 0 .and. ky == 0 .and. kz == 1) temp_kvec(kvec_count)%k_factor = temp_kvec(kvec_count)%k_factor*0.5_pr
-                end if
-            end do
-        end do
-    end do
-
-    num_kvec = kvec_count
-    allocate(kvectors(num_kvec))
-    kvectors(:) = temp_kvec(:num_kvec)
-    deallocate(temp_kvec)
-
-end subroutine init_Ewald_old
 
 subroutine init_Ewald()
     real(pr)    :: kr_sqr
@@ -467,5 +431,45 @@ subroutine init_internal_constants()
     Pressure_factor = 1._pr / (3._pr * volume)
 
 end subroutine init_internal_constants
+
+!##################################################################################################
+!     Not used / Not implemented
+!##################################################################################################
+
+subroutine init_Ewald_old()
+    integer                         :: kx, ky, kz, kvec_count
+    real(pr)                        :: k_sqr, halfSigma_sqr, fourPi, k_periodicity(3)
+    type(kvector_data), allocatable :: temp_kvec(:)
+
+    halfSigma_sqr = sigma_sqr / 4.0_pr
+    fourPi = 4._pr * pi
+    k_periodicity = 2._pr*pi/periodicity
+
+
+    allocate(temp_kvec(product(2*kgrid+1)))  ! overestimate, shrink later
+    kvec_count = 0  ! Counter for the number of reciprocal lattice vectors in the first octant
+    do kx = 0, kgrid(1)
+        do ky = 0, kgrid(2)
+            do kz = 0, kgrid(3)
+                if (kx == 0 .and. ky == 0 .and. kz == 0) cycle
+                ! Only store kx > 0 or (kx==0 and ky>=0 and kz>=0) to avoid double-counting
+                if (kx > 0 .or. (kx==0 .and. ky >= 0 .and. kz >= 0)) then
+                    kvec_count = kvec_count + 1
+                    temp_kvec(kvec_count)%kvec = real((/kx, ky, kz/),pr)*k_periodicity
+                    k_sqr = sum((temp_kvec(kvec_count)%kvec)**2)
+                    temp_kvec(kvec_count)%k_squared = k_sqr
+                    temp_kvec(kvec_count)%k_factor = exp(-k_sqr*halfSigma_sqr) / k_sqr
+    !!                if (kx == 0 .and. ky == 0 .and. kz == 1) temp_kvec(kvec_count)%k_factor = temp_kvec(kvec_count)%k_factor*0.5_pr
+                end if
+            end do
+        end do
+    end do
+
+    num_kvec = kvec_count
+    allocate(kvectors(num_kvec))
+    kvectors(:) = temp_kvec(:num_kvec)
+    deallocate(temp_kvec)
+
+end subroutine init_Ewald_old
 
 END MODULE initializationsMod
