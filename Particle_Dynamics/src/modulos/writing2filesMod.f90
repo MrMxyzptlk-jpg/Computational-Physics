@@ -3,10 +3,11 @@ MODULE writing2filesMod
     use subroutinesMod
     use formatsMod
     use parsingMod
+    use propertiesMod, only: charges, dipole_moments, symbols
     implicit none
 
-    private     size_x, size_y, size_z, symbol
-    character(len=11)       :: size_x, size_y, size_z
+    private     size_x, size_y, size_z, symbol, dataDir
+    character(len=11)       :: size_x, size_y, size_z, dataDir = "data/"
     character(len=3)        :: symbol
 
     integer(int_medium)     :: unit_positions, unit_observables, unit_structFact
@@ -28,10 +29,10 @@ end subroutine initialize_XYZ_data
 subroutine open_files(reciprocal_vec)
     real (pr), intent (in)  :: reciprocal_vec(3)
 
-    if (save_positions)  open(newunit=unit_positions, file="datos/positions.xyz", status="replace")
+    if (save_positions)  open(newunit=unit_positions, file=dataDir//"positions.xyz", status="replace")
 
     if (save_observables) then
-        open(newunit=unit_observables, file="datos/observables.out", status="replace")
+        open(newunit=unit_observables, file=dataDir//"observables.out", status="replace")
         if (integrator == 'velocity-Verlet') then
             write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    |   Temperature"
         else
@@ -40,7 +41,7 @@ subroutine open_files(reciprocal_vec)
     end if
 
     if (do_structure_factor) then
-        open(newunit=unit_structFact, file="datos/structure_factor.out", status="replace")
+        open(newunit=unit_structFact, file=dataDir//"structure_factor.out", status="replace")
         write(unit_structFact, '(a,3(E12.5,1x))') "## Reciprocal vector: K = ", reciprocal_vec
         write(unit_structFact, '(a,2(I2,a),I2)')  "## Miller indexes: h = ", Miller_index(1), " ; k = ", Miller_index(2) &
             , " ; l = ", Miller_index(3)
@@ -65,7 +66,7 @@ subroutine close_files()
 end subroutine close_files
 
 subroutine write_XYZfile(time, positions, velocities)
-    real (pr), intent (in)              :: positions(:,:), velocities(:,:), time
+    real (pr), intent (in)              :: time, positions(:,:), velocities(:,:)
     integer                             :: i
     character(len=11)                   :: time_tmp
 
@@ -87,7 +88,11 @@ subroutine write_XYZfile(time, positions, velocities)
             time_tmp
 
         do i = 1, num_atoms
-            write(unit_positions, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1)
+            if (allocated(symbols)) then
+                write(unit_positions, fmt=format_XYZ) symbols(i), positions(:,i)*conversion_factors(1)
+            else
+                write(unit_positions, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1)
+            end if
         end do
     else
         ! Line 2: extended XYZ header with box info and time
@@ -98,11 +103,23 @@ subroutine write_XYZfile(time, positions, velocities)
             time_tmp
 
         do i = 1, num_atoms
-            write(unit_positions,fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1), velocities(:,i)*conversion_factors(5)
+            if (allocated(symbols)) then
+                write(unit_positions,fmt=format_XYZ) symbols(i), positions(:,i)*conversion_factors(1) &
+                    , velocities(:,i)*conversion_factors(5)
+            else
+                write(unit_positions,fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1) &
+                    , velocities(:,i)*conversion_factors(5)
+            end if
         end do
     end if
 
 end subroutine write_XYZfile
+
+subroutine write_stateXML(positions, velocities, forces)
+    real (pr), dimension(:,:), intent (in)      :: positions, velocities, forces
+    integer                                     :: i
+
+end subroutine write_stateXML
 
 subroutine write_observables(time, energies, pressures, temperatures)
     real (pr), intent (in)  :: time, energies(2), pressures, temperatures
@@ -138,7 +155,7 @@ subroutine write_msd(msd)
 
     time_jump = dt*conversion_factors(2)*measuring_jump
 
-    open(newunit=unitnum, file="datos/mean_sqr_displacement.out", status="replace")
+    open(newunit=unitnum, file=dataDir//"mean_sqr_displacement.out", status="replace")
         write(unitnum, '(a)') "## Δt | ⟨Δr(t)^2⟩"
         do i = 0, size(msd) - 1
             write(unitnum, format_style0) real(i,pr)*time_jump, msd(i)*conversion_factors(1)
@@ -152,7 +169,7 @@ subroutine write_pair_corr(pair_corr)
     real (pr)               :: bin_center
     integer                 :: unitnum, i
 
-    open(newunit=unitnum, file="datos/pair_correlation.out", status="replace")
+    open(newunit=unitnum, file=dataDir//"pair_correlation.out", status="replace")
         write(unitnum, '(a)') "## r | pair_correlation(r)"
         do i = 1, pair_corr_bins
             bin_center = (real(i-1,pr) + 0.5_pr)*dr
@@ -168,7 +185,7 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
     real (pr)               :: stddev, error
     integer                 :: unit_info
 
-    open(newunit=unit_info, file="datos/INFO.out", status="replace")
+    open(newunit=unit_info, file=dataDir//"INFO.out", status="replace")
         write(unit_info,'(a24,13x,I4)')     "Number of atoms:       ", num_atoms
         write(unit_info,'(a24,14x,a)')      "Initial structure:     ", structure
         write(unit_info,'(a24,6x,E11.5)')   "Lattice constant:      ", lattice_constant*conversion_factors(1)

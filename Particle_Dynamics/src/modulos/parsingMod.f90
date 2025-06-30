@@ -212,6 +212,20 @@ subroutine parse_inputXML()
 
 end subroutine parse_inputXML
 
+subroutine parse_stateXML()
+    character(len=9)        :: inputFile = 'sate.xml'
+    type(Node), pointer     :: inputDoc
+    type(NodeList), pointer :: list
+
+    call check_fileXML(inputFile, inputDoc)
+
+
+
+    ! Clean up
+    call destroy(inputDoc)
+
+end subroutine parse_stateXML
+
 subroutine check_fileXML(filename, fileDoc)
     character(len=*), intent(in)        :: filename
     type(Node), pointer, intent(out)    :: fileDoc
@@ -230,6 +244,8 @@ subroutine check_fileXML(filename, fileDoc)
     endif
 
 end subroutine check_fileXML
+
+!############ Subroutines to verify and get the value of each kind of data ###############
 
 subroutine get_parsed_string(name, value)
     character(len=*), intent(in)    :: name

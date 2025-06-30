@@ -9,10 +9,9 @@ MODULE initializationsMod
     use subroutinesMod
     use parsingMod
     use observablesMod
+    use propertiesMod
     implicit none
 
-    real(pr), dimension(:), allocatable     :: Pressures, Temperatures, pair_corr, meanSqrDisplacement, structure_factor
-    real(pr), dimension(:,:), allocatable   :: positions, velocities, forces, previous_forces, Energies
     real(pr)                                :: reciprocal_vec(3)
     integer(int_large)                      :: transitory_minIndex, MC_accepted
     logical                                 :: do_linkCell = .False.

@@ -35,6 +35,7 @@ SRC = 	precisionMod.f90 \
         parsingMod.f90 \
         forcesMod.f90 \
         writing2filesMod.f90 \
+        propertiesMod.f90 \
         initializationsMod.f90 \
         integratorsMod.f90 \
         main.f90
