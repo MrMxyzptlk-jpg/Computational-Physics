@@ -16,7 +16,7 @@ MODULE propertiesMod
     real(pr), dimension(:), allocatable     :: pair_corr, meanSqrDisplacement, structure_factor
 
     ! For Coulomb interactions
-    real(pr), allocatable   :: dipole_moments(:,:)
+    real(pr), allocatable   :: dipoles(:,:)
     real(pr), allocatable   :: charges(:)
 
 END MODULE propertiesMod

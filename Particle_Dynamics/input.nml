@@ -11,6 +11,7 @@
 /
 
 &calculation
+    state              = 'fromScratch'  ! Options: 'fromScratch', 'fromFile'
     dt                 = 0.005          ! In units of [ℏ/Eh = tₐ]
     real_steps         = 1000
     transitory_steps   = 1000
@@ -23,6 +24,7 @@
 /
 
 &tasks
+    save_state               = true
     save_transitory          = true
     save_observables         = true
     save_positions           = true

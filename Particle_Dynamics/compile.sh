@@ -5,6 +5,7 @@ gfortran src/modulos/precisionMod.f90\
         src/modulos/formatsMod.f90\
         src/modulos/constantsMod.f90\
         src/modulos/parametersMod.f90\
+        src/modulos/propertiesMod.f90\
         src/modulos/subroutinesMod.f90\
         src/modulos/potentialsMod.f90\
         src/modulos/observablesMod.f90\

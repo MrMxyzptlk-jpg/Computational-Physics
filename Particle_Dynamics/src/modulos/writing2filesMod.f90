@@ -3,11 +3,13 @@ MODULE writing2filesMod
     use subroutinesMod
     use formatsMod
     use parsingMod
-    use propertiesMod, only: charges, dipole_moments, symbols
+    use propertiesMod, only: symbols, positions, velocities, charges, dipoles
+    use FoX_dom
     implicit none
 
     private     size_x, size_y, size_z, symbol, dataDir
-    character(len=11)       :: size_x, size_y, size_z, dataDir = "data/"
+    character(len=11)       :: size_x, size_y, size_z
+    character(len=5)       :: dataDir = "data/"
     character(len=3)        :: symbol
 
     integer(int_medium)     :: unit_positions, unit_observables, unit_structFact
@@ -49,11 +51,10 @@ subroutine open_files(reciprocal_vec)
     end if
 end subroutine open_files
 
-subroutine write_tasks(time, positions, velocities, energies, pressures, temperatures, structure_factor)
-    real (pr), dimension(:,:), intent (in)  :: positions, velocities
+subroutine write_tasks(time, energies, pressures, temperatures, structure_factor)
     real (pr), intent (in)                  :: time, energies(2), pressures, temperatures, structure_factor
 
-    if (save_positions)      call write_XYZfile(time, positions, velocities)
+    if (save_positions)      call write_XYZfile(time)
     if (save_observables)    call write_observables(time, energies, pressures, temperatures)
     if (do_structure_factor) call write_structure_factor(time, structure_factor)
 
@@ -65,8 +66,8 @@ subroutine close_files()
     if (do_structure_factor)    close (unit_structFact)
 end subroutine close_files
 
-subroutine write_XYZfile(time, positions, velocities)
-    real (pr), intent (in)              :: time, positions(:,:), velocities(:,:)
+subroutine write_XYZfile(time)
+    real (pr), intent (in)              :: time
     integer                             :: i
     character(len=11)                   :: time_tmp
 
@@ -115,9 +116,67 @@ subroutine write_XYZfile(time, positions, velocities)
 
 end subroutine write_XYZfile
 
-subroutine write_stateXML(positions, velocities, forces)
-    real (pr), dimension(:,:), intent (in)      :: positions, velocities, forces
-    integer                                     :: i
+subroutine write_stateXML()
+
+    character(len=9)    :: filename = 'STATE.xml'
+    type(Node), pointer :: doc, root, atomsNode, atomNode
+    character(len=128)   :: attr_string
+    type(Node), pointer :: dummy
+    integer             :: i
+
+    ! Create a new XML document
+    doc => createDocument(getImplementation(), "", "STATE", null())
+    root => getDocumentElement(doc)
+
+    ! Create <atoms> node with num_atoms and periodicity attributes
+    atomsNode => createElementNS(doc, "", "atoms")
+    write(attr_string, '(I5)') num_atoms
+    call setAttribute(atomsNode, "num_atoms", trim(adjustl(attr_string)))
+    write(attr_string, format_state) periodicity(1), periodicity(2), periodicity(3)
+    call setAttribute(atomsNode, "periodicity", trim(adjustl(attr_string)))
+
+    dummy => appendChild(root, atomsNode)
+
+    ! Loop over atoms
+    do i = 1, num_atoms
+        atomNode => createElementNS(doc, "", "atom")
+
+        ! Symbol (optional)
+        if (allocated(symbols)) then
+            call setAttribute(atomNode, "symbol", trim(symbols(i)))
+        end if
+
+        ! Position
+        write(attr_string, format_state) positions(1,i), positions(2,i), positions(3,i)
+        call setAttribute(atomNode, "position", trim(adjustl(attr_string)))
+
+        ! Velocity (optional)
+        if (allocated(velocities)) then
+            write(attr_string, format_state) velocities(1,i), velocities(2,i), velocities(3,i)
+            call setAttribute(atomNode, "velocity", trim(adjustl(attr_string)))
+        end if
+
+        ! Charge (optional)
+        if (allocated(charges)) then
+            write(attr_string, *) charges(i)
+            call setAttribute(atomNode, "charge", trim(adjustl(attr_string)))
+        end if
+
+        ! Dipole (optional)
+        if (allocated(dipoles)) then
+            write(attr_string, format_state) dipoles(1,i), dipoles(2,i), dipoles(3,i)
+            call setAttribute(atomNode, "dipole", trim(adjustl(attr_string)))
+        end if
+
+        dummy => appendChild(atomsNode, atomNode)
+    end do
+
+    ! Write to file
+    call serialize(doc, filename)
+    print*, "STATE.xml file will not be pretty but can be fixed with 'xmllint --format STATE.xml --output STATE.xml'"
+
+    ! Free memory
+    call destroy(doc)
 
 end subroutine write_stateXML
 

@@ -48,29 +48,35 @@ CONTAINS
 
 subroutine init_structure()
 
-    select case (structure)
-        case ("FCC")
-            init_positions =>  init_positions_FCC
-            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
-        case ("BCC")
-            init_positions =>  init_positions_BCC
-            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
-        case ("random")
-            init_positions =>  init_positions_random
-            if (density > 0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
-            if (density > 0._pr) then
-                print*, "Random structure selected -> Chosen density is being ignored. Using density = num_atoms/vol instead"
-            end if
-        case default
-            init_positions =>  init_positions_FCC
-            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
-    end select
-
+    if (state == 'fromScratch') then
+        select case (structure)
+            case ("FCC")
+                init_positions =>  init_positions_FCC
+                if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
+            case ("BCC")
+                init_positions =>  init_positions_BCC
+                if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+            case ("random")
+                init_positions =>  init_positions_random
+                if (density > 0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
+            case default
+                init_positions =>  init_positions_FCC
+                if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
+        end select
+    else if (state == 'fromFile') then
+        init_positions =>  init_positions_fromFile
+        call parse_stateXML()   ! Getting the normalized structure from file
+        if (density > 0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
+        cell_dim = 1_int_medium
+    else
+        print*, "Wrong 'state' option in input file. Stopping..."
+        STOP
+    end if
 end subroutine init_structure
 
 subroutine init_parameters()
 
-    if (structure == "random") then
+    if (structure == "random") then ! This propably is redundant base on the init_structure() subroutine
         cell_dim = 1_int_medium
         density = num_atoms / product(cell_dim*lattice_constant)
     end if
@@ -115,11 +121,11 @@ subroutine init_potential()
         case ("lannard_jones")
             potential =>  Lennard_Jones
             potential_function => Lennard_Jones_potential
-        case ("Coulomb_Ewald")
+        case ("Coulomb")
             sigma_sqr  = sigma*sigma
             potential =>  Coulomb_Ewald_realSpace
             if (summation /= 'Ewald') then
-                print*, "Summation = ", summation," not allowed in Coulomb_Ewald type. Switching to 'Ewald' instead."
+                print*, "Summation = ", summation," not allowed in Coulomb type. Switching to 'Ewald' instead."
                 summation = 'Ewald'
             end if
         case ("reaction_field")
@@ -158,7 +164,10 @@ subroutine init_observables()
     end if
     allocate(forces(3,size(positions,2)))
 
-    if (integrator == 'velocity-Verlet') allocate(previous_forces(3,size(positions,2)), velocities(3,size(positions,2)))
+    if (integrator == 'velocity-Verlet') then
+        allocate(previous_forces(3,size(positions,2)))
+        if (state == 'fromScratch') allocate(velocities(3,size(positions,2)))
+    end if
     if (.not. do_structure_factor) allocate(structure_factor(1))
 
 end subroutine init_observables
@@ -324,6 +333,15 @@ subroutine init_positions_BCC()
 
 end subroutine init_positions_BCC
 
+subroutine init_positions_fromFile()
+    integer :: i
+
+    do i = 1, num_atoms
+        positions(:,i) = positions(:,i) * periodicity
+    end do
+
+end subroutine init_positions_fromFile
+
 subroutine init_velocities_random()
     real(pr)                                :: velocity_average(size(velocities,1))
     integer                                 :: i
@@ -365,14 +383,16 @@ end subroutine init_velocities_Maxwell
 
 subroutine init_velocities()
 
-    select case (initial_velocities)
-        case('Maxwell')
-            call init_velocities_Maxwell()
-        case('random')
-            call init_velocities_random()
-        case default
-            call init_velocities_random()
-    end select
+    if (state == 'fromScratch') then
+        select case (initial_velocities)
+            case('Maxwell')
+                call init_velocities_Maxwell()
+            case('random')
+                call init_velocities_random()
+            case default
+                call init_velocities_random()
+        end select
+    end if
 
 end subroutine init_velocities
 
@@ -409,7 +429,7 @@ end subroutine init_Ewald
 
 subroutine init_internal_constants()
 
-    if (type == "Coulomb_Ewald") call init_Ewald()
+    if (type == "Coulomb") call init_Ewald()
 
     if (integrator == 'Brownian') then
         if ((viscosity == 0._pr) .and. (reduced_viscosity == 0._pr)) then

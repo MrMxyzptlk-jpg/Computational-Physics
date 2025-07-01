@@ -13,6 +13,7 @@
 />
 
 <calculation
+    state              = "fromScratch"
     dt                 = "0.005"
     real_steps         = "1000"
     transitory_steps   = "1000"
@@ -25,6 +26,7 @@
 />
 
 <tasks
+    save_state               = "true"
     save_transitory          = "true"
     save_observables         = "true"
     save_positions           = "true"
@@ -36,7 +38,7 @@
 
 <approximation
     integrator      = "velocity-Verlet"
-    type            = "Coulomb_Ewald"
+    type            = "Coulomb"
     sigma           = "1.4"
     epsilon         = "1"
     kgrid           = "10 10 10"

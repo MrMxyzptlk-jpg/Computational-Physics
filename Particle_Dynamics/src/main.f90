@@ -185,6 +185,8 @@ program ex1
         call write_msd(meanSqrDisplacement)
     end if
 
+    if (save_state) call write_stateXML()
+
     CPU_t_end = omp_get_wtime()
     CPU_elapsed_time = CPU_t_end - CPU_t_start
 

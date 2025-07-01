@@ -18,10 +18,10 @@ subroutine get_measurements(i_measure)      ! Should be in observables module
     if ((.not.transitory) .and. do_mean_sqr_displacement) call update_msd(positions, meanSqrDisplacement)
     if (do_structure_factor) then
         call get_structure_factor(positions, structure_factor(i_measure), reciprocal_vec)
-        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+        call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure) &
             , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
     else
-        call write_tasks(real(i_measure*measuring_jump,pr)*dt, positions, velocities, energies(:,i_measure) &
+        call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure) &
             , pressures(i_measure), temperatures(i_measure), structure_factor(1))
     end if
 
