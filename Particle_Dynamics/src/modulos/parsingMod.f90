@@ -149,10 +149,7 @@ subroutine parse_inputXML()
     call get_parsed_value(inputNode, "dim_linkCell", dim_linkCell)
     call get_parsed_value(inputNode, "measuring_jump", measuring_jump)
     call get_parsed_value(inputNode, "initial_velocities", initial_velocities)
-    if (initial_velocities == "Maxwell") then
-        print*, "Maxwell not debugged for XML parser. Changing to random"
-        initial_velocities = "random"
-    end if
+    if (initial_velocities == "Maxwell") print*, "WARNING: Maxwell not debugged for XML parser."
 
     !####### TASKS node #######
     list => getElementsByTagName(inputDoc, "tasks")

@@ -19,6 +19,7 @@
 program ex1
     use precisionMod
     use parsingMod
+    use checkParsingMod
     use omp_lib
     use writing2filesMod
     use initializationsMod
@@ -62,7 +63,7 @@ program ex1
     call init_observables()
     call init_tasks()
     call init_summation()
-    if (integrator == 'velocity-Verlet') call init_velocities()
+    if (integrator == 'velocity-Verlet' .and. (state == 'fromScratch')) call init_velocities()
     call init_internal_constants()
     if (integrator == 'velocity-Verlet') call thermostat_rescale(velocities)     ! thermostatsMod module
     call initialize_XYZ_data()                  ! writing2fliesMod module

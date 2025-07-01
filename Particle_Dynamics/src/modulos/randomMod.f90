@@ -7,45 +7,48 @@ MODULE randomMod
 CONTAINS
 
 subroutine gasdev_v(harvest)
+    use precisionMod  ! Assumes `pr` is defined here
+    implicit none
+
     real(pr), intent(out)           :: harvest(:)
-    real(pr), allocatable, save     :: g(:)
+    real(pr), save                  :: g_saved = 0.0_pr
     logical, save                   :: gaus_stored = .false.
-    integer, save                   :: last_allocated = 0
-    real(pr)                        :: rsq, v1, v2
     integer                         :: i, n
+    real(pr)                        :: rsq, v1, v2, fac
 
     n = size(harvest)
+    i = 1
 
-    if (n /= last_allocated) then
-        if (last_allocated > 0) deallocate(g)
-        allocate(g(n))
-        last_allocated = n
+    ! Use stored value from last call, if available
+    if (gaus_stored) then
+        harvest(1) = g_saved
+        i = 2
         gaus_stored = .false.
     end if
 
-    if (gaus_stored) then
-        harvest = g
-        gaus_stored = .false.
-    else
-        i = 1
-        do while (i <= n)
-            call random_number(v1)
-            call random_number(v2)
-            v1 = 2.0_pr * v1 - 1.0_pr
-            v2 = 2.0_pr * v2 - 1.0_pr
-            rsq = v1*v1 + v2*v2
+    ! Generate random pairs using Box-Muller
+    do while (i <= n)
+        ! Generate two uniform numbers in [-1, 1]
+        v1 = 2.0_pr * rmzran() - 1.0_pr
+        v2 = 2.0_pr * rmzran() - 1.0_pr
+        rsq = v1*v1 + v2*v2
 
-            if (rsq > 0.0_pr .and. rsq < 1.0_pr) then
-                rsq = sqrt(-2.0_pr * log(rsq) / rsq)
-                harvest(i) = v1 * rsq
-                if (i < n) then
-                    g(i+1) = v2 * rsq
-                end if
+        if (rsq > 0.0_pr .and. rsq < 1.0_pr) then
+            fac = sqrt(-2.0_pr * log(rsq) / rsq)
+            if (i == n) then
+                ! Only one slot left — store one, return the other
+                harvest(i) = v1 * fac
+                g_saved = v2 * fac
+                gaus_stored = .true.
+                i = i + 1
+            else
+                ! Fill two at once
+                harvest(i)     = v1 * fac
+                harvest(i + 1) = v2 * fac
                 i = i + 2
             end if
-        end do
-        gaus_stored = .true.
-    end if
+        end if
+    end do
 
 end subroutine gasdev_v
 

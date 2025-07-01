@@ -20,7 +20,7 @@
     summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists', 'Ewald'
     dim_linkCell       = 3,3,3
     measuring_jump     = 10
-    initial_velocities = 'random'       ! Options: 'random', 'Maxwell', 'fromfile'
+    initial_velocities = 'Maxwell'       ! Options: 'random', 'Maxwell', 'fromfile'
 /
 
 &tasks

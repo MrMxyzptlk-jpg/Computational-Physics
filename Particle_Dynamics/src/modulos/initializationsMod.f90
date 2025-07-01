@@ -384,18 +384,12 @@ subroutine init_velocities_Maxwell()
 end subroutine init_velocities_Maxwell
 
 subroutine init_velocities()
-
-    if (state == 'fromScratch') then
-        select case (initial_velocities)
-            case('Maxwell')
-                call init_velocities_Maxwell()
-            case('random')
-                call init_velocities_random()
-            case default
-                call init_velocities_random()
-        end select
-    end if
-
+    select case (initial_velocities)
+        case('Maxwell')
+            call init_velocities_Maxwell()
+        case('random')
+            call init_velocities_random()
+    end select
 end subroutine init_velocities
 
 subroutine init_Ewald()
