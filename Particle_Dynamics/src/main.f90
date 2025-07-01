@@ -45,8 +45,10 @@ program ex1
         case("XML")
             call parse_inputXML()
         case default
-            call parse_inputNML()
+            print*, "ERROR: invalid parser" ; STOP
     end select
+
+    call check_inputValues()
 
 !##################################################################################################
 !      Necessary definitions, pointers, initializations and conversion factors (initializations module unless specified otherwise)
