@@ -95,7 +95,7 @@ subroutine write_XYZfile(time)
                 write(unit_positions, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1)
             end if
         end do
-    else
+    else if (integrator == 'velocity-Verlet') then
         ! Line 2: extended XYZ header with box info and time
         write(unit_positions,'(A)') 'Lattice="' // &
             size_x // ' 0.0  0.0  0.0 ' // &
@@ -117,7 +117,6 @@ subroutine write_XYZfile(time)
 end subroutine write_XYZfile
 
 subroutine write_stateXML()
-
     character(len=9)    :: filename = 'STATE.xml'
     type(Node), pointer :: doc, root, atomsNode, atomNode
     character(len=128)   :: attr_string
