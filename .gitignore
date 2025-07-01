@@ -53,6 +53,7 @@
 *.txt
 *.bin
 *.xyz
+STATE.xml
 
 # Latex folder
 latex
