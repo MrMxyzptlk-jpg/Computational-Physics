@@ -2,15 +2,11 @@ MODULE parsingMod
     use precisionMod
     use subroutinesMod
     use propertiesMod
+    use parametersMod
+    use checkParsingMod
     use FoX_dom
 
     implicit none
-
-    character (len=15)  :: type, state
-    character (len=6)   :: ensemble
-    character (len=12)  :: summation, thermostat_type, initial_velocities
-    logical             :: save_positions, save_state, do_structure_factor, do_mean_sqr_displacement
-    integer(int_large)  :: transitory_steps, thermostat_steps, dim_linkCell(3), Miller_index(3)
 
     interface get_parsed_value
         module procedure get_parsed_string
@@ -29,7 +25,7 @@ MODULE parsingMod
         , measuring_jump, initial_velocities, state
     namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
         , do_structure_factor, Miller_index, save_state
-    namelist /approximation/ integrator, type, sigma, epsilon, kgrid, MC_adjust_step, MC_delta
+    namelist /approximation/ integrator, interactions, sigma, epsilon, kgrid, MC_adjust_step, MC_delta
     namelist /thermostat/ thermostat_type, Berendsen_time
     namelist /MSD/ max_correlation
     namelist /pair_correlation/pair_corr_cutoff, pair_corr_bins
@@ -176,7 +172,7 @@ subroutine parse_inputXML()
     inputNode => item(list, 0)
 
     call get_parsed_value(inputNode, "integrator", integrator)
-    call get_parsed_value(inputNode, "type", type)
+    call get_parsed_value(inputNode, "interactions", interactions)
     call get_parsed_value(inputNode, "sigma", sigma)
     call get_parsed_value(inputNode, "epsilon", epsilon)
     call get_parsed_value(inputNode, "kgrid", kgrid)
@@ -265,98 +261,7 @@ subroutine parse_stateXML() ! Gets normalized positions, as well as other data i
 
 end subroutine parse_stateXML
 
-subroutine check_fileXML(filename, fileDoc)
-    character(len=*), intent(in)        :: filename
-    type(Node), pointer, intent(out)    :: fileDoc
-    type(DOMException)                  :: ex
-    integer                             :: ios
-
-    fileDoc => parseFile(filename, iostat=ios, ex=ex)
-    if (ios /= 0) then
-        print*, "Error reading file. iostat was ", ios
-        stop
-    else if (inException(ex)) then
-        print*,"DOM Parse error ", getExceptionCode(ex)
-        stop
-    else
-        print*, "Read input.xml file."
-    endif
-
-end subroutine check_fileXML
-
-subroutine check_stateProperties(checks, children)
-    logical                 :: checks(4)
-    integer                 :: checks_count(4)
-    type(NodeList), pointer :: children
-    type(Node), pointer     :: child
-    integer                 :: i
-
-    checks = .False.
-    checks_count = 0
-
-    do i = 1, num_atoms
-        child => item(children, i-1)
-        if (hasAttribute(child, "symbol")) then
-            checks_count(1) = checks_count(1) + 1
-        end if
-        if (hasAttribute(child, "velocity")) then
-            checks_count(2) = checks_count(2) + 1
-        end if
-        if (hasAttribute(child, "charge")) then
-            checks_count(3) = checks_count(3) + 1
-        end if
-        if (hasAttribute(child, "dipole")) then
-            checks_count(4) = checks_count(4) + 1
-        end if
-    end do
-
-    ! Symbols check
-    if (checks_count(1) /= num_atoms) then
-        print*, "Mismatch between 'symbols' and number of atoms. Using default symbol = X"
-        checks(1) = .False.
-    else if (checks_count(1) == 0) then
-        checks(1) = .False.
-    else if (checks_count(1) == num_atoms) then
-        checks(1) = .True.
-    end if
-
-    ! Velocities check
-    if (integrator == 'velocity-Verlet') then
-        if ((checks_count(2) /= 0) .and. (checks_count(2) /= num_atoms)) then
-            print*, "Mismatch between 'velocities' and number of atoms. Stopping..."
-            STOP
-        else if (checks_count(2) == 0) then
-            print*, "No velocities specified for 'velocity-Verlet'. Stopping..."; STOP
-        else if (checks_count(2) == num_atoms) then
-            checks(2) = .True.
-        end if
-    end if
-
-    if (type == 'Coulomb') then
-        ! Charges check
-        if ((checks_count(3) /= 0) .and. (checks_count(3) /= num_atoms)) then
-            print*, "Mismatch between 'charges' and number of atoms. Stopping..."
-            STOP
-        else if (checks_count(3) == 0) then
-            print*, "No charges specified for 'Coulomb' type interaction. Stopping..."; STOP
-        else if (checks_count(3) == num_atoms) then
-            checks(3) = .True.
-        end if
-
-        ! Dipoles check
-        !if ((checks_count(4) /= 0) .and. (checks_count(4) /= num_atoms)) then
-        !    print*, "Mismatch between 'dipoles' and number of atoms. Stopping..."
-        !    STOP
-        !else if (checks_count(4) == 0) then
-        !    print*, "No dipoles specified for 'Coulomb' type interaction. Stopping..."; STOP
-        !else if (checks_count(4) == num_atoms) then
-        !    checks(4) = .True.
-        !end if
-    end if
-
-end subroutine check_stateProperties
-
-!############ Subroutines to verify and get the value of each kind of data ###############
+!############ Subroutines to inquire about and get the value of each kind of data ###############
 
 subroutine get_parsed_string(inputNode, name, value)
     character(len=*), intent(in)    :: name

@@ -17,7 +17,7 @@
     transitory_steps   = 1000
     thermostat_steps   = 50             ! Rescales every 50 steps the thermostat is applied
     radius_cutoff      = 2.5            ! In Bohr
-    summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists'
+    summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists', 'Ewald
     dim_linkCell       = 3,3,3
     measuring_jump     = 10
     initial_velocities = 'random'       ! Options: 'random', 'Maxwell', 'fromfile'
@@ -36,7 +36,7 @@
 
 &approximation
     integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
-    type         = 'Coulomb'            ! Options: 'lennard_jones', 'Coulomb'
+    interactions = 'Coulomb'            ! Options: 'lennard_jones', 'Coulomb'
     sigma        = 1.4                  ! In Bohr
     epsilon      = 1                    ! In hartree
     kgrid        = 10,10,10             ! Reciprocal space grid

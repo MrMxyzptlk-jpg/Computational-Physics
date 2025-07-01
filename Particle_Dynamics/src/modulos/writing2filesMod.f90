@@ -251,7 +251,7 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
         write(unit_info,'(a24,6x,E11.5)')   "Density:               ", density
         write(unit_info,'(a24,4x,a)')       "Summation:             ", summation
         write(unit_info,'(a24,4x,a)')       "Initial velocities:    ", initial_velocities
-        write(unit_info,'(a24,4x,a)')       "Potential:             ", type
+        write(unit_info,'(a24,4x,a)')       "Potential:             ", interactions
         write(unit_info,'(a24,2x,a)')       "Integrator:            ", integrator
         write(unit_info,'(a24,11x,I6)')     "Transitory steps:      ", transitory_steps
         write(unit_info,'(a24,11x,I6)')     "Run steps:             ", real_steps

@@ -33,6 +33,7 @@ SRC = 	precisionMod.f90 \
         observablesMod.f90 \
         thermostatsMod.f90 \
         updatePositionsMod.f90 \
+		checkParsingMod.f90 \
         parsingMod.f90 \
         forcesMod.f90 \
         writing2filesMod.f90 \

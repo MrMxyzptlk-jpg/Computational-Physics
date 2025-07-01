@@ -101,7 +101,7 @@ subroutine init_parameters()
     dtdt = dt*dt
 
     radius_cutoff_squared = radius_cutoff*radius_cutoff
-    if (type == "lannard_jones") potential_cutoff = potential_function(radius_cutoff_squared)
+    if (interactions == "lannard_jones") potential_cutoff = potential_function(radius_cutoff_squared)
 
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
 
@@ -119,7 +119,7 @@ end subroutine init_parameters
 
 subroutine init_potential()
 
-    select case (type)
+    select case (interactions)
         case ("lannard_jones")
             potential =>  Lennard_Jones
             potential_function => Lennard_Jones_potential
@@ -127,7 +127,7 @@ subroutine init_potential()
             sigma_sqr  = sigma*sigma
             potential =>  Coulomb_Ewald_realSpace
             if (summation /= 'Ewald') then
-                print*, "Summation = ", summation," not allowed in Coulomb type. Switching to 'Ewald' instead."
+                print*, "Summation = ", summation," not allowed in Coulomb interactions. Switching to 'Ewald' instead."
                 summation = 'Ewald'
             end if
         case ("reaction_field")
@@ -431,7 +431,7 @@ end subroutine init_Ewald
 
 subroutine init_internal_constants()
 
-    if (type == "Coulomb") call init_Ewald()
+    if (interactions == "Coulomb") call init_Ewald()
 
     if (integrator == 'Brownian') then
         if ((viscosity == 0._pr) .and. (reduced_viscosity == 0._pr)) then
