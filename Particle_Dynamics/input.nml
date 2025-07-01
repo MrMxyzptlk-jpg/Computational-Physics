@@ -2,7 +2,7 @@
     ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'  -- Only 'NVT' in Monte-Carlo
     structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random', 'fromfile'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
-    cell_dim            = 4,4,4
+    cell_dim            = 2,2,2
     num_atoms           = 256
     ref_Temp            = 1.0           ! In units of epsilon/Kb
     density             = 1.0           ! Number of atoms/volume

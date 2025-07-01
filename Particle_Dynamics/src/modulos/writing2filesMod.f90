@@ -132,7 +132,7 @@ subroutine write_stateXML()
     atomsNode => createElementNS(doc, "", "atoms")
     write(attr_string, '(I5)') num_atoms
     call setAttribute(atomsNode, "num_atoms", trim(adjustl(attr_string)))
-    write(attr_string, format_state) periodicity(1), periodicity(2), periodicity(3)
+    write(attr_string, format_state) periodicity*conversion_factors(1)
     call setAttribute(atomsNode, "periodicity", trim(adjustl(attr_string)))
 
     dummy => appendChild(root, atomsNode)
@@ -147,12 +147,12 @@ subroutine write_stateXML()
         end if
 
         ! Position
-        write(attr_string, format_state) positions(1,i), positions(2,i), positions(3,i)
+        write(attr_string, format_state) positions(:,i)*conversion_factors(1)
         call setAttribute(atomNode, "position", trim(adjustl(attr_string)))
 
         ! Velocity (optional)
         if (allocated(velocities)) then
-            write(attr_string, format_state) velocities(1,i), velocities(2,i), velocities(3,i)
+            write(attr_string, format_state) velocities(:,i)*conversion_factors(5)
             call setAttribute(atomNode, "velocity", trim(adjustl(attr_string)))
         end if
 

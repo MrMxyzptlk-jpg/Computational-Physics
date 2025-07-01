@@ -48,6 +48,8 @@ CONTAINS
 
 subroutine init_structure()
 
+    if (density<=0._pr) print*, "Density <= 0. Stopping..."
+
     if (state == 'fromScratch') then
         select case (structure)
             case ("FCC")
