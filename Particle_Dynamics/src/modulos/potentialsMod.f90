@@ -178,7 +178,7 @@ subroutine reaction_field(particle_distance_sqr, particle_separation, force_cont
     q_i = 1._pr
     q_j = 1._pr
 
-    ! Prefactor: 1 / (4*pi*epsilon_0) in atomic units = 1
+    ! Prefactor: 1 / (4*pi*delta_0) in atomic units = 1
     prefac = q_i * q_j
 
     ! Dielectric correction factor (ε → ∞ gives 1)

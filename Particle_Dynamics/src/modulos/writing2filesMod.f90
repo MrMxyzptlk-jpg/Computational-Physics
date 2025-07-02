@@ -118,7 +118,7 @@ end subroutine write_XYZfile
 
 subroutine write_stateXML()
     character(len=9)    :: filename = 'STATE.xml'
-    type(Node), pointer :: doc, root, atomsNode, atomNode
+    type(Node), pointer :: doc, root, atomsNode, atomNode, physicalNode
     character(len=128)   :: attr_string
     type(Node), pointer :: dummy
     integer             :: i
@@ -128,15 +128,23 @@ subroutine write_stateXML()
     root => getDocumentElement(doc)
 
     ! Create <atoms> node with num_atoms and periodicity attributes
-    atomsNode => createElementNS(doc, "", "atoms")
-    write(attr_string, '(I5)') num_atoms
-    call setAttribute(atomsNode, "num_atoms", trim(adjustl(attr_string)))
-    write(attr_string, format_state) periodicity*conversion_factors(1)
-    call setAttribute(atomsNode, "periodicity", trim(adjustl(attr_string)))
+    physicalNode => createElementNS(doc, "", "physical")
 
+    write(attr_string, '(I6)') num_atoms
+    call setAttribute(physicalNode, "num_atoms", trim(adjustl(attr_string)))
+
+    write(attr_string, format_state) periodicity*conversion_factors(1)
+    call setAttribute(physicalNode, "periodicity", trim(adjustl(attr_string)))
+
+    write(attr_string, '(a)') structure
+    call setAttribute(physicalNode, "structure", trim(adjustl(attr_string)))
+
+    dummy => appendChild(root, physicalNode)
+
+    ! Write atoms' nodes
+    atomsNode => createElementNS(doc, "", "atoms")
     dummy => appendChild(root, atomsNode)
 
-    ! Loop over atoms
     do i = 1, num_atoms
         atomNode => createElementNS(doc, "", "atom")
 

@@ -24,6 +24,7 @@ program ex1
     use writing2filesMod
     use initializationsMod
     use integratorsMod
+    use propertiesMod
     use observablesMod
     implicit none
 

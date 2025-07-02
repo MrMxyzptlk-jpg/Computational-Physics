@@ -25,12 +25,36 @@ MODULE parsingMod
         , measuring_jump, initial_velocities, state
     namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
         , do_structure_factor, Miller_index, save_state
-    namelist /approximation/ integrator, interactions, sigma, epsilon, kgrid, MC_adjust_step, MC_delta
+    namelist /approximation/ integrator, interactions, sigma, delta, kgrid, MC_adjust_step, MC_delta
     namelist /thermostat/ thermostat_type, Berendsen_time
     namelist /MSD/ max_correlation
     namelist /pair_correlation/pair_corr_cutoff, pair_corr_bins
 
     CONTAINS
+
+subroutine check_statePhysical(inputNode, parsed_periodicity)   ! Should be in checkParsingMod but cannot because of the use of get_parsed_value()
+    type(Node), pointer, intent(in) :: inputNode
+    real(pr), intent(out)           :: parsed_periodicity(3)
+    integer(int_large)              :: parsed_num_atoms
+    character (len=6)               :: parsed_structure
+
+    ! Check necessary attributes exist
+    if (.not.(hasAttribute(inputNode, "num_atoms"))) STOP "ERROR: Missing num_atoms in STATE.xml"
+    if (.not.(hasAttribute(inputNode, "periodicity"))) STOP "ERROR: Missing periodicity in STATE.xml"
+    if (.not.(hasAttribute(inputNode, "structure"))) STOP "ERROR: Missing structure in STATE.xml"
+
+    ! Check consistent number of atoms specified
+    call get_parsed_value(inputNode, "num_atoms", parsed_num_atoms)
+    if (num_atoms /= parsed_num_atoms) STOP "ERROR: Mismatch between STATE.xml num_atoms and input.xml num_atoms"
+
+    ! Check consistent structure specification
+    call get_parsed_value(inputNode, "structure", parsed_structure)
+    if (structure /= parsed_structure) STOP "ERROR: Mismatch between STATE.xml structure and input.xml structure"
+
+    ! Get the other relevant variables
+    call get_parsed_value(inputNode, "periodicity", parsed_periodicity)
+
+end subroutine check_statePhysical
 
 subroutine set_defaults()
         ! Physical problems' characteristics
@@ -70,7 +94,7 @@ subroutine set_defaults()
         ! Potential parameters
         integrator  = 'velocity-Verlet'
         sigma   = 1._pr
-        epsilon = 1._pr
+        delta = 1._pr
         kgrid   = (/5, 5, 5/)
         MC_adjust_step  = 50
         MC_delta        = 0.01
@@ -149,7 +173,6 @@ subroutine parse_inputXML()
     call get_parsed_value(inputNode, "dim_linkCell", dim_linkCell)
     call get_parsed_value(inputNode, "measuring_jump", measuring_jump)
     call get_parsed_value(inputNode, "initial_velocities", initial_velocities)
-    if (initial_velocities == "Maxwell") print*, "WARNING: Maxwell not debugged for XML parser."
 
     !####### TASKS node #######
     list => getElementsByTagName(inputDoc, "tasks")
@@ -171,7 +194,7 @@ subroutine parse_inputXML()
     call get_parsed_value(inputNode, "integrator", integrator)
     call get_parsed_value(inputNode, "interactions", interactions)
     call get_parsed_value(inputNode, "sigma", sigma)
-    call get_parsed_value(inputNode, "epsilon", epsilon)
+    call get_parsed_value(inputNode, "delta", delta)
     call get_parsed_value(inputNode, "kgrid", kgrid)
     call get_parsed_value(inputNode, "MC_adjust_step", MC_adjust_step)
     call get_parsed_value(inputNode, "MC_delta", MC_delta)
@@ -207,27 +230,26 @@ subroutine parse_inputXML()
 
 end subroutine parse_inputXML
 
-subroutine parse_stateXML() ! Gets normalized positions, as well as other data if present.
+subroutine parse_stateXML(parsed_periodicity) ! Gets normalized positions, as well as other data if present.
+    real(pr), intent(out)   :: parsed_periodicity(3)
     character(len=9)        :: inputFile = 'STATE.xml'
     type(Node), pointer     :: inputDoc, child
     type(NodeList), pointer :: list, children
     type(Node), pointer     :: inputNode
-    real(pr)                :: parsed_periodicity(3)
     integer                 :: i
     logical                 :: checks(4)
 
     call check_fileXML(inputFile, inputDoc)
 
-    list => getElementsByTagName(inputDoc, "atoms")
+    list => getElementsByTagName(inputDoc, "physical")
     inputNode => item(list, 0)
-    children => getChildNodes(inputNode)
 
-    ! Check consistent number of atoms specified
-    call get_parsed_value(inputNode, "num_atoms", num_atoms)
-    if (getLength(children) /= num_atoms) print*, "Warning: Mismatch between num_atoms and the number of atoms in STATE.xml file."
-    num_atoms = getLength(children)
+    call check_statePhysical(inputNode, parsed_periodicity)
 
     ! Check consistent properties specified and allocate properties
+    list => getElementsByTagName(inputDoc, "atoms")
+    inputNode => item(list, 0)
+    children => getElementsByTagName(inputNode, "atom")
     call check_stateProperties(checks, children)
 
     allocate(positions(3,num_atoms))
@@ -244,13 +266,6 @@ subroutine parse_stateXML() ! Gets normalized positions, as well as other data i
         if (checks(2)) call get_parsed_value(child, "velocity", velocities(:,i))
         if (checks(3)) call get_parsed_value(child, "charge", charges(i))
         if (checks(4)) call get_parsed_value(child, "dipole", dipoles(:,i))
-    end do
-
-    ! Normalize positions to rescale later
-    call get_parsed_value(inputNode, "periodicity", parsed_periodicity)
-    print*, parsed_periodicity
-    do i = 1, num_atoms
-        positions(:,i) = positions(:,i) / parsed_periodicity
     end do
 
     ! Clean up
@@ -327,7 +342,7 @@ subroutine get_parsed_realVector(inputNode, name, value)
     character(len=*), intent(in)    :: name
     type(Node), intent(in), pointer :: inputNode
     real(pr)                        :: value(3)
-    character(len=64)               :: attr_string
+    character(len=88)               :: attr_string      ! Long enough for the total format_state specifier
 
     if (hasAttribute(inputNode, name)) then
         attr_string = getAttribute(inputNode, name)

@@ -4,14 +4,14 @@
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
     cell_dim            = 4,4,4
     num_atoms           = 256
-    ref_Temp            = 1.0           ! In units of epsilon/Kb
+    ref_Temp            = 1.0           ! In units of delta/Kb
     density             = 1.0           ! Number of atoms/volume
     reduced_viscosity   = 2.87          ! REDUCED viscosity (only for BD)
     mass                = 1             ! In a.m.u.
 /
 
 &calculation
-    state              = 'fromScratch'  ! Options: 'fromScratch', 'fromFile'
+    state              = 'fromFile'  ! Options: 'fromScratch', 'fromFile'
     dt                 = 0.005          ! In units of [ℏ/Eh = tₐ]
     real_steps         = 1000
     transitory_steps   = 1000
@@ -38,7 +38,7 @@
     integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
     interactions = 'Coulomb'            ! Options: 'lennard_jones', 'Coulomb'
     sigma        = 1.4                  ! In Bohr
-    epsilon      = 1                    ! In hartree
+    delta      = 1                    ! In hartree
     kgrid        = 10,10,10             ! Reciprocal space grid
     MC_adjust_step  = 10
     MC_delta        = 1

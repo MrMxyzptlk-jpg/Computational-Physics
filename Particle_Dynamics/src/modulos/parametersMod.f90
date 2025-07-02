@@ -40,7 +40,7 @@ MODULE parametersMod
 !######### APPROXIMATION variables ###########
     ! Parsed
     character (len=15)      :: integrator, interactions
-    real(pr)                :: sigma, epsilon   ! Variables for the potential defining the interactions
+    real(pr)                :: sigma, delta   ! Variables for the potential defining the interactions
     integer                 :: kgrid(3)         ! Partition of reciprocal space ('Ewald' summation)
     integer(int_large)      :: MC_adjust_step   ! ('Monte-Carlo' integrator)
     real(pr)                :: MC_delta         ! ('Monte-Carlo' integrator)

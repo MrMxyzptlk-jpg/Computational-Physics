@@ -40,7 +40,7 @@
     integrator      = "velocity-Verlet"
     interactions    = "Coulomb"
     sigma           = "1.4"
-    epsilon         = "1"
+    delta         = "1"
     kgrid           = "10 10 10"
     MC_adjust_step  = "10"
     MC_delta        = "1"

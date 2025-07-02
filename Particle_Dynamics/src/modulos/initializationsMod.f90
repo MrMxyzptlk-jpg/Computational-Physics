@@ -50,57 +50,45 @@ subroutine init_structure()
 
     if (density<=0._pr) print*, "Density <= 0. Stopping..."
 
-    if (state == 'fromScratch') then
-        select case (structure)
-            case ("FCC")
-                init_positions =>  init_positions_FCC
-                if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
-            case ("BCC")
-                init_positions =>  init_positions_BCC
-                if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
-            case ("random")
-                init_positions =>  init_positions_random
-                if (density > 0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
-            case default
-                init_positions =>  init_positions_FCC
-                if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
-        end select
-    else if (state == 'fromFile') then
-        init_positions =>  init_positions_fromFile
-        call parse_stateXML()   ! Getting the normalized structure from file
-        if (density > 0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
-        cell_dim = 1_int_medium
-    else
-        print*, "Wrong 'state' option in input file. Stopping..."
-        STOP
-    end if
+    select case (structure)
+        case ("FCC")
+            init_positions =>  init_positions_FCC
+            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
+        case ("BCC")
+            init_positions =>  init_positions_BCC
+            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+        case ("random")
+            init_positions =>  init_positions_random
+            cell_dim = 1_int_medium
+            if (density >  0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
+            if (density <= 0._pr) density = num_atoms / lattice_constant**3._pr
+    end select
+
+    if (state == 'fromFile') init_positions =>  init_positions_fromFile
+
 end subroutine init_structure
 
 subroutine init_parameters()
 
-    if (structure == "random") then ! This propably is redundant base on the init_structure() subroutine
-        cell_dim = 1_int_medium
-        density = num_atoms / product(cell_dim*lattice_constant)
-    end if
-
     ! Define conversion factors to adimensionalize the variables
     conversion_factors(1) = sigma                           ! Distance      [Bohr = a₀]
-    conversion_factors(2) = sigma*sqrt(mass/epsilon)        ! Time          [ℏ/Eh = tₐ]
-    conversion_factors(3) = 1._pr                           ! Temperature   [epsilon / kB]
-    conversion_factors(4) = epsilon                         ! Energy        [hartree = Eh]
-    conversion_factors(5) = sqrt(epsilon/mass)              ! Velocity      [a₀ / tₐ]
-    conversion_factors(6) = epsilon/(sigma*sigma*sigma)     ! Pressure      [hartree / bohr³]
+    conversion_factors(2) = sigma*sqrt(mass/delta)        ! Time          [ℏ/Eh = tₐ]
+    conversion_factors(3) = 1._pr                           ! Temperature   [delta / kB]
+    conversion_factors(4) = delta                         ! Energy        [hartree = Eh]
+    conversion_factors(5) = sqrt(delta/mass)              ! Velocity      [a₀ / tₐ]
+    conversion_factors(6) = delta/(sigma*sigma*sigma)     ! Pressure      [hartree / bohr³]
 
     lattice_constant = lattice_constant/conversion_factors(1)
-    ref_Temp = ref_Temp*conversion_factors(3)    ! Already non-dimensional!!
     periodicity = cell_dim*lattice_constant
     volume = product(periodicity)
+
+    ref_Temp = ref_Temp*conversion_factors(3)    ! Already non-dimensional!!
     radius_cutoff = radius_cutoff/conversion_factors(1)
-
     dt = dt/conversion_factors(2)
-    dtdt = dt*dt
 
+    dtdt = dt*dt
     radius_cutoff_squared = radius_cutoff*radius_cutoff
+
     if (interactions == "lannard_jones") potential_cutoff = potential_function(radius_cutoff_squared)
 
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
@@ -126,10 +114,6 @@ subroutine init_potential()
         case ("Coulomb")
             sigma_sqr  = sigma*sigma
             potential =>  Coulomb_Ewald_realSpace
-            if (summation /= 'Ewald') then
-                print*, "Summation = ", summation," not allowed in Coulomb interactions. Switching to 'Ewald' instead."
-                summation = 'Ewald'
-            end if
         case ("reaction_field")
             potential =>  reaction_field
             potential_function => reaction_field_potential
@@ -336,10 +320,26 @@ subroutine init_positions_BCC()
 end subroutine init_positions_BCC
 
 subroutine init_positions_fromFile()
-    integer :: i
+    integer     :: i, j
+    real(pr)    :: parsed_periodicity(3)
+    real(pr)    :: scaling_factor_vec(3), scaling_factor, scaling_tol
 
+    call parse_stateXML(parsed_periodicity)   ! Getting the positions, num_atoms and periodicity from STATE.xml file
+
+    ! Check consistent super-cell dimensions for re-scaling
+    scaling_tol = 10._pr * epsilon(minval(periodicity) * conversion_factors(1))    ! Getting a tolerance base on the values of periodicity we are dealing with
+    scaling_factor_vec = periodicity / parsed_periodicity   ! Note no re-dimensionalization of the periodicity to avoid another multiplication for the position re-scaling
+    do i = 1, 3
+        j = mod(i,3) + 1
+        if (abs(scaling_factor_vec(i) - scaling_factor_vec(j)) > scaling_tol) then
+            STOP "ERROR: Inconsistent periodicity rescaling from STATE.xml to input.xml"
+        end if
+    end do
+
+    ! Re-scale positions to meet the new density from input.xml file. Note this does not propagate error after consecutive runs fromFile, because parameters remain unchanged
+    scaling_factor = scaling_factor_vec(1)
     do i = 1, num_atoms
-        positions(:,i) = positions(:,i) * periodicity
+        positions(:,i) = positions(:,i) * scaling_factor
     end do
 
 end subroutine init_positions_fromFile

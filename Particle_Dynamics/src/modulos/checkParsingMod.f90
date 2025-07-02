@@ -5,6 +5,7 @@ MODULE checkParsingMod
     implicit none
 
 CONTAINS
+! check_statePhysical() is in parsingMod
 
 subroutine check_fileXML(filename, fileDoc)
     character(len=*), intent(in)        :: filename
@@ -52,11 +53,10 @@ subroutine check_stateProperties(checks, children)
     end do
 
     ! Symbols check
-    if (checks_count(1) /= num_atoms) then
-        print*, "Mismatch between 'symbols' and number of atoms. Using default symbol = X"
-        checks(1) = .False.
+    if ((checks_count(1) /= 0) .and. (checks_count(1) /= num_atoms)) then
+        print*, "WARNING: Mismatch between 'symbols' and number of atoms. Using default symbol = X"
     else if (checks_count(1) == 0) then
-        checks(1) = .False.
+        print*, "WARNING: No symbols specified. Using default symbol = X"
     else if (checks_count(1) == num_atoms) then
         checks(1) = .True.
     end if
@@ -64,11 +64,12 @@ subroutine check_stateProperties(checks, children)
     ! Velocities check
     if (integrator == 'velocity-Verlet') then
         if ((checks_count(2) /= 0) .and. (checks_count(2) /= num_atoms)) then
-            print*, "Mismatch between 'velocities' and number of atoms. Stopping..."
+            print*, "ERROR: Mismatch between 'velocities' and number of atoms. Stopping..."
             STOP
         else if (checks_count(2) == 0) then
-            print*, "No velocities specified for 'velocity-Verlet'. Stopping..."; STOP
-        else if ((checks_count(2) == num_atoms) .and. (initial_velocities == 'fromFile')) then
+            print*, "ERROR: No velocities specified for 'velocity-Verlet'. Stopping..."
+            STOP
+        else if ((checks_count(2) == num_atoms) .and. (state == 'fromFile')) then
             checks(2) = .True.
         end if
     end if
@@ -76,20 +77,21 @@ subroutine check_stateProperties(checks, children)
     if (interactions == 'Coulomb') then
         ! Charges check
         if ((checks_count(3) /= 0) .and. (checks_count(3) /= num_atoms)) then
-            print*, "Mismatch between 'charges' and number of atoms. Stopping..."
+            print*, "ERROR: Mismatch between 'charges' and number of atoms. Stopping..."
             STOP
         else if (checks_count(3) == 0) then
-            print*, "No charges specified for 'Coulomb' interactions. Stopping..."; STOP
+            print*, "WARNING: No charges specified for 'Coulomb' interactions. Using default q = 1"
         else if (checks_count(3) == num_atoms) then
             checks(3) = .True.
         end if
 
         ! Dipoles check
         !if ((checks_count(4) /= 0) .and. (checks_count(4) /= num_atoms)) then
-        !    print*, "Mismatch between 'dipoles' and number of atoms. Stopping..."
+        !    print*, "ERROR: Mismatch between 'dipoles' and number of atoms. Stopping..."
         !    STOP
         !else if (checks_count(4) == 0) then
-        !    print*, "No dipoles specified for 'Coulomb' interactions. Stopping..."; STOP
+        !    print*, "ERROR: No dipoles specified for 'Coulomb' interactions. Stopping..."
+        !    STOP
         !else if (checks_count(4) == num_atoms) then
         !    checks(4) = .True.
         !end if
@@ -166,14 +168,14 @@ subroutine check_parsed_approximation()
     end if
 
     if (sigma <= 0._pr)     STOP "ERROR: sigma <= 0._pr"
-    if (epsilon <= 0._pr)   STOP "ERROR: epsilon <= 0._pr"
+    if (delta <= 0._pr)   STOP "ERROR: delta <= 0._pr"
 
     if (integrator == 'Monte-Carlo') then
         if (MC_adjust_step <= 0) STOP "ERROR: MC_adjust_step <= 0"
         if (MC_delta <= 0._pr)   STOP "ERROR: MC_delta <= 0._pr"
     end if
 
-    if  ((integrator == 'velocity-Verlet') .and. (interactions == 'coulomb') .and. (summation /= 'Ewald')) then
+    if  ((integrator == 'velocity-Verlet') .and. (interactions == 'Coulomb') .and. (summation /= 'Ewald')) then
         print*, "WARNING: unavailable summation for Coulomb interactions. Switching to 'Ewald' summation"
         summation = 'Ewald'
     end if

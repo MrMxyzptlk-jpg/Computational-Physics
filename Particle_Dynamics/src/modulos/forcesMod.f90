@@ -150,10 +150,11 @@ subroutine create_links(positions)
 
 end subroutine create_links
 
-integer(int_large) function index_cell(ix,iy,iz, dim_linkCell)  ! For indexing Linked-Lists
-    integer(int_large), intent(in)   :: dim_linkCell(3)
-    integer(int_large), intent(in)   :: ix, iy, iz
-    integer(int_large)               :: Mx, My, Mz
+function index_cell(ix,iy,iz, dim_linkCell)  ! For indexing Linked-Lists
+    integer(int_large), intent(in)  :: dim_linkCell(3)
+    integer(int_large), intent(in)  :: ix, iy, iz
+    integer(int_large)              :: Mx, My, Mz
+    integer(int_large)              :: index_cell
 
     Mx = dim_linkCell(1)
     My = dim_linkCell(2)
