@@ -2,12 +2,12 @@ MODULE updatePositionsMod
     use parametersMod
     use potentialsMod
     use subroutinesMod
+    use propertiesMod
     use randomMod
     implicit none
 CONTAINS
 
-subroutine update_positions_MC(positions, E_potential, N_accepted)
-    real(pr), dimension(:,:), intent(inout) :: positions
+subroutine update_positions_MC(E_potential, N_accepted)
     real(pr), intent(inout)                 :: E_potential
     integer, intent(inout)                  :: N_accepted
     real(pr)                                :: random_displacement(3)
@@ -51,8 +51,7 @@ subroutine update_positions_MC(positions, E_potential, N_accepted)
 
 end subroutine update_positions_MC
 
-subroutine update_positions_velVer(positions, velocities, forces)
-    real(pr), dimension(:,:), intent(inout)    :: positions, velocities, forces
+subroutine update_positions_velVer()
 
     positions = positions + velocities*dt + forces*dtdt*0.5_pr
 
@@ -64,8 +63,7 @@ subroutine update_positions_velVer(positions, velocities, forces)
 
 end subroutine update_positions_velVer
 
-subroutine update_positions_Brownian(positions, forces)
-    real(pr), dimension(:,:), intent(inout)     :: positions, forces
+subroutine update_positions_Brownian()
     real(pr)                                    :: random_noise(3)
     integer                                     :: i, j
 

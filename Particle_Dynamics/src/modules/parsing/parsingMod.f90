@@ -4,19 +4,10 @@ MODULE parsingMod
     use propertiesMod
     use parametersMod
     use checkParsingMod
+    use get_parsed_valueMod
     use FoX_dom
 
     implicit none
-
-    interface get_parsed_value
-        module procedure get_parsed_string
-        module procedure get_parsed_logical
-        module procedure get_parsed_integerScalar
-        module procedure get_parsed_integerVector
-        module procedure get_parsed_realScalar
-        module procedure get_parsed_realVector
-    end interface
-
 
     ! Namelist blocks
     namelist /physical/ structure, lattice_constant, density, reduced_viscosity, viscosity, ref_Temp, num_atoms, mass, cell_dim &
@@ -272,85 +263,6 @@ subroutine parse_stateXML(parsed_periodicity) ! Gets normalized positions, as we
     call destroy(inputDoc)
 
 end subroutine parse_stateXML
-
-!############ Subroutines to inquire about and get the value of each kind of data ###############
-
-subroutine get_parsed_string(inputNode, name, value)
-    character(len=*), intent(in)    :: name
-    type(Node), intent(in), pointer :: inputNode
-    character(len=*)                :: value
-
-    if (hasAttribute(inputNode, name)) then
-        value = getAttribute(inputNode, name)
-    end if
-
-end subroutine get_parsed_string
-
-subroutine get_parsed_logical(inputNode, name, value)
-    character(len=*), intent(in)    :: name
-    type(Node), intent(in), pointer :: inputNode
-    logical                         :: value
-    character(len=64)               :: attr_string
-
-    if (hasAttribute(inputNode, name)) then
-        attr_string = getAttribute(inputNode, name)
-        read(attr_string, *) value
-    end if
-
-end subroutine get_parsed_logical
-
-subroutine get_parsed_integerScalar(inputNode, name, value)
-    character(len=*), intent(in)    :: name
-    type(Node), intent(in), pointer :: inputNode
-    integer                         :: value
-    character(len=64)               :: attr_string
-
-    if (hasAttribute(inputNode, name)) then
-        attr_string = getAttribute(inputNode, name)
-        read(attr_string, *) value
-    end if
-
-end subroutine get_parsed_integerScalar
-
-subroutine get_parsed_integerVector(inputNode, name, value)
-    character(len=*), intent(in)    :: name
-    type(Node), intent(in), pointer :: inputNode
-    integer                         :: value(3)
-    character(len=64)               :: attr_string
-
-    if (hasAttribute(inputNode, name)) then
-        attr_string = getAttribute(inputNode, name)
-        read(attr_string, *) value(1), value(2), value(3)
-    end if
-
-end subroutine get_parsed_integerVector
-
-subroutine get_parsed_realScalar(inputNode, name, value)
-    character(len=*), intent(in)    :: name
-    type(Node), intent(in), pointer :: inputNode
-    real(pr)                        :: value
-    character(len=64)               :: attr_string
-
-    if (hasAttribute(inputNode, name)) then
-        attr_string = getAttribute(inputNode, name)
-        read(attr_string, *) value
-    end if
-
-end subroutine get_parsed_realScalar
-
-subroutine get_parsed_realVector(inputNode, name, value)
-    character(len=*), intent(in)    :: name
-    type(Node), intent(in), pointer :: inputNode
-    real(pr)                        :: value(3)
-    character(len=88)               :: attr_string      ! Long enough for the total format_state specifier
-
-    if (hasAttribute(inputNode, name)) then
-        attr_string = getAttribute(inputNode, name)
-        read(attr_string, *) value(1), value(2), value(3)
-    end if
-
-end subroutine get_parsed_realVector
-
 
 !##################################################################################################
 !     Not used / Not implemented

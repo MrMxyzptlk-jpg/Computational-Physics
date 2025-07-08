@@ -7,6 +7,7 @@ MODULE forcesMod
     use parametersMod
     use observablesMod
     use potentialsMod
+    use propertiesMod
     implicit none
 
     private  head, list, map, N_linkedCells, N_neighbors
@@ -17,25 +18,54 @@ MODULE forcesMod
 
 CONTAINS
 
-subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial, pair_corr)
-    real(pr), intent(in)    :: positions(:,:)
-    real(pr), intent(out)   :: forces(:,:)
+subroutine get_force_contribution(index1, index2, force_contribution, E_potential, pressure_virial, pair_corr)
+    integer, intent(in)                     :: index1, index2
+    real(pr), dimension(3), intent(out)     :: force_contribution
+    real(pr), intent(out)                   :: E_potential, pressure_virial
+    real(pr), intent(inout)                 :: pair_corr(:)
+    real(pr), dimension(3)                  :: particle_separation
+    real(pr)                                :: particle_distance_squared
+
+    particle_separation = positions(:,index1) - positions(:,index2) ! Separation vector
+    particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
+    particle_distance_squared = sum(particle_separation*particle_separation)
+
+    if (particle_distance_squared <= radius_cutoff_squared) then
+        call potential(particle_distance_squared, particle_separation, force_contribution, E_potential &
+            , pressure_virial, potential_cutoff)
+    endif
+
+    if (do_pair_correlation .and. .not. transitory) call update_pair_correlation(particle_distance_squared, pair_corr)
+
+end subroutine get_force_contribution
+
+subroutine add_force_contribution(particle1_forces, particle2_forces, force_contribution)
+    real(pr), dimension(3), intent(out)     :: particle1_forces, particle2_forces
+    real(pr), dimension(3), intent(in)      :: force_contribution
+
+        particle1_forces = particle1_forces + force_contribution
+        particle2_forces = particle2_forces - force_contribution
+
+end subroutine add_force_contribution
+
+subroutine get_forces_allVSall(E_potential, pressure_virial, pair_corr)
     real(pr), intent(out)   :: E_potential, pressure_virial
     real(pr), intent(inout) :: pair_corr(:)
-    integer(int_huge)       :: i, j
+    real(pr)                :: force_contribution(3)
+    integer                 :: i, j
 
     forces = 0._pr
     if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
-    !$omp parallel private(j, i) &
+    !$omp parallel private(j, i, force_contribution) &
     !$omp shared(positions, num_atoms) &
     !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
 
         !$omp do schedule(dynamic)
         do i=1,num_atoms-1
             do j = i+1, num_atoms
-                call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
-                    pressure_virial, pair_corr)
+                call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr)
+                call add_force_contribution(forces(:,i), forces(:,j), force_contribution)
             end do
         end do
         !$omp end do
@@ -43,30 +73,6 @@ subroutine get_forces_allVSall(positions, forces, E_potential, pressure_virial, 
     !$omp end parallel
 
 end subroutine get_forces_allVSall
-
-subroutine get_force_contribution(particle1_position, particle2_position, particle1_forces, particle2_forces, E_potential &
-    , pressure_virial, pair_corr)
-    real(pr), dimension(3), intent(in)      :: particle1_position, particle2_position
-    real(pr), dimension(3), intent(out)     :: particle1_forces, particle2_forces
-    real(pr), intent(out)                   :: E_potential, pressure_virial
-    real(pr), intent(inout)                 :: pair_corr(:)
-    real(pr), dimension(3)                  :: particle_separation, force_contribution
-    real(pr)                                :: particle_distance_squared
-
-    particle_separation = particle1_position - particle2_position ! Separation vector
-    particle_separation = particle_separation - periodicity*anint(particle_separation/periodicity) ! PBC
-    particle_distance_squared = sum(particle_separation*particle_separation)
-
-    if (particle_distance_squared <= radius_cutoff_squared) then
-        call potential(particle_distance_squared, particle_separation, force_contribution, E_potential &
-            , pressure_virial, potential_cutoff)
-        particle1_forces = particle1_forces + force_contribution
-        particle2_forces = particle2_forces - force_contribution
-    endif
-
-    if (do_pair_correlation .and. .not. transitory) call update_pair_correlation(particle_distance_squared, pair_corr)
-
-end subroutine get_force_contribution
 
 subroutine check_linkCell(do_linkCell)
     logical, intent(out)    :: do_linkCell
@@ -164,17 +170,16 @@ function index_cell(ix,iy,iz, dim_linkCell)  ! For indexing Linked-Lists
 
 end function index_cell
 
-subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial, pair_corr) ! Performs worse than serial version
-    real(pr), intent(in)    :: positions(:,:)
-    real(pr), intent(out)   :: forces(:,:)
+subroutine get_forces_linkedlist(E_potential, pressure_virial, pair_corr) ! Performs worse than serial version
     real(pr), intent(out)   :: E_potential, pressure_virial
     real(pr), intent(inout) :: pair_corr(:)
+    real(pr)                :: force_contribution(3)
     integer                 :: i, j, icell, jcell, jcell0, neighbor
 
     forces = 0._pr
     if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
-    !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell) &
+    !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell, force_contribution) &
     !$omp shared(positions, head, map, list, N_linkedCells) &
     !$omp schedule(dynamic) reduction(+: forces, E_potential, pressure_virial, pair_corr)
     do icell = 1, N_linkedCells ! Go through all cells
@@ -182,8 +187,8 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
         do while (i /= 0)
             j = list(i)
             do while (j /= 0) ! All pairs in the cell
-                call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential &
-                    , pressure_virial, pair_corr)
+                call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr)
+                call add_force_contribution(forces(:,i), forces(:,j), force_contribution)
                 j = list(j)
             end do
             jcell0 = N_neighbors*(icell - 1)
@@ -194,8 +199,8 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
                 j = head(jcell)
 
                 do while (j /= 0) ! For all particles in a neighbor cell
-                    call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential &
-                        , pressure_virial, pair_corr)
+                    call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr)
+                call add_force_contribution(forces(:,i), forces(:,j), force_contribution)
                     j = list(j)
                 end do
             end do
@@ -206,14 +211,13 @@ subroutine get_forces_linkedlist(positions, forces, E_potential, pressure_virial
 
 end subroutine get_forces_linkedlist
 
-subroutine get_forces_Ewald(positions, forces, E_potential, pressure_virial, pair_corr)
-    real(pr), intent(in)    :: positions(:,:)
-    real(pr), intent(out)   :: forces(:,:)
+subroutine get_forces_Ewald(E_potential, pressure_virial, pair_corr)
     real(pr), intent(out)   :: E_potential, pressure_virial
     real(pr), intent(inout) :: pair_corr(:)
-    integer(int_huge)       :: i, j
+    integer                 :: i, j
     real(pr)                :: box_dipole(3), surface_potential, pressure_reciprocal
     real(pr)                :: potential_real, potential_reciprocal
+    real(pr)                :: force_contribution(3)
     real(pr)                :: force_reciprocal(3,num_atoms)
 
     force_reciprocal = 0._pr
@@ -222,15 +226,15 @@ subroutine get_forces_Ewald(positions, forces, E_potential, pressure_virial, pai
     forces = 0._pr
     if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; pressure_reciprocal = 0._pr; end if
 
-    !$omp parallel private(j, i) &
+    !$omp parallel private(j, i, force_contribution) &
     !$omp shared(positions, num_atoms) &
     !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
 
         !$omp do schedule(dynamic)
         do i=1,num_atoms-1
             do j = i+1, num_atoms
-                call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
-                    pressure_virial, pair_corr)
+                call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr)
+                call add_force_contribution(forces(:,i), forces(:,j), force_contribution)
             end do
         end do
         !$omp end do
@@ -276,8 +280,8 @@ end subroutine get_forces_Ewald
 !        do while (i /= 0)
 !            j = list(i)
 !            do while (j /= 0) ! All pairs in the cell
-!                call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential &
-!                    , pressure_virial, pair_corr)
+!                call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr)
+!                call add_force_contribution(forces(:,i), forces(:,j), force_contribution)
 !                j = list(j)
 !            end do
 !            jcell0 = N_neighbors*(icell - 1)
@@ -288,8 +292,8 @@ end subroutine get_forces_Ewald
 !                j = head(jcell)
 !
 !                do while (j /= 0) ! For all particles in a neighbor cell
-!                    call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential &
-!                        , pressure_virial, pair_corr)
+!                    call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr)
+!                    call add_force_contribution(forces(:,i), forces(:,j), force_contribution)
 !                    j = list(j)
 !                end do
 !            end do
@@ -306,7 +310,7 @@ end subroutine get_forces_Ewald
 !    integer                 :: i, j, icell, jcell, jcell0, neighbor
 !
 !    if (measure) then
-!        !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell, particle_distance_squared) &
+!        !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell, particle_distance_squared, force_contribution) &
 !        !$omp shared(positions, head, map, list, N_linkedCells) &
 !        !$omp schedule(dynamic) reduction(+: pair_corr)
 !        do icell = 1, N_linkedCells ! Go through all cells
@@ -351,8 +355,9 @@ end subroutine get_forces_Ewald
 !
 !    do i=1,num_atoms-1
 !        do j = i+1, num_atoms
-!            call get_force_contribution(positions(:,i), positions(:,j), forces(:,i), forces(:,j), E_potential, &
+!            call get_force_contribution(i, j, force_contribution, E_potential, &
 !                pressure_virial, pair_corr)
+!            call add_force_contribution(forces(:,i), forces(:,j), force_contribution)
 !        end do
 !    end do
 !

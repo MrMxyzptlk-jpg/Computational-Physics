@@ -26,6 +26,7 @@ program ex1
     use integratorsMod
     use propertiesMod
     use observablesMod
+    use measurementsMod
     implicit none
 
     real(pr)            :: CPU_t_start, CPU_t_end, CPU_elapsed_time
@@ -66,7 +67,7 @@ program ex1
     call init_summation()
     if (integrator == 'velocity-Verlet' .and. (state == 'fromScratch')) call init_velocities()
     call init_internal_constants()
-    if (integrator == 'velocity-Verlet') call thermostat_rescale(velocities)     ! thermostatsMod module
+    if (integrator == 'velocity-Verlet') call thermostat_rescale()     ! thermostatsMod module
     call initialize_XYZ_data()                  ! writing2fliesMod module
 
 !##################################################################################################
@@ -85,7 +86,7 @@ program ex1
     if (integrator == 'velocity-Verlet') then
 
         call open_files(reciprocal_vec)
-            call get_forces(positions, forces,  Energies(1,i_measure), pressures(i_measure), pair_corr)
+            call get_forces(Energies(1,i_measure), pressures(i_measure), pair_corr)
 
             if (save_transitory) call get_measurements(i_measure)
 
@@ -98,7 +99,7 @@ program ex1
                     if (measure) call get_measurements(i_measure)
 
                 end do
-                call thermostat_chosen(velocities)
+                call thermostat_chosen()
             end do
 
             transitory  = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory
@@ -111,7 +112,7 @@ program ex1
 
                 if (measure) call get_measurements(i_measure)
 
-                if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen(velocities)
+                if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen()
             end do
         call close_files()
     end if
@@ -119,7 +120,7 @@ program ex1
     if (integrator == 'Brownian') then
 
         call open_files(reciprocal_vec)
-            call get_forces(positions, forces,  Energies(1,i_measure), pressures(i_measure), pair_corr)
+            call get_forces(Energies(1,i_measure), pressures(i_measure), pair_corr)
 
             if (save_transitory) call get_measurements(i_measure)
 
@@ -151,7 +152,7 @@ program ex1
     if (integrator == 'Monte-Carlo') then
 
         call open_files(reciprocal_vec)
-            call get_forces(positions, forces,  Energies(1,i_measure), pressures(i_measure), pair_corr)
+            call get_forces(Energies(1,i_measure), pressures(i_measure), pair_corr)
             if (save_transitory) call get_measurements(i_measure)
 
             do i = -transitory_steps/MC_adjust_step , -1, 1
@@ -163,7 +164,7 @@ program ex1
                     if (measure) call get_measurements(i_measure)
 
                 end do
-                call update_random_step(MC_accepted)
+                call update_random_step()
             end do
 
             transitory  = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory

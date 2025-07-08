@@ -17,13 +17,11 @@ MODULE initializationsMod
     logical                                 :: do_linkCell = .False.
 
     abstract interface
-        subroutine init_pos()
-        end subroutine init_pos
+        subroutine no_args()
+        end subroutine no_args
 
-        subroutine force_sub(positions, forces, E_potential, pressure_virial, pair_corr)
+        subroutine force_sub(E_potential, pressure_virial, pair_corr)
             use precisionMod
-            real(pr), intent(in)    :: positions(:,:)
-            real(pr), intent(out)   :: forces(:,:)
             real(pr), intent(out)   :: E_potential, pressure_virial
             real(pr), intent(inout) :: pair_corr(:)
         end subroutine force_sub
@@ -33,16 +31,11 @@ MODULE initializationsMod
             real(pr), intent(in)        :: positions(:,:)
             real(pr), intent(inout)     :: pair_corr(:)
         end subroutine pairCorr_sub
-
-        subroutine thermo(velocities)
-            use precisionMod
-            real(pr), allocatable, intent(inout)    :: velocities(:,:)
-        end subroutine thermo
     end interface
 
-    procedure(init_pos), pointer     :: init_positions      => null()
-    procedure(force_sub), pointer    :: get_forces          => null()
-    procedure(thermo), pointer       :: thermostat_chosen   => null()
+    procedure(no_args), pointer     :: init_positions      => null()
+    procedure(force_sub), pointer   :: get_forces          => null()
+    procedure(no_args), pointer     :: thermostat_chosen   => null()
 
 CONTAINS
 
@@ -126,14 +119,18 @@ end subroutine init_potential
 
 subroutine init_thermostat()
 
-    select case (thermostat_type)
-        case ("rescale")
-            thermostat_chosen =>  thermostat_rescale
-        case ("Berendsen")
-            thermostat_chosen =>  thermostat_Berendsen
-        case default
-            thermostat_chosen =>  thermostat_rescale
-    end select
+    if (integrator=="velocity-Verlet") then
+        select case (thermostat_type)
+            case ("rescale")
+                thermostat_chosen =>  thermostat_rescale
+            case ("Berendsen")
+                thermostat_chosen =>  thermostat_Berendsen
+            case default
+                thermostat_chosen =>  thermostat_rescale
+        end select
+    end if
+
+    if (integrator=="Monte-Carlo") thermostat_chosen =>  update_random_step
 
 end subroutine init_thermostat
 

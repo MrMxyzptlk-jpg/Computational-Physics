@@ -2,6 +2,7 @@ MODULE subroutinesMod
     use precisionMod
     use constantsMod
     use parametersMod
+    use propertiesMod
     implicit none
 
 contains
@@ -17,20 +18,7 @@ subroutine get_distance_squared(particle1, particle2, distance_squared)
 
 end subroutine get_distance_squared
 
-subroutine update_random_step(N_accepted)
-    integer, intent(inout)  :: N_accepted
-
-    if (real(N_accepted,pr)/real(MC_adjust_step,pr) > 0.5_pr) then
-        MC_delta = MC_delta*1.05_pr
-    else
-        MC_delta = MC_delta*0.95_pr
-    endif
-    N_accepted = 0
-
-end subroutine update_random_step
-
-subroutine update_velocities_velVer(velocities, forces, previous_forces)
-    real(pr), dimension(:,:), intent(inout)    :: velocities, forces, previous_forces
+subroutine update_velocities_velVer()
 
     velocities = velocities + dt * 0.5_pr*(previous_forces + forces)
 
