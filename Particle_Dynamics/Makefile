@@ -17,7 +17,7 @@ MODDIR = $(SRCDIR)/modules
 OBJDIR = build
 
 # Ensure obj directory exists
-$(shell mkdir -p $(OBJDIR) $(OBJDIR)/RNGs $(OBJDIR)/variables $(OBJDIR)/parsing)
+$(shell mkdir -p $(OBJDIR) $(OBJDIR)/RNGs $(OBJDIR)/variables $(OBJDIR)/parsing $(OBJDIR)/phases)
 
 # List source files in correct dependency order
 SRC = 	precisionMod.f90 \
@@ -38,9 +38,12 @@ SRC = 	precisionMod.f90 \
         parsing/parsingMod.f90 \
         forcesMod.f90 \
         writing2filesMod.f90 \
-        initializationsMod.f90 \
         integratorsMod.f90 \
+        initializationsMod.f90 \
         measurementsMod.f90 \
+		phases/phase_initializeMod.f90 \
+		phases/phase_runMod.f90 \
+		phases/phase_endMod.f90 \
         main.f90
 
 # Prefix source files with full path
@@ -81,6 +84,6 @@ $(OBJDIR)/main.o: $(SRCDIR)/main.f90
 
 # Clean rule
 clean:
-	rm -f $(OBJDIR)/*.o $(OBJDIR)/*.mod $(OBJDIR)/*.d $(TARGET)
+	rm -rf $(OBJDIR)/*
 
 .PHONY: all clean

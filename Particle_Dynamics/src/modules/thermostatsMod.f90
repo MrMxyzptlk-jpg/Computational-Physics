@@ -2,13 +2,21 @@ MODULE thermostatsMod
     use parametersMod
     use propertiesMod
     implicit none
+
+    abstract interface
+        subroutine thermo()
+        end subroutine thermo
+    end interface
+
+    procedure(thermo), pointer     :: thermostat_chosen   => null()
+
 CONTAINS
 
 subroutine thermostat_rescale()
     real(pr)    :: instant_Temp, scaling_factor
 
-    instant_Temp = sum(velocities*velocities)/(3.0_pr * real(num_atoms,pr))
-    scaling_factor = sqrt( ref_Temp / instant_Temp )
+    instant_Temp = sum(velocities*velocities) / (3.0_pr * real(num_atoms,pr))
+    scaling_factor = sqrt(ref_Temp / instant_Temp)
 
     velocities = velocities*scaling_factor
 

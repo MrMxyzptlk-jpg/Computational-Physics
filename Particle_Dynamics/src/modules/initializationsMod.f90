@@ -10,22 +10,12 @@ MODULE initializationsMod
     use parsingMod
     use observablesMod
     use propertiesMod
+    use integratorsMod
     implicit none
 
-    real(pr)                                :: reciprocal_vec(3)
-    integer(int_large)                      :: transitory_minIndex, MC_accepted
-    logical                                 :: do_linkCell = .False.
-
     abstract interface
-        subroutine no_args()
-        end subroutine no_args
-
-        subroutine force_sub(E_potential, pressure_virial, pair_corr)
-            use precisionMod
-            real(pr), intent(out)   :: E_potential, pressure_virial
-            real(pr), intent(inout) :: pair_corr(:)
-        end subroutine force_sub
-
+        subroutine init_pos()
+        end subroutine init_pos
         subroutine pairCorr_sub(positions, pair_corr)
             use precisionMod
             real(pr), intent(in)        :: positions(:,:)
@@ -33,9 +23,7 @@ MODULE initializationsMod
         end subroutine pairCorr_sub
     end interface
 
-    procedure(no_args), pointer     :: init_positions      => null()
-    procedure(force_sub), pointer   :: get_forces          => null()
-    procedure(no_args), pointer     :: thermostat_chosen   => null()
+    procedure(init_pos), pointer     :: init_positions      => null()
 
 CONTAINS
 
@@ -154,6 +142,19 @@ subroutine init_observables()
     if (.not. do_structure_factor) allocate(structure_factor(1))
 
 end subroutine init_observables
+
+subroutine init_integrator()
+
+    select case(integrator)
+        case("velocity-Verlet")
+            integrator_step => velVerlet_step
+        case("Monte-Carlo")
+            integrator_step => MC_step
+        case("Brownian")
+            integrator_step => Brownian_step
+    end select
+
+end subroutine init_integrator
 
 subroutine init_summation()
 

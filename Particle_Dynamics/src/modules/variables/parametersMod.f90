@@ -28,6 +28,10 @@ MODULE parametersMod
     integer(int_large)      :: dim_linkCell(3)  ! Number of cells in each direction to sum over in linked-lists summation
     integer(int_large)      :: thermostat_steps
 
+    ! Internal
+    logical                 :: do_linkCell = .False.
+    integer(int_large)      :: transitory_minIndex
+
 !######### TASKS variables ###################
     ! Parsed
     logical                 :: save_positions, save_state, save_transitory, save_observables
@@ -36,6 +40,7 @@ MODULE parametersMod
 
     ! Internal
     logical                 :: transitory, measure
+    real(pr)                :: reciprocal_vec(3)
 
 !######### APPROXIMATION variables ###########
     ! Parsed
@@ -60,6 +65,7 @@ MODULE parametersMod
     ! Parsed
     character (len=12)      :: thermostat_type
     real(pr)                :: Berendsen_time
+    integer(int_large)      :: MC_accepted
 
 !######### MSD variables #####################
     ! Parsed

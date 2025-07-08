@@ -8,7 +8,7 @@ MODULE measurementsMod
     implicit none
 CONTAINS
 
-subroutine get_measurements(i_measure)      ! Should be in observables module
+subroutine get_measurements(i_measure)
     integer(int_large)      :: i_measure
 
     call get_observables(velocities, Energies(2,i_measure), pressures(i_measure), temperatures(i_measure))
