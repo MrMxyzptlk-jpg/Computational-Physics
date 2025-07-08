@@ -421,11 +421,15 @@ subroutine init_Ewald()
             end do
         end do
     end do
+
 end subroutine init_Ewald
 
 subroutine init_internal_constants()
 
-    if (interactions == "Coulomb") call init_Ewald()
+    if (interactions == "Coulomb") then
+        if (summation == "Ewald") call init_Ewald()
+        if (.not. allocated(charges)) then; allocate(charges(num_atoms)); charges = 1._pr; end if
+    end if
 
     if (integrator == 'Brownian') then
         if ((viscosity == 0._pr) .and. (reduced_viscosity == 0._pr)) then
@@ -451,40 +455,40 @@ end subroutine init_internal_constants
 !     Not used / Not implemented
 !##################################################################################################
 
-subroutine init_Ewald_old()
-    integer                         :: kx, ky, kz, kvec_count
-    real(pr)                        :: k_sqr, halfSigma_sqr, fourPi, k_periodicity(3)
-    type(kvector_data), allocatable :: temp_kvec(:)
-
-    halfSigma_sqr = sigma_sqr / 4.0_pr
-    fourPi = 4._pr * pi
-    k_periodicity = 2._pr*pi/periodicity
-
-
-    allocate(temp_kvec(product(2*kgrid+1)))  ! overestimate, shrink later
-    kvec_count = 0  ! Counter for the number of reciprocal lattice vectors in the first octant
-    do kx = 0, kgrid(1)
-        do ky = 0, kgrid(2)
-            do kz = 0, kgrid(3)
-                if (kx == 0 .and. ky == 0 .and. kz == 0) cycle
-                ! Only store kx > 0 or (kx==0 and ky>=0 and kz>=0) to avoid double-counting
-                if (kx > 0 .or. (kx==0 .and. ky >= 0 .and. kz >= 0)) then
-                    kvec_count = kvec_count + 1
-                    temp_kvec(kvec_count)%kvec = real((/kx, ky, kz/),pr)*k_periodicity
-                    k_sqr = sum((temp_kvec(kvec_count)%kvec)**2)
-                    temp_kvec(kvec_count)%k_squared = k_sqr
-                    temp_kvec(kvec_count)%k_factor = exp(-k_sqr*halfSigma_sqr) / k_sqr
-    !!                if (kx == 0 .and. ky == 0 .and. kz == 1) temp_kvec(kvec_count)%k_factor = temp_kvec(kvec_count)%k_factor*0.5_pr
-                end if
-            end do
-        end do
-    end do
-
-    num_kvec = kvec_count
-    allocate(kvectors(num_kvec))
-    kvectors(:) = temp_kvec(:num_kvec)
-    deallocate(temp_kvec)
-
-end subroutine init_Ewald_old
+!subroutine init_Ewald_old()
+!    integer                         :: kx, ky, kz, kvec_count
+!    real(pr)                        :: k_sqr, halfSigma_sqr, fourPi, k_periodicity(3)
+!    type(kvector_data), allocatable :: temp_kvec(:)
+!
+!    halfSigma_sqr = sigma_sqr / 4.0_pr
+!    fourPi = 4._pr * pi
+!    k_periodicity = 2._pr*pi/periodicity
+!
+!
+!    allocate(temp_kvec(product(2*kgrid+1)))  ! overestimate, shrink later
+!    kvec_count = 0  ! Counter for the number of reciprocal lattice vectors in the first octant
+!    do kx = 0, kgrid(1)
+!        do ky = 0, kgrid(2)
+!            do kz = 0, kgrid(3)
+!                if (kx == 0 .and. ky == 0 .and. kz == 0) cycle
+!                ! Only store kx > 0 or (kx==0 and ky>=0 and kz>=0) to avoid double-counting
+!                if (kx > 0 .or. (kx==0 .and. ky >= 0 .and. kz >= 0)) then
+!                    kvec_count = kvec_count + 1
+!                    temp_kvec(kvec_count)%kvec = real((/kx, ky, kz/),pr)*k_periodicity
+!                    k_sqr = sum((temp_kvec(kvec_count)%kvec)**2)
+!                    temp_kvec(kvec_count)%k_squared = k_sqr
+!                    temp_kvec(kvec_count)%k_factor = exp(-k_sqr*halfSigma_sqr) / k_sqr
+!    !!                if (kx == 0 .and. ky == 0 .and. kz == 1) temp_kvec(kvec_count)%k_factor = temp_kvec(kvec_count)%k_factor*0.5_pr
+!                end if
+!            end do
+!        end do
+!    end do
+!
+!    num_kvec = kvec_count
+!    allocate(kvectors(num_kvec))
+!    kvectors(:) = temp_kvec(:num_kvec)
+!    deallocate(temp_kvec)
+!
+!end subroutine init_Ewald_old
 
 END MODULE initializationsMod

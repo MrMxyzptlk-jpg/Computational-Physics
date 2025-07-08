@@ -2,6 +2,7 @@ MODULE potentialsMod
     use precisionMod
     use constantsMod
     use parametersMod
+    use propertiesMod
     use subroutinesMod
     implicit none
 
@@ -66,35 +67,35 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
     real(pr), intent(in)    :: positions(3,num_atoms)
     integer                 :: kx, ky, kz, k_sqr, i
     real(pr)                :: factor, kvec_real(3), E_contribution
-    complex(pr)             :: eikx(num_atoms,  0:kgrid(1))
-    complex(pr)             :: eiky(num_atoms,-kgrid(2):kgrid(2))
-    complex(pr)             :: eikz(num_atoms,-kgrid(3):kgrid(3))
+    complex(pr)             :: eikx(        0:kgrid(1), num_atoms)
+    complex(pr)             :: eiky(-kgrid(2):kgrid(2), num_atoms)
+    complex(pr)             :: eikz(-kgrid(3):kgrid(3), num_atoms)
     complex(pr)             :: reciprocal_charge, exp_k
     logical                 :: good_kvec
 
     ! Calculate exponents with kx, ky, kz = {0, 1}
-    eikx(:,0) = (1.0_pr, 0.0_pr)
-    eiky(:,0) = (1.0_pr, 0.0_pr)
-    eikz(:,0) = (1.0_pr, 0.0_pr)
+    eikx(0,:) = (1.0_pr, 0.0_pr)
+    eiky(0,:) = (1.0_pr, 0.0_pr)
+    eikz(0,:) = (1.0_pr, 0.0_pr)
 
-    eikx(:,1) = cmplx(cos(twoPi*positions(1,:)), sin(twoPi*positions(1,:)), pr)
-    eiky(:,1) = cmplx(cos(twoPi*positions(2,:)), sin(twoPi*positions(2,:)), pr)
-    eikz(:,1) = cmplx(cos(twoPi*positions(3,:)), sin(twoPi*positions(3,:)), pr)
+    eikx(1,:) = cmplx(cos(twoPi*positions(1,:)), sin(twoPi*positions(1,:)), pr)
+    eiky(1,:) = cmplx(cos(twoPi*positions(2,:)), sin(twoPi*positions(2,:)), pr)
+    eikz(1,:) = cmplx(cos(twoPi*positions(3,:)), sin(twoPi*positions(3,:)), pr)
 
     ! Use recursion to avoid the calculation of exponential by using multiplication instead
     do i = 2, kgrid(1)
-        eikx(:,i) = eikx(:,i-1)*eikx(:,1)
+        eikx(i,:) = eikx(i-1,:)*eikx(1,:)
     end do
     do i = 2, kgrid(2)
-        eiky(:,i) = eiky(:,i-1)*eiky(:,1)
+        eiky(i,:) = eiky(i-1,:)*eiky(1,:)
     end do
     do i = 2, kgrid(3)
-        eikz(:,i) = eikz(:,i-1)*eikz(:,1)
+        eikz(i,:) = eikz(i-1,:)*eikz(1,:)
     end do
 
     ! Use conjugation symmetry
-    eiky(:,-kgrid(2):-1) = conjg(eiky(:,kgrid(2):1:-1))
-    eikz(:,-kgrid(3):-1) = conjg(eikz(:,kgrid(3):1:-1))
+    eiky(-kgrid(2):-1,:) = conjg(eiky(kgrid(2):1:-1,:))
+    eikz(-kgrid(3):-1,:) = conjg(eikz(kgrid(3):1:-1,:))
 
     E_potential = 0.0_pr
     force_contribution = 0._pr
@@ -110,12 +111,12 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
             do kz = -kgrid(3), kgrid(3)
                 call check_kvec(kx, ky, kz, k_sqr, good_kvec)
                 if (good_kvec) then
-                    reciprocal_charge = sum(eikx(:,kx)*eiky(:,ky)*eikz(:,kz))
+                    reciprocal_charge = sum(charges(:)*eikx(kx,:)*eiky(ky,:)*eikz(kz,:))
                     do i = 1, num_atoms
-                        exp_k = eikx(i,kx) * eiky(i,ky) * eikz(i,kz)
+                        exp_k = eikx(kx,i) * eiky(ky,i) * eikz(kz,i)
                         kvec_real = (/kx, ky, kz/) * k_periodicity  ! Real k-space vector
                         force_contribution(:,i) = force_contribution(:,i) &
-                            - factor * kfac(k_sqr) * kvec_real * aimag(conjg(reciprocal_charge*exp_k))
+                            - charges(i) * factor * kfac(k_sqr) * kvec_real * aimag(conjg(reciprocal_charge*exp_k))
                     end do
                     if (measure .and. save_observables) then
                         E_contribution = factor * kfac(k_sqr) * real(reciprocal_charge*conjg(reciprocal_charge))
