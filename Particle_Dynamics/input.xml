@@ -39,7 +39,7 @@
 <approximation
     integrator      = "velocity-Verlet"
     interactions    = "Coulomb"
-    sigma           = "1"
+    sigma           = "0.5"
     delta           = "1"
     kgrid           = "10 10 10"
     MC_adjust_step  = "10"

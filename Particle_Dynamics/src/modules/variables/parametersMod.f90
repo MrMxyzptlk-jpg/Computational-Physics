@@ -56,10 +56,10 @@ MODULE parametersMod
     integer                 :: num_kvec         ! Number of allowed reciprocal vectors
     integer                 :: k_sqr_max        ! Maximum reciprocal vector length allowed
     real(pr), allocatable   :: kfac(:)          ! Factors appearing in 'Ewald' summation (avoid recalculation)
-    type :: kvector_data
-        real(pr)    :: k_squared, kvec(3),k_factor
-    end type kvector_data
-    type(kvector_data), allocatable :: kvectors(:)
+   ! type :: kvector_data       ! UNUSED
+   !     real(pr)    :: k_squared, kvec(3),k_factor
+   ! end type kvector_data
+   ! type(kvector_data), allocatable :: kvectors(:)
 
 !######### THERMOSTAT variables ##############
     ! Parsed

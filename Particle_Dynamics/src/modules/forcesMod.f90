@@ -263,11 +263,11 @@ subroutine get_forces_Ewald(E_potential, pressure_virial, pair_corr)
     call Coulomb_Ewald_reciprocalSpace(positions, force_reciprocal, potential_reciprocal)
     forces = forces + force_reciprocal
 
-    ! Correction if there a net charge (non-homogenous cancelling background charge)
-    if(.False.) then ! NOT DEBUGGED
+    ! Correction if there's a net charge (vacuum)
+    if(.False.) then ! NOT DEBUGGED AND ONLY EQUIVALENT CHARGES
         forces = forces - pi/(0.75_pr*volume) * spread(sum(positions,2)-0.5_pr*real(num_atoms,pr)*periodicity,2,num_atoms)
         if (measure .and. save_observables) then
-            box_dipole = sum(positions,2) ! Net box dipole, when all charges are equal. Else the charges q must multiply each position
+            box_dipole = sum(positions,2)-0.5_pr*real(num_atoms,pr)*periodicity ! Net box dipole, when all charges are equal. Else the charges q must multiply each position
             surface_potential  = (pi/(1.5_pr*volume)) * sum(box_dipole*box_dipole)   ! Surface term
             E_potential = E_potential + surface_potential
         end if

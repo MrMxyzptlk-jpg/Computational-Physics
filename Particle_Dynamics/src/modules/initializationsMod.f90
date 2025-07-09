@@ -401,7 +401,7 @@ subroutine init_Ewald()
     eightPi_over_volume = 8._pr*pi/volume
     twoPi_over_volume   = twoPi/volume
     radius_cutoff = 0.5_pr*minval(periodicity)  ! Set to half the minimum box width
-    Ewald_selfTerm = num_atoms / (sqrt(pi)*sigma)
+    Ewald_selfTerm = sum(charges*charges)/ (sqrt(pi)*sigma)
 
     ! Get k-space factors for the force and potential energy contributions
     halfSigma_sqr = sigma*sigma / 4.0_pr
@@ -425,8 +425,8 @@ end subroutine init_Ewald
 subroutine init_internal_constants()
 
     if (interactions == "Coulomb") then
-        if (summation == "Ewald") call init_Ewald()
         if (.not. allocated(charges)) then; allocate(charges(num_atoms)); charges = 1._pr; end if
+        if (summation == "Ewald") call init_Ewald()
     end if
 
     if (integrator == 'Brownian') then
