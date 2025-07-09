@@ -31,16 +31,16 @@
     save_observables         = "true"
     save_positions           = "true"
     do_pair_correlation      = "false"
-    do_structure_factor      = "true"
-    do_mean_sqr_displacement = "true"
+    do_structure_factor      = "false"
+    do_mean_sqr_displacement = "false"
     Miller_index             = "0 -1 0"
 />
 
 <approximation
     integrator      = "velocity-Verlet"
-    interactions    = "lennard_jones"
-    sigma           = "1.4"
-    delta         = "1"
+    interactions    = "Coulomb"
+    sigma           = "1"
+    delta           = "1"
     kgrid           = "10 10 10"
     MC_adjust_step  = "10"
     MC_delta        = "1"
