@@ -1,7 +1,7 @@
 
 !***************************************************************
 ! Program: ex1.f90
-! Purpose:
+! Purpose: Simulating classical particle interactions using Molecular Dynamics (MD) or Monte Carlo (MC).
 !
 ! Description:
 !

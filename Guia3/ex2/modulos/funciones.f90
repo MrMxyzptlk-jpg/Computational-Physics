@@ -7,7 +7,7 @@ MODULE funciones
 
     !funciones de la guía 3
 
-    FUNCTION ran2(idum)
+    FUNCTION ran2(idum) ! Extracted from "Press et al., Numerical Recipes: The Art of Scientific Computing, 3ra ed., Cambridge University Press, 2007."
             INTEGER idum,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
             REAL ran2,AM,EPS,RNMX
             PARAMETER (IM1=2147483563,IM2=2147483399,AM=1./IM1,IMM1=IM1-1, &
