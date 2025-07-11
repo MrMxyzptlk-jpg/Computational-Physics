@@ -17,7 +17,16 @@ MODDIR = $(SRCDIR)/modules
 OBJDIR = build
 
 # Ensure obj directory exists
-$(shell mkdir -p $(OBJDIR) $(OBJDIR)/RNGs $(OBJDIR)/variables $(OBJDIR)/parsing $(OBJDIR)/phases)
+$(shell mkdir -p $(OBJDIR) \
+				$(OBJDIR)/RNGs \
+				$(OBJDIR)/variables \
+				$(OBJDIR)/potentials \
+				$(OBJDIR)/measurements \
+				$(OBJDIR)/thermostats \
+				$(OBJDIR)/parsing \
+				$(OBJDIR)/forces \
+				$(OBJDIR)/integrators \
+				$(OBJDIR)/phases)
 
 # List source files in correct dependency order
 SRC = 	precisionMod.f90 \
@@ -29,18 +38,34 @@ SRC = 	precisionMod.f90 \
         variables/parametersMod.f90 \
         variables/propertiesMod.f90 \
         subroutinesMod.f90 \
-        potentialsMod.f90 \
-        observablesMod.f90 \
-        thermostatsMod.f90 \
+        potentials/Lennard_JonesMod.f90 \
+        potentials/Coulomb_EwaldMod.f90 \
+        potentials/Coulomb_ReactionFieldMod.f90 \
+        potentials/potentialsMod.f90 \
+        measurements/meanSquareDisplacementMod.f90 \
+        measurements/pairCorrelationFunctionMod.f90 \
+        measurements/structureFactorMod.f90 \
+        measurements/observablesMod.f90 \
+        thermostats/MD_rescaleMod.f90 \
+        thermostats/MD_BerendsenMod.f90 \
+        thermostats/MC_RndStepMod.f90 \
+        thermostats/thermostatsMod.f90 \
         updatePositionsMod.f90 \
 		parsing/checkParsingMod.f90 \
 		parsing/get_parsed_valueMod.f90 \
         parsing/parsingMod.f90 \
-        forcesMod.f90 \
+        forces/forces_contributionMod.f90 \
+        forces/forces_EwaldMod.f90 \
+        forces/forces_LinkedListsMod.f90 \
+        forces/forces_AllvsAllMod.f90 \
+        forces/forcesMod.f90 \
         writing2filesMod.f90 \
-        integratorsMod.f90 \
+        integrators/velVerlet_stepMod.f90 \
+        integrators/MC_stepMod.f90 \
+        integrators/BD_stepMod.f90 \
+        integrators/integratorsMod.f90 \
         initializationsMod.f90 \
-        measurementsMod.f90 \
+        measurements/measurementsMod.f90 \
 		phases/phase_initializeMod.f90 \
 		phases/phase_runMod.f90 \
 		phases/phase_endMod.f90 \
@@ -70,7 +95,13 @@ endef
 
 $(eval $(call make_compile_rule,RNGs))
 $(eval $(call make_compile_rule,variables))
+$(eval $(call make_compile_rule,potentials))
+$(eval $(call make_compile_rule,measurements))
+$(eval $(call make_compile_rule,thermostats))
 $(eval $(call make_compile_rule,parsing))
+$(eval $(call make_compile_rule,forces))
+$(eval $(call make_compile_rule,integrators))
+$(eval $(call make_compile_rule,phases))
 
 # Generic rule for modules at the root of src/modules/
 $(OBJDIR)/%.o: $(MODDIR)/%.f90

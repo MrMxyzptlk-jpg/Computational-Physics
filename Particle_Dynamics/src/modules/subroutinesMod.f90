@@ -48,7 +48,7 @@ subroutine get_stats(measurements, variance, stddev, average, error)
 
 end subroutine get_stats
 
-subroutine check_kvec(kx, ky, kz, k_sqr, kvec_flag)
+subroutine check_kvec(kx, ky, kz, k_sqr, kvec_flag) ! Verify the k-vector is inside the 3D ball in reciprocal space
     integer, intent(in)     :: kx, ky, kz
     integer, intent(out)    :: k_sqr
     logical, intent(out)    :: kvec_flag
