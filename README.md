@@ -32,5 +32,4 @@ Simulated a many body system interacting through a two particle potential, chose
 Added to the program in the previous section a new formalism to simulate particles in a colloidal suspension (deterministic and stochastic contributions).
 
 ## Particle Dynamics
-Added a non-local potential: Coulomb potential. Exploited the periodicity of the bulk simulation to calculate long range interaction using Ewald summation (see [details](Particle_Dynamics/README.md)). This code is the full modularization of the code in the previous two sections. It also allows for non-equivalent charges in the system.
-
+Added a non-local potential: Coulomb potential. Exploited the periodicity of the bulk simulation to calculate long range interaction using Ewald summation (see [details](Particle_Dynamics/README.md)). This code is the full modularization of the code in the previous two sections. It also allows for the continuation of a previous calculation or the start of a new calculation from a given configuration by means of a STATE.xml file. Additionally, non-equivalent charges can be specified in said file.
