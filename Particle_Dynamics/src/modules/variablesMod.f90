@@ -1,6 +1,6 @@
 ! Module containing all global variables which are parsed or derived from parsed variables
 
-MODULE parametersMod
+MODULE variablesMod
     use precisionMod
     use constantsMod
     implicit none
@@ -107,4 +107,4 @@ MODULE parametersMod
         end function pot_func
     end interface
 
-END MODULE parametersMod
+END MODULE variablesMod

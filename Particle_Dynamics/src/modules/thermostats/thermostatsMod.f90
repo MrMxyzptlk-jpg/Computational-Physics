@@ -1,6 +1,5 @@
+! Wrapper module with all implemented thermostats
 MODULE thermostatsMod
-    use parametersMod
-    use propertiesMod
     use MD_rescaleMod
     use MD_BerendsenMod
     use MC_RndStepMod

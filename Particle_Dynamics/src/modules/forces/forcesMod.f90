@@ -1,13 +1,6 @@
+! Wrapper module for different force summations
 MODULE forcesMod
     use precisionMod
-    use constantsMod
-    use subroutinesMod
-    use parsingMod, only : dim_linkCell, integrator
-    use omp_lib
-    use parametersMod
-    use observablesMod
-    use potentialsMod
-    use propertiesMod
     use forces_EwaldMod
     use forces_LinkedListsMod
     use forces_AllvsAllMod

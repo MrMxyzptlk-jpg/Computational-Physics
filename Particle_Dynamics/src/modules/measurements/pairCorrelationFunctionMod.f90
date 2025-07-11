@@ -1,6 +1,6 @@
 MODULE pairCorrelationFunctionMod
     use precisionMod
-    use parametersMod
+    use variablesMod
     use subroutinesMod
     implicit none
 

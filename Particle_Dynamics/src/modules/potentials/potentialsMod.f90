@@ -1,7 +1,8 @@
+! Wrapper module with the different potentials, and a subroutine still to be separated.
 MODULE potentialsMod
     use precisionMod
     use constantsMod
-    use parametersMod
+    use variablesMod
     use propertiesMod
     use subroutinesMod
     use Lennard_JonesMod

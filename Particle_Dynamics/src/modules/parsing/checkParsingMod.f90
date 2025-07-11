@@ -1,11 +1,36 @@
 MODULE checkParsingMod
     use precisionMod
-    use parametersMod
+    use variablesMod
+    use get_parsed_valueMod
     use FoX_dom
     implicit none
 
 CONTAINS
 ! check_statePhysical() is in parsingMod
+
+subroutine check_statePhysical(inputNode, parsed_periodicity)
+    type(Node), pointer, intent(in) :: inputNode
+    real(pr), intent(out)           :: parsed_periodicity(3)
+    integer(int_large)              :: parsed_num_atoms
+    character (len=6)               :: parsed_structure
+
+    ! Check necessary attributes exist
+    if (.not.(hasAttribute(inputNode, "num_atoms"))) STOP "ERROR: Missing num_atoms in STATE.xml"
+    if (.not.(hasAttribute(inputNode, "periodicity"))) STOP "ERROR: Missing periodicity in STATE.xml"
+    if (.not.(hasAttribute(inputNode, "structure"))) STOP "ERROR: Missing structure in STATE.xml"
+
+    ! Check consistent number of atoms specified
+    call get_parsed_value(inputNode, "num_atoms", parsed_num_atoms)
+    if (num_atoms /= parsed_num_atoms) STOP "ERROR: Mismatch between STATE.xml num_atoms and input.xml num_atoms"
+
+    ! Check consistent structure specification
+    call get_parsed_value(inputNode, "structure", parsed_structure)
+    if (structure /= parsed_structure) STOP "ERROR: Mismatch between STATE.xml structure and input.xml structure"
+
+    ! Get the other relevant variables
+    call get_parsed_value(inputNode, "periodicity", parsed_periodicity)
+
+end subroutine check_statePhysical
 
 subroutine check_fileXML(filename, fileDoc)
     character(len=*), intent(in)        :: filename

@@ -1,6 +1,6 @@
 MODULE meanSquareDisplacementMod
     use precisionMod
-    use parametersMod
+    use variablesMod
     use subroutinesMod
     implicit none
 

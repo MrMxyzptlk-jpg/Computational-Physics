@@ -1,6 +1,6 @@
 MODULE phase_runMod
     use precisionMod
-    use parametersMod
+    use variablesMod
     use propertiesMod
     use measurementsMod
     use writing2filesMod

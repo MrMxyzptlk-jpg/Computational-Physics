@@ -5,6 +5,7 @@ MODULE velVerlet_stepMod
     use updatePositionsMod
     use propertiesMod
     use forcesMod, only : get_forces, create_links
+    use updateVelocities_velVerletMod
     implicit none
 
 contains

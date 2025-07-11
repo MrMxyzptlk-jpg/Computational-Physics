@@ -2,7 +2,7 @@ MODULE initializationsMod
     use precisionMod
     use constantsMod
     use randomMod
-    use parametersMod
+    use variablesMod
     use potentialsMod
     use forcesMod
     use thermostatsMod

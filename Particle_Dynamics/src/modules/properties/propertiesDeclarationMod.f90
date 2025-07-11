@@ -1,3 +1,4 @@
+! Module to declare all properties of the particles and system
 MODULE propertiesMod
     use precisionMod
     implicit none

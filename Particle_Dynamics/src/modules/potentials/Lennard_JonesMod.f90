@@ -1,7 +1,7 @@
 MODULE Lennard_JonesMod
     use precisionMod
     use constantsMod
-    use parametersMod
+    use variablesMod
     use propertiesMod
     use subroutinesMod
     implicit none

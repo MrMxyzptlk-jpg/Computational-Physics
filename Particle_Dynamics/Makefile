@@ -18,8 +18,9 @@ OBJDIR = build
 
 # Ensure obj directory exists
 $(shell mkdir -p $(OBJDIR) \
+				$(OBJDIR)/parameters \
 				$(OBJDIR)/RNGs \
-				$(OBJDIR)/variables \
+				$(OBJDIR)/properties \
 				$(OBJDIR)/potentials \
 				$(OBJDIR)/measurements \
 				$(OBJDIR)/thermostats \
@@ -29,14 +30,14 @@ $(shell mkdir -p $(OBJDIR) \
 				$(OBJDIR)/phases)
 
 # List source files in correct dependency order
-SRC = 	precisionMod.f90 \
+SRC =  	parameters/precisionMod.f90 \
+        parameters/formatsMod.f90 \
+        parameters/constantsMod.f90 \
         RNGs/mzranMod.f90 \
         RNGs/mzran_threadsafeMod.f90 \
         RNGs/randomMod.f90 \
-        formatsMod.f90 \
-        variables/constantsMod.f90 \
-        variables/parametersMod.f90 \
-        variables/propertiesMod.f90 \
+        variablesMod.f90 \
+        properties/propertiesDeclarationMod.f90 \
         subroutinesMod.f90 \
         potentials/Lennard_JonesMod.f90 \
         potentials/Coulomb_EwaldMod.f90 \
@@ -50,7 +51,11 @@ SRC = 	precisionMod.f90 \
         thermostats/MD_BerendsenMod.f90 \
         thermostats/MC_RndStepMod.f90 \
         thermostats/thermostatsMod.f90 \
-        updatePositionsMod.f90 \
+        properties/updatePositions_velVerletMod.f90 \
+        properties/updatePositions_MCMod.f90 \
+        properties/updatePositions_BDMod.f90 \
+        properties/updateVelocities_velVerletMod.f90 \
+        properties/updatePositionsMod.f90 \
 		parsing/checkParsingMod.f90 \
 		parsing/get_parsed_valueMod.f90 \
         parsing/parsingMod.f90 \
@@ -94,7 +99,8 @@ $(OBJDIR)/$(1)/%.o: $(MODDIR)/$(1)/%.f90
 endef
 
 $(eval $(call make_compile_rule,RNGs))
-$(eval $(call make_compile_rule,variables))
+$(eval $(call make_compile_rule,parameters))
+$(eval $(call make_compile_rule,properties))
 $(eval $(call make_compile_rule,potentials))
 $(eval $(call make_compile_rule,measurements))
 $(eval $(call make_compile_rule,thermostats))

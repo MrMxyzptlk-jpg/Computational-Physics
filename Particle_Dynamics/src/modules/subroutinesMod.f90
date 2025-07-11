@@ -1,7 +1,7 @@
 MODULE subroutinesMod
     use precisionMod
     use constantsMod
-    use parametersMod
+    use variablesMod
     use propertiesMod
     implicit none
 
@@ -17,12 +17,6 @@ subroutine get_distance_squared(particle1, particle2, distance_squared)
     distance_squared = sum(particle_separation*particle_separation)
 
 end subroutine get_distance_squared
-
-subroutine update_velocities_velVer()
-
-    velocities = velocities + dt * 0.5_pr*(previous_forces + forces)
-
-end subroutine update_velocities_velVer
 
 subroutine get_stats(measurements, variance, stddev, average, error)
     real(pr), intent(in)                :: measurements(:)

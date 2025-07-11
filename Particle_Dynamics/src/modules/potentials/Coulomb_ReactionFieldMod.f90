@@ -1,7 +1,7 @@
 MODULE Coulomb_ReactionFieldMod
     use precisionMod
     use constantsMod
-    use parametersMod
+    use variablesMod
     use propertiesMod
     use subroutinesMod
     implicit none

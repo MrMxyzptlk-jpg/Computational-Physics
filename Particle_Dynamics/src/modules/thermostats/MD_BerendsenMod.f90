@@ -1,5 +1,5 @@
 MODULE MD_BerendsenMod
-    use parametersMod
+    use variablesMod
     use propertiesMod
     implicit none
 

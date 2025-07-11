@@ -1,5 +1,5 @@
 MODULE MC_RndStepMod
-    use parametersMod
+    use variablesMod
     use propertiesMod
     implicit none
 

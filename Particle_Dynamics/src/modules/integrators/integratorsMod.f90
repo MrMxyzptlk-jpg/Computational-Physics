@@ -1,10 +1,6 @@
+! Wrapper module for the different integrators
 MODULE integratorsMod
     use precisionMod
-    use subroutinesMod
-    use parsingMod
-    use updatePositionsMod
-    use propertiesMod
-    use forcesMod, only : get_forces, create_links
     use velVerlet_stepMod
     use MC_stepMod
     use BD_stepMod

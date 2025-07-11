@@ -4,7 +4,7 @@ MODULE forces_LinkedListsMod
     use subroutinesMod
     use parsingMod, only : dim_linkCell, integrator
     use omp_lib
-    use parametersMod
+    use variablesMod
     use observablesMod
     use potentialsMod
     use propertiesMod

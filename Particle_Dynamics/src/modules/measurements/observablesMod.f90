@@ -1,6 +1,7 @@
+! Wrapper module with measurable quantities, and two subroutines still to be separated.
 MODULE observablesMod
     use precisionMod
-    use parametersMod
+    use variablesMod
     use subroutinesMod
     use meanSquareDisplacementMod
     use pairCorrelationFunctionMod

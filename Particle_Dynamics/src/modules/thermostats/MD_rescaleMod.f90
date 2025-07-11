@@ -1,5 +1,5 @@
 MODULE MD_rescaleMod
-    use parametersMod
+    use variablesMod
     use propertiesMod
     implicit none
 
