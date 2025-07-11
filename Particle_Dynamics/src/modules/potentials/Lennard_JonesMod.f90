@@ -3,7 +3,6 @@ MODULE Lennard_JonesMod
     use constantsMod
     use variablesMod
     use propertiesMod
-    use subroutinesMod
     implicit none
 
 CONTAINS

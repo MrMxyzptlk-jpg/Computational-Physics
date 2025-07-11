@@ -36,7 +36,7 @@ subroutine phase_initialize()
 
         call init_structure()
         call init_potential()
-        call init_parameters()
+        call init_variables()
         call init_positions()
         call init_thermostat()
         call init_observables()

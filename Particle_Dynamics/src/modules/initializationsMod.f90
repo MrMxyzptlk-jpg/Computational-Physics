@@ -49,7 +49,7 @@ subroutine init_structure()
 
 end subroutine init_structure
 
-subroutine init_parameters()
+subroutine init_variables()
 
     ! Define conversion factors to adimensionalize the variables
     conversion_factors(1) = sigma                           ! Distance      [Bohr = a₀]
@@ -84,7 +84,7 @@ subroutine init_parameters()
     measure = .False.
     measuring_steps = real_steps/measuring_jump
 
-end subroutine init_parameters
+end subroutine init_variables
 
 subroutine init_potential()
 

@@ -1,7 +1,6 @@
 MODULE updatePositions_MCMod
     use variablesMod
     use potentialsMod
-    use subroutinesMod
     use propertiesMod
     use randomMod
     implicit none

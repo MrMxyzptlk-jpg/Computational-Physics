@@ -28,19 +28,19 @@ subroutine phase_run()
 
         if (save_transitory) call get_measurements(i_measure)
 
-        call phase_transitory()
+        call run_transitory()
 
         transitory  = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory
         measure     = .False.
         i_measure   = 0
 
-        call phase_definitive()
+        call run_definitive()
 
     call close_files()
 
 end subroutine phase_run
 
-subroutine phase_transitory()
+subroutine run_transitory()
     integer(int_large)  :: i, j
 
     do i = -transitory_steps/thermostat_steps , -1, 1
@@ -55,9 +55,9 @@ subroutine phase_transitory()
         call thermostat_chosen()
     end do
 
-end subroutine phase_transitory
+end subroutine run_transitory
 
-subroutine phase_definitive()
+subroutine run_definitive()
     integer(int_large)  :: i
 
     do i = 1 , real_steps
@@ -70,6 +70,6 @@ subroutine phase_definitive()
         if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen()
     end do
 
-end subroutine phase_definitive
+end subroutine run_definitive
 
 END MODULE phase_runMod

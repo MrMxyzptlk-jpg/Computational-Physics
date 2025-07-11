@@ -3,7 +3,6 @@ MODULE Coulomb_ReactionFieldMod
     use constantsMod
     use variablesMod
     use propertiesMod
-    use subroutinesMod
     implicit none
 
 CONTAINS
