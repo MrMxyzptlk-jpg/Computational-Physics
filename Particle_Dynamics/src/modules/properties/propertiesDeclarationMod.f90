@@ -11,6 +11,7 @@ MODULE propertiesMod
     real(pr), dimension(:,:), allocatable   :: forces
     real(pr), dimension(:,:), allocatable   :: velocities
     real(pr), dimension(:,:), allocatable   :: previous_forces  ! Internal property for velocity-Verlet algorithm
+    real(pr), dimension(:), allocatable     :: previous_E_potential     ! Internal property for Metropolis algorithm
 
     ! Observables
     real(pr), dimension(:), allocatable     :: Pressures, Temperatures

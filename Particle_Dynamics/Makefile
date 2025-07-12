@@ -39,6 +39,7 @@ SRC =  	parameters/precisionMod.f90 \
         variablesMod.f90 \
         properties/propertiesDeclarationMod.f90 \
         subroutinesMod.f90 \
+        potentials/potentialContributionMod.f90 \
         potentials/Lennard_JonesMod.f90 \
         potentials/Coulomb_EwaldMod.f90 \
         potentials/Coulomb_ReactionFieldMod.f90 \

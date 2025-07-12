@@ -1,3 +1,4 @@
+! NOT TESTED OR FULLY IMPLEMENTED
 MODULE Coulomb_ReactionFieldMod
     use precisionMod
     use constantsMod

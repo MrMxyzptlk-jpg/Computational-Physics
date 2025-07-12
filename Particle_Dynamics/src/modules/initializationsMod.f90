@@ -16,6 +16,7 @@ MODULE initializationsMod
     abstract interface
         subroutine init_pos()
         end subroutine init_pos
+
         subroutine pairCorr_sub(positions, pair_corr)
             use precisionMod
             real(pr), intent(in)        :: positions(:,:)
@@ -390,6 +391,32 @@ subroutine init_velocities()
     end select
 end subroutine init_velocities
 
+subroutine init_internal_constants()
+
+    if (interactions == "Coulomb") then
+        if (.not. allocated(charges)) then; allocate(charges(num_atoms)); charges = 1._pr; end if
+    end if
+
+    if (integrator == 'Brownian') then
+        if ((viscosity == 0._pr) .and. (reduced_viscosity == 0._pr)) then
+            print*, "No viscosity of reduced viscosity specified. Setting reduced_viscosity = 1"
+            reduced_viscosity = 1._pr
+        else if (viscosity/=0._pr) then
+            reduced_viscosity = 3._pr*pi*viscosity * sigma      ! 3πησ product
+        else if(reduced_viscosity/=0._pr) then
+            viscosity = 3._pr*pi * sigma / reduced_viscosity    ! 3πησ product
+        end if
+
+        diffusion_coeff = ref_Temp / reduced_viscosity          ! D₀ = k_B T / (3πησ)
+        reduced_viscosity_inv = 1._pr / reduced_viscosity       ! 1 / (3πησ)
+        brownian_stddev = sqrt(2.0_pr * diffusion_coeff * dt)
+    end if
+
+    Temp_factor = 2.0_pr / (3.0_pr * real(num_atoms,pr))
+    Pressure_factor = 1._pr / (3._pr * volume)
+
+end subroutine init_internal_constants
+
 subroutine init_Ewald()
     real(pr)    :: kr_sqr
     integer     :: kx, ky, kz, k_sqr
@@ -422,32 +449,19 @@ subroutine init_Ewald()
 
 end subroutine init_Ewald
 
-subroutine init_internal_constants()
+subroutine init_MonteCarlo()
+    integer     :: i
 
-    if (interactions == "Coulomb") then
-        if (.not. allocated(charges)) then; allocate(charges(num_atoms)); charges = 1._pr; end if
-        if (summation == "Ewald") call init_Ewald()
-    end if
+    allocate(previous_E_potential(num_atoms))
+    previous_E_potential = 0._pr
 
-    if (integrator == 'Brownian') then
-        if ((viscosity == 0._pr) .and. (reduced_viscosity == 0._pr)) then
-            print*, "No viscosity of reduced viscosity specified. Setting reduced_viscosity = 1"
-            reduced_viscosity = 1._pr
-        else if (viscosity/=0._pr) then
-            reduced_viscosity = 3._pr*pi*viscosity * sigma      ! 3πησ product
-        else if(reduced_viscosity/=0._pr) then
-            viscosity = 3._pr*pi * sigma / reduced_viscosity    ! 3πησ product
-        end if
+    do i = 1, num_atoms
+        call get_E_potential_contribution(i, previous_E_potential(i))
+    end do
 
-        diffusion_coeff = ref_Temp / reduced_viscosity          ! D₀ = k_B T / (3πησ)
-        reduced_viscosity_inv = 1._pr / reduced_viscosity       ! 1 / (3πησ)
-        brownian_stddev = sqrt(2.0_pr * diffusion_coeff * dt)
-    end if
+    previous_E_potential = previous_E_potential * 0.5_pr    ! Avoid double-counting
 
-    Temp_factor = 2.0_pr / (3.0_pr * real(num_atoms,pr))
-    Pressure_factor = 1._pr / (3._pr * volume)
-
-end subroutine init_internal_constants
+end subroutine init_MonteCarlo
 
 !##################################################################################################
 !     Not used / Not implemented

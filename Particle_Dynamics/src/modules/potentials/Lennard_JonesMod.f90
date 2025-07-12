@@ -7,7 +7,7 @@ MODULE Lennard_JonesMod
 
 CONTAINS
 
-function Lennard_Jones_potential(particle_distance_sqr) ! Lennard-Jones potential
+function Lennard_Jones_potential(particle_distance_sqr)
     real(pr), intent(in)   :: particle_distance_sqr
     real(pr)               :: Lennard_Jones_potential
     real(pr)               :: r2inv, r6inv
