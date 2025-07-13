@@ -4,6 +4,7 @@ MODULE potentialsMod
     use Coulomb_EwaldMod
     use Coulomb_ReactionFieldMod   ! Not fully implemented yet
     use potentialContributionMod
+    use potentialPointersMod
     implicit none
 
 END MODULE potentialsMod

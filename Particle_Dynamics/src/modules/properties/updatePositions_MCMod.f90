@@ -6,9 +6,8 @@ MODULE updatePositions_MCMod
     implicit none
 CONTAINS
 
-subroutine update_positions_MC(E_potential, N_accepted)
+subroutine update_positions_MC(E_potential)
     real(pr), intent(inout)                 :: E_potential
-    integer, intent(inout)                  :: N_accepted
     real(pr)                                :: random_displacement(3)
     real(pr)                                :: old_position(3), E_potential_new, dE
     integer                                 :: random_particle_id, i, j
@@ -32,18 +31,20 @@ subroutine update_positions_MC(E_potential, N_accepted)
 
         ! Metropolis criterion
         if (dE <= 0._pr ) then
-            if (measure .and. save_observables) E_potential = E_potential_new
-            N_accepted = N_accepted + 1
+            previous_E_potential(j) = E_potential_new
+            MC_accepted = MC_accepted + 1
             return
         else if ( rmzran() < exp(-dE / ref_Temp)) then
-            if (measure .and. save_observables) E_potential = E_potential_new
-            N_accepted = N_accepted + 1
+            previous_E_potential(j) = E_potential_new
+            MC_accepted = MC_accepted + 1
             return
         else
             ! Revert move if trial not accepted
             positions(:,random_particle_id) = old_position
         end if
     end do
+
+    if (measure .and. save_observables) E_potential = sum(previous_E_potential)
 
 end subroutine update_positions_MC
 

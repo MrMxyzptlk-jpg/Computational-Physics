@@ -25,7 +25,7 @@ subroutine get_force_contribution(index1, index2, force_contribution, E_potentia
     particle_distance_sqr = sum(particle_separation*particle_separation)
 
     if (particle_distance_sqr <= radius_cutoff_squared) then
-        call potential(particle_distance_sqr, particle_separation, force_contribution, E_potential &
+        call potential(index1, index2, particle_distance_sqr, particle_separation, force_contribution, E_potential &
             , pressure_virial, potential_cutoff)
     endif
 

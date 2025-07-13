@@ -8,7 +8,8 @@ MODULE Coulomb_ReactionFieldMod
 
 CONTAINS
 
-function reaction_field_potential(particle_distance_sqr) ! Coulomb potential with reaction field approximation
+function reaction_field_potential(index1, index2, particle_distance_sqr) ! Coulomb potential with reaction field approximation
+    integer, intent(in)    :: index1, index2
     real(pr), intent(in)   :: particle_distance_sqr
     real(pr)               :: reaction_field_potential
 
@@ -16,12 +17,13 @@ function reaction_field_potential(particle_distance_sqr) ! Coulomb potential wit
 
 end function reaction_field_potential
 
-subroutine reaction_field(particle_distance_sqr, particle_separation, force_contribution, E_potential, pressure_virial &
-    , potential_cutoff)
-    real(pr), intent(in)       :: particle_distance_sqr, particle_separation(3)
-    real(pr), intent(out)      :: force_contribution(3)
-    real(pr), intent(inout)    :: E_potential, pressure_virial
-    real(pr), intent(in)       :: potential_cutoff
+subroutine reaction_field(index1, index2, particle_distance_sqr, particle_separation, force_contribution, E_potential &
+    , pressure_virial, potential_cutoff)
+    integer, intent(in)     :: index1, index2
+    real(pr), intent(in)    :: particle_distance_sqr, particle_separation(3)
+    real(pr), intent(out)   :: force_contribution(3)
+    real(pr), intent(inout) :: E_potential, pressure_virial
+    real(pr), intent(in)    :: potential_cutoff
 
     real(pr) :: particle_distance, particle_distance_cubed
     real(pr) :: radius_cutoff, radius_cutoff_cubed

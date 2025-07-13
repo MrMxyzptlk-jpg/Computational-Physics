@@ -40,7 +40,7 @@
     sigma        = 1.4                  ! In Bohr
     delta      = 1                    ! In hartree
     kgrid        = 10,10,10             ! Reciprocal space grid
-    MC_adjust_step  = 10
+    MC_adjust_step  = 100
     MC_delta        = 1
 /
 

@@ -87,24 +87,4 @@ MODULE variablesMod
     ! Brownian Dynamics specific variables and internal variables
     real(pr)                :: diffusion_coeff, brownian_stddev  ! Internal variables
 
-    ! Potentials' pointers
-    procedure(pot), pointer      :: potential => null()
-    procedure(pot_func), pointer :: potential_function => null()
-
-    abstract interface ! Intended to allow for the implementation of a different potential later on
-        subroutine pot(particle_distance_squared, particle_separation, force_contribution, E_potential, pressure_virial &
-            , potential_cutoff)
-            use precisionMod
-            real(pr), intent(in)               :: particle_distance_squared, particle_separation(3)
-            real(pr), intent(out)              :: force_contribution(3)
-            real(pr), intent(inout)            :: E_potential, pressure_virial
-            real(pr), intent(in)               :: potential_cutoff
-        end subroutine pot
-        function pot_func(particle_distance_squared)
-            use precisionMod
-            real(pr), intent(in)    :: particle_distance_squared
-            real(pr)                :: pot_func
-        end function pot_func
-    end interface
-
 END MODULE variablesMod

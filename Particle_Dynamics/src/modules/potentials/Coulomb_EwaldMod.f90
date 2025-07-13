@@ -11,17 +11,37 @@ MODULE Coulomb_EwaldMod
 
 CONTAINS
 
-subroutine Coulomb_Ewald_realSpace(particle_distance_sqr, particle_separation, force_contribution, E_potential, pressure_virial&
-    , potential_cutoff) ! Coulomb potential contribution from the reference cell in the lattice
-    real(pr), intent(in)        :: particle_distance_sqr, particle_separation(3)
-    real(pr), intent(out)       :: force_contribution(3)
-    real(pr), intent(inout)     :: E_potential, pressure_virial
-    real(pr), intent(in)        :: potential_cutoff  ! Irrelevant in Ewald summation, but needed for the interface
-    real(pr)                    :: force_magnitude, particle_distance, term1, term2
+function Coulomb_realSpace(index1, index2, particle_distance_sqr)
+    real(pr), intent(in)   :: particle_distance_sqr
+    integer, intent(in)    :: index1, index2
+    real(pr)               :: Coulomb_realSpace
+    real(pr)               :: particle_distance, term1
 
     particle_distance = sqrt(particle_distance_sqr)
 
-    term1 = ERFC(particle_distance/sigma) / particle_distance ! Screened Coulomb term
+    Coulomb_realSpace =  ERFC(particle_distance/sigma) * charges(index1) * charges(index2) / particle_distance ! Screened Coulomb term
+
+end function Coulomb_realSpace
+
+function Coulomb_reciprocalSpace(index1, index2)
+    integer, intent(in)     :: index1, index2
+    real(pr)                :: Coulomb_reciprocalSpace
+
+
+end function Coulomb_reciprocalSpace
+
+subroutine Coulomb_Ewald_realSpace(index1, index2, particle_distance_sqr, particle_separation, force_contribution, E_potential &
+    , pressure_virial, potential_cutoff) ! Coulomb potential contribution from the reference cell in the lattice
+    real(pr), intent(in)    :: particle_distance_sqr, particle_separation(3)
+    integer, intent(in)     :: index1, index2
+    real(pr), intent(out)   :: force_contribution(3)
+    real(pr), intent(inout) :: E_potential, pressure_virial
+    real(pr), intent(in)    :: potential_cutoff  ! Irrelevant in Ewald summation, but needed for the interface
+    real(pr)                :: force_magnitude, particle_distance, term1, term2
+
+    particle_distance = sqrt(particle_distance_sqr)
+
+    term1 = ERFC(particle_distance/sigma) * charges(index1) * charges(index2)/ particle_distance ! Screened Coulomb term
     term2 = Ewald_realFactor*exp(-particle_distance_sqr/sigma_sqr)
 
     force_magnitude = term1 + term2

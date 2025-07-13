@@ -39,6 +39,7 @@ SRC =  	parameters/precisionMod.f90 \
         variablesMod.f90 \
         properties/propertiesDeclarationMod.f90 \
         subroutinesMod.f90 \
+        potentials/potentialPointersMod.f90 \
         potentials/potentialContributionMod.f90 \
         potentials/Lennard_JonesMod.f90 \
         potentials/Coulomb_EwaldMod.f90 \
@@ -57,8 +58,8 @@ SRC =  	parameters/precisionMod.f90 \
         properties/updatePositions_BDMod.f90 \
         properties/updateVelocities_velVerletMod.f90 \
         properties/updatePositionsMod.f90 \
-		parsing/checkParsingMod.f90 \
 		parsing/get_parsed_valueMod.f90 \
+		parsing/checkParsingMod.f90 \
         parsing/parsingMod.f90 \
         forces/forces_contributionMod.f90 \
         forces/forces_EwaldMod.f90 \

@@ -63,7 +63,7 @@ subroutine set_defaults()
         sigma   = 1._pr
         delta = 1._pr
         kgrid   = (/5, 5, 5/)
-        MC_adjust_step  = 50
+        MC_adjust_step  = 500
         MC_delta        = 0.01
 
         ! Thermostat parameters

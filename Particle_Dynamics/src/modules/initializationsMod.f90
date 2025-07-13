@@ -71,7 +71,7 @@ subroutine init_variables()
     dtdt = dt*dt
     radius_cutoff_squared = radius_cutoff*radius_cutoff
 
-    if (interactions == "lannard_jones") potential_cutoff = potential_function(radius_cutoff_squared)
+    if (interactions == "lannard_jones") potential_cutoff = potential_function(0, 0, radius_cutoff_squared) ! the first two arguments are there in case we want to implement non-equivalent particles latter on
 
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
 
@@ -96,6 +96,8 @@ subroutine init_potential()
         case ("Coulomb")
             sigma_sqr  = sigma*sigma
             potential =>  Coulomb_Ewald_realSpace
+            potential_function =>  Coulomb_realSpace
+            potential_function_reciprocal =>  Coulomb_reciprocalSpace
         case ("reaction_field")
             potential =>  reaction_field
             potential_function => reaction_field_potential
@@ -151,6 +153,11 @@ subroutine init_integrator()
             integrator_step => velVerlet_step
         case("Monte-Carlo")
             integrator_step => MC_step
+            if (summation == "Ewald") then
+                get_E_potential_contribution => get_E_potential_contribution_Ewald
+            else
+                get_E_potential_contribution => get_E_potential_contribution_normal
+            end if
         case("Brownian")
             integrator_step => Brownian_step
     end select
@@ -453,13 +460,10 @@ subroutine init_MonteCarlo()
     integer     :: i
 
     allocate(previous_E_potential(num_atoms))
-    previous_E_potential = 0._pr
 
     do i = 1, num_atoms
         call get_E_potential_contribution(i, previous_E_potential(i))
     end do
-
-    previous_E_potential = previous_E_potential * 0.5_pr    ! Avoid double-counting
 
 end subroutine init_MonteCarlo
 
