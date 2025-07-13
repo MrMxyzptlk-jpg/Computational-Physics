@@ -11,22 +11,59 @@ MODULE Coulomb_EwaldMod
 
 CONTAINS
 
-function Coulomb_realSpace(index1, index2, particle_distance_sqr)
+function Coulomb_realSpace(index1, index2, particle_distance_sqr) result(E_potential)
     real(pr), intent(in)   :: particle_distance_sqr
     integer, intent(in)    :: index1, index2
-    real(pr)               :: Coulomb_realSpace
-    real(pr)               :: particle_distance, term1
+    real(pr)               :: E_potential
+    real(pr)               :: particle_distance
 
     particle_distance = sqrt(particle_distance_sqr)
 
-    Coulomb_realSpace =  ERFC(particle_distance/sigma) * charges(index1) * charges(index2) / particle_distance ! Screened Coulomb term
+    E_potential =  ERFC(particle_distance/sigma) * charges(index1) * charges(index2) / particle_distance ! Screened Coulomb term
 
 end function Coulomb_realSpace
 
-function Coulomb_reciprocalSpace(index1, index2)
-    integer, intent(in)     :: index1, index2
-    real(pr)                :: Coulomb_reciprocalSpace
+function Coulomb_reciprocalSpace() result(E_potential)
+    real(pr)            :: E_potential
+    integer             :: kx, ky, kz, k_sqr, i
+    real(pr)            :: factor, kvec_real(3)
+    complex(pr)         :: eikx(        0:kgrid(1), num_atoms)
+    complex(pr)         :: eiky(-kgrid(2):kgrid(2), num_atoms)
+    complex(pr)         :: eikz(-kgrid(3):kgrid(3), num_atoms)
+    complex(pr)         :: reciprocal_charge, exp_k
+    logical             :: good_kvec
 
+    call get_exponential_factors(eikx, eiky, eikz)
+
+    E_potential = 0.0_pr
+
+    !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charge, k_sqr, factor) &
+    !$omp shared(positions, num_atoms, eikx, eiky, eikz, kfac, charges, kgrid) &
+    !$omp reduction(+: E_potential)
+
+    !$omp do schedule(dynamic)
+    do kx = 0, kgrid(1)
+        if (kx == 0) then
+            factor = 1.0_pr ! No reflection with respect to y-z plane
+        else
+            factor = 2.0_pr ! Reflection symmetry with respect to y-z plane
+        end if
+        ! The same symmetries can be used but might be less efficient (see commented subroutine at the end of this module)
+        do ky = -kgrid(2), kgrid(2)
+            do kz = -kgrid(3), kgrid(3)
+                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                if (good_kvec) then
+                    reciprocal_charge = sum(charges(:)*eikx(kx,:)*eiky(ky,:)*eikz(kz,:))
+                    E_potential  = E_potential + factor * kfac(k_sqr) * real(reciprocal_charge*conjg(reciprocal_charge))
+                end if
+            end do
+        end do
+    end do
+    !$omp end do
+
+    !$omp end parallel
+
+    E_potential = E_potential - Ewald_selfTerm
 
 end function Coulomb_reciprocalSpace
 
@@ -49,7 +86,6 @@ subroutine Coulomb_Ewald_realSpace(index1, index2, particle_distance_sqr, partic
 
     if (measure .and. save_observables) then
         E_potential = E_potential + term1
-    !        pressure_virial = pressure_virial + Pressure_factor*particle_distance_sqr*force_magnitude
     end if
 
 end subroutine Coulomb_Ewald_realSpace
@@ -71,7 +107,7 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
     force_contribution = 0._pr
 
     !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charge, exp_k, k_sqr, factor, kvec_real) &
-    !$omp shared(positions, num_atoms, eikx, eiky, eikz) &
+    !$omp shared(positions, num_atoms, eikx, eiky, eikz, kgrid, measure, save_observables, kfac, charges, k_periodicity) &
     !$omp reduction(+: force_contribution, E_potential)
 
     !$omp do schedule(dynamic)

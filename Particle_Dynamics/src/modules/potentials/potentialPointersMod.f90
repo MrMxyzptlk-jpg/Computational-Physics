@@ -26,9 +26,8 @@ MODULE potentialPointersMod
             real(pr)                :: pot_func
         end function pot_func
 
-        function pot_func_recip(index1, index2)
+        function pot_func_recip()
             use precisionMod
-            integer, intent(in)     :: index1, index2
             real(pr)                :: pot_func_recip
         end function pot_func_recip
 

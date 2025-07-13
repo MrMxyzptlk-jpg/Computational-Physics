@@ -45,7 +45,7 @@ subroutine get_E_potential_contribution_Ewald(random_particle_id, dE) ! For MC i
         end if
     end do
 
-    dE = dE + potential_function_reciprocal(random_particle_id, i)
+    dE = dE + potential_function_reciprocal()/num_atoms
 
 end subroutine get_E_potential_contribution_Ewald
 

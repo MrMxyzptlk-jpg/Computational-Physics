@@ -200,7 +200,7 @@ subroutine check_parsed_approximation()
         if (MC_delta <= 0._pr)   STOP "ERROR: MC_delta <= 0._pr"
     end if
 
-    if  ((integrator == 'velocity-Verlet') .and. (interactions == 'Coulomb') .and. (summation /= 'Ewald')) then
+    if  ((interactions == 'Coulomb') .and. (summation /= 'Ewald')) then
         print*, "WARNING: unavailable summation for Coulomb interactions. Switching to 'Ewald' summation"
         summation = 'Ewald'
     end if
