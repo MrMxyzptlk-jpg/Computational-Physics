@@ -31,9 +31,10 @@ MODULE potentialPointersMod
             real(pr)                :: pot_func_recip
         end function pot_func_recip
 
-        subroutine pot_contrib(random_particle_id, dE)
+        subroutine pot_contrib(random_particle_id, proposed_position, dE)
             use precisionMod
             integer, intent(in)     :: random_particle_id
+            real(pr), intent(in)    :: proposed_position(3)
             real(pr), intent(out)   :: dE
         end subroutine pot_contrib
     end interface

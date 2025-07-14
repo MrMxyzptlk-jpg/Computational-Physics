@@ -196,7 +196,8 @@ subroutine check_parsed_approximation()
     if (delta <= 0._pr)   STOP "ERROR: delta <= 0._pr"
 
     if (integrator == 'Monte-Carlo') then
-        if (MC_adjust_step <= 0) STOP "ERROR: MC_adjust_step <= 0"
+        if (MC_acceptance_rate <= 0) STOP "ERROR: MC_acceptance_rate <= 0"
+        if (MC_acceptance_rate >= 1) STOP "ERROR: MC_acceptance_rate >= 1"
         if (MC_delta <= 0._pr)   STOP "ERROR: MC_delta <= 0._pr"
     end if
 

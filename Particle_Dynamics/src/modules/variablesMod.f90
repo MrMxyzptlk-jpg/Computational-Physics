@@ -47,7 +47,7 @@ MODULE variablesMod
     character (len=15)      :: integrator, interactions
     real(pr)                :: sigma, delta   ! Variables for the potential defining the interactions
     integer                 :: kgrid(3)         ! Partition of reciprocal space ('Ewald' summation)
-    integer(int_large)      :: MC_adjust_step   ! ('Monte-Carlo' integrator)
+    real(pr)                :: MC_acceptance_rate   ! ('Monte-Carlo' integrator)
     real(pr)                :: MC_delta         ! ('Monte-Carlo' integrator)
 
     ! Internal (Ewald summation)
@@ -65,6 +65,8 @@ MODULE variablesMod
     ! Parsed
     character (len=12)      :: thermostat_type
     real(pr)                :: Berendsen_time
+
+    ! Internal
     integer(int_large)      :: MC_accepted
 
 !######### MSD variables #####################

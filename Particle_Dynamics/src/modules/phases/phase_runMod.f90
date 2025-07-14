@@ -4,7 +4,6 @@ MODULE phase_runMod
     use propertiesMod
     use measurementsMod
     use writing2filesMod
-    use omp_lib
     use integratorsMod, only : integrator_step
     implicit none
 

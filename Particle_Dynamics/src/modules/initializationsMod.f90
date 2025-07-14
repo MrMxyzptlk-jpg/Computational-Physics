@@ -71,7 +71,10 @@ subroutine init_variables()
     dtdt = dt*dt
     radius_cutoff_squared = radius_cutoff*radius_cutoff
 
-    if (interactions == "lannard_jones") potential_cutoff = potential_function(0, 0, radius_cutoff_squared) ! the first two arguments are there in case we want to implement non-equivalent particles latter on
+    if (interactions == "lannard_jones") then
+        potential_cutoff = 0._pr    ! Must be initialized as 0 because it will be used in the potential_function()
+        potential_cutoff = potential_function(0, 0, radius_cutoff_squared) ! the first two arguments are there in case we want to implement non-equivalent particles latter on
+    end if
 
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
 
@@ -459,11 +462,6 @@ end subroutine init_Ewald
 subroutine init_MonteCarlo()
     integer     :: i
 
-    allocate(previous_E_potential(num_atoms))
-
-    do i = 1, num_atoms
-        call get_E_potential_contribution(i, previous_E_potential(i))
-    end do
 
 end subroutine init_MonteCarlo
 

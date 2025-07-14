@@ -23,7 +23,7 @@ function Coulomb_realSpace(index1, index2, particle_distance_sqr) result(E_poten
 
 end function Coulomb_realSpace
 
-function Coulomb_reciprocalSpace() result(E_potential)
+function Coulomb_reciprocalSpace() result(E_potential)  !! Can be made more efficient
     real(pr)            :: E_potential
     integer             :: kx, ky, kz, k_sqr, i
     real(pr)            :: factor, kvec_real(3)

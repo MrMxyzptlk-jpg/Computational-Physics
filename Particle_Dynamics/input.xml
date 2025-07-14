@@ -37,13 +37,13 @@
 />
 
 <approximation
-    integrator      = "velocity-Verlet"
+    integrator      = "Monte-Carlo"
     interactions    = "Coulomb"
     sigma           = "0.5"
     delta           = "1"
-    kgrid           = "10 10 10"
-    MC_adjust_step  = "100"
-    MC_delta        = "1"
+    kgrid           = "6 6 6"
+    MC_acceptance_rate  = "0.5"
+    MC_delta        = "0.1"
 />
 
 <thermostat

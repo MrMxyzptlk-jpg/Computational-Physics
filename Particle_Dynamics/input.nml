@@ -11,7 +11,7 @@
 /
 
 &calculation
-    state              = 'fromFile'  ! Options: 'fromScratch', 'fromFile'
+    state              = 'fromScratch'  ! Options: 'fromScratch', 'fromFile'
     dt                 = 0.005          ! In units of [ℏ/Eh = tₐ]
     real_steps         = 1000
     transitory_steps   = 1000
@@ -35,12 +35,12 @@
 /
 
 &approximation
-    integrator   = 'velocity-Verlet'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
-    interactions = 'Coulomb'            ! Options: 'lennard_jones', 'Coulomb'
-    sigma        = 1.4                  ! In Bohr
+    integrator   = 'Monte-Carlo'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
+    interactions = 'lennard_jones'          ! Options: 'lennard_jones', 'Coulomb'
+    sigma        = 1                  ! In Bohr
     delta      = 1                    ! In hartree
     kgrid        = 10,10,10             ! Reciprocal space grid
-    MC_adjust_step  = 100
+    MC_acceptance_rate  = 0.5
     MC_delta        = 1
 /
 

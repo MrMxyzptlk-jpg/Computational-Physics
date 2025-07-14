@@ -8,43 +8,34 @@ CONTAINS
 
 subroutine update_positions_MC(E_potential)
     real(pr), intent(inout)                 :: E_potential
-    real(pr)                                :: random_displacement(3)
-    real(pr)                                :: old_position(3), E_potential_new, dE
+    real(pr)                                :: proposed_position(3), E_potential_new, E_potential_old, dE
     integer                                 :: random_particle_id, i, j
 
     do j = 1, num_atoms
         ! Pick a random particle
         random_particle_id = int(rmzran()*num_atoms) + 1
-        old_position = positions(:,random_particle_id)
 
         ! Propose a displacement
-        random_displacement = (/(MC_delta*(rmzran() - 0.5d0), i = 1, 3)/)
-        positions(:,random_particle_id) = old_position + random_displacement
+        proposed_position = positions(:,random_particle_id) + (/(MC_delta*(rmzran() - 0.5_pr), i = 1, 3)/)
 
         ! Apply periodic boundary conditions
-        positions(:,random_particle_id) = modulo(positions(:,random_particle_id), periodicity(:))
+        proposed_position = modulo(proposed_position, periodicity(:))
 
-        ! Compute new potential energy contribution
-        call get_E_potential_contribution(random_particle_id, E_potential_new)
-
-        dE = E_potential_new - previous_E_potential(j)
+        ! Compute potential energy contribution (E_new - E_old)
+        call get_E_potential_contribution(random_particle_id, proposed_position, dE)
 
         ! Metropolis criterion
         if (dE <= 0._pr ) then
-            previous_E_potential(j) = E_potential_new
+            if (measure .and. save_observables) E_potential = E_potential + dE
             MC_accepted = MC_accepted + 1
-            return
+            positions(:,random_particle_id) = proposed_position
         else if ( rmzran() < exp(-dE / ref_Temp)) then
-            previous_E_potential(j) = E_potential_new
+            if (measure .and. save_observables) E_potential = E_potential + dE
             MC_accepted = MC_accepted + 1
-            return
-        else
-            ! Revert move if trial not accepted
-            positions(:,random_particle_id) = old_position
+            positions(:,random_particle_id) = proposed_position
         end if
     end do
 
-    if (measure .and. save_observables) E_potential = sum(previous_E_potential)
 
 end subroutine update_positions_MC
 

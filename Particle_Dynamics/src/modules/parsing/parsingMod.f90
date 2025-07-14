@@ -16,7 +16,7 @@ MODULE parsingMod
         , measuring_jump, initial_velocities, state
     namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
         , do_structure_factor, Miller_index, save_state
-    namelist /approximation/ integrator, interactions, sigma, delta, kgrid, MC_adjust_step, MC_delta
+    namelist /approximation/ integrator, interactions, sigma, delta, kgrid, MC_acceptance_rate, MC_delta
     namelist /thermostat/ thermostat_type, Berendsen_time
     namelist /MSD/ max_correlation
     namelist /pair_correlation/pair_corr_cutoff, pair_corr_bins
@@ -63,7 +63,7 @@ subroutine set_defaults()
         sigma   = 1._pr
         delta = 1._pr
         kgrid   = (/5, 5, 5/)
-        MC_adjust_step  = 500
+        MC_acceptance_rate  = 0.5
         MC_delta        = 0.01
 
         ! Thermostat parameters
@@ -163,7 +163,7 @@ subroutine parse_inputXML()
     call get_parsed_value(inputNode, "sigma", sigma)
     call get_parsed_value(inputNode, "delta", delta)
     call get_parsed_value(inputNode, "kgrid", kgrid)
-    call get_parsed_value(inputNode, "MC_adjust_step", MC_adjust_step)
+    call get_parsed_value(inputNode, "MC_acceptance_rate", MC_acceptance_rate)
     call get_parsed_value(inputNode, "MC_delta", MC_delta)
 
     !####### THERMOSTAT node #######
