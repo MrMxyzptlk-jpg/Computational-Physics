@@ -447,6 +447,11 @@ subroutine init_Ewald()
     k_sqr_max = product(kgrid)
     allocate(kfac(k_sqr_max))
 
+
+    !$omp parallel private(kx, ky, kz, good_kvec, k_sqr) &
+    !$omp shared(kgrid, charges, volume, halfSigma_sqr, kr_sqr)
+
+    !$omp do schedule(dynamic)
     do kx = 0, kgrid(1)
         do ky = 0, kgrid(2)
             do kz = 0, kgrid(3)
@@ -458,6 +463,9 @@ subroutine init_Ewald()
             end do
         end do
     end do
+    !$omp end do
+
+    !$omp end parallel
 
 end subroutine init_Ewald
 

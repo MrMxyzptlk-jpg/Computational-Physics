@@ -20,6 +20,11 @@ subroutine get_E_potential_contribution_normal(random_particle_id, proposed_posi
     E_potential_old = 0._pr
     E_potential_new = 0._pr
 
+    !$omp parallel private(particle_distance_sqr, i) &
+    !$omp shared(random_particle_id, num_atoms, positions, radius_cutoff_squared, proposed_position) &
+    !$omp reduction(+: E_potential_old, E_potential_new)
+
+    !$omp do schedule(dynamic)
     do i = 1, num_atoms
         if (i /= random_particle_id) then
             call get_distance_squared(positions(:,random_particle_id), positions(:,i), particle_distance_sqr)
@@ -32,6 +37,9 @@ subroutine get_E_potential_contribution_normal(random_particle_id, proposed_posi
             end if
         end if
     end do
+    !$omp end do
+
+    !$omp end parallel
 
     dE = E_potential_new - E_potential_old
 
@@ -44,6 +52,15 @@ subroutine get_E_potential_contribution_Ewald(random_particle_id, proposed_posit
     real(pr)                :: particle_distance_sqr, E_potential_new, E_potential_old
     integer                 :: i
 
+
+    E_potential_old = 0._pr
+    E_potential_new = 0._pr
+
+    !$omp parallel private(particle_distance_sqr, i) &
+    !$omp shared(random_particle_id, num_atoms, positions, radius_cutoff_squared, proposed_position) &
+    !$omp reduction(+: E_potential_old, E_potential_new)
+
+    !$omp do schedule(dynamic)
     do i = 1, num_atoms
         if (i /= random_particle_id) then
             call get_distance_squared(positions(:,random_particle_id), positions(:,i), particle_distance_sqr)
@@ -56,6 +73,9 @@ subroutine get_E_potential_contribution_Ewald(random_particle_id, proposed_posit
             end if
         end if
     end do
+    !$omp end do
+
+    !$omp end parallel
 
     dE = E_potential_new - E_potential_old
 
