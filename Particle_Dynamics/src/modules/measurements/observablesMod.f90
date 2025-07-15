@@ -20,7 +20,7 @@ subroutine get_observables(velocities, E_kinetic, Pressure, Temperature)
         Temperature = Temp_factor*E_kinetic
         Pressure = density*Temperature + Pressure*Pressure_factor
     else
-        Pressure = Pressure*Pressure_factor
+        Pressure = density*ref_Temp + Pressure*Pressure_factor
     end if
 
 end subroutine get_observables

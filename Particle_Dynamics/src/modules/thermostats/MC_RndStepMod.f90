@@ -12,6 +12,9 @@ subroutine update_random_step()
     else
         MC_delta = MC_delta*0.95_pr
     endif
+
+    MC_delta = min(MC_delta, 0.5_pr*sigma)
+    if (MC_delta==0.5_pr*sigma) print *, "WARNING: MC_delta reached cap value sigma/2"
     print*, "MC_delta = ", MC_delta, "  Accepted ratio = ", real(MC_accepted,pr)/real(num_atoms*thermostat_steps,pr) &
         ,"  Accepted trials = ", MC_accepted
     MC_accepted = 0

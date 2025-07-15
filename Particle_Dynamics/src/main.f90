@@ -1,9 +1,9 @@
 
 !***************************************************************
 ! Program: ex1.f90
-! Purpose:
+! Purpose: simple simulation of particles interacting by Lennard-Jones or Coulomb potential.
 !
-! Description:
+! Description: Available 'integrators': velocity-Verlet, Monte-Carlo and Brownian. See further details in README.md
 !
 ! Input: All parameters are in ATOMIC UNITS. The program adimensionalized the problem in order to calculate, and re-dimnesionalizes the values when writing to files.
 !
@@ -12,7 +12,7 @@
 !
 !
 !
-! Room for improvement:  further modularization for comprehension and ease of use should be done in the 'subrutinas' modue. That is, to subdivide it into smaller modules in the 'modulos' folder. Also, the get_measurements() should be moved to observablesMod but requires too many modifications.
+! Room for improvement: The Ewald implementation of the reciprocal space sum could be improved by having linked lists that index all good reciprocal vectors, thus reducing the sizes of all reciprocal arrays like eikx, eiky, eikz (after joining them into 1 array), kfac and reciprocal_charges.
 !
 ! Author: Jerónimo Noé Acito Pino
 !***************************************************************

@@ -99,7 +99,7 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
     complex(pr)             :: reciprocal_charge, exp_k
     logical                 :: good_kvec
 
-    call get_exponential_factors(eikx, eiky, eikz)
+    call get_all_expFactors(eikx, eiky, eikz)
 
     E_potential = 0.0_pr
     force_contribution = 0._pr
@@ -142,7 +142,38 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
 
 end subroutine Coulomb_Ewald_reciprocalSpace
 
-subroutine get_exponential_factors(eikx, eiky, eikz)
+subroutine update_Ewald(index, proposed_position)
+    integer, intent(in)     :: index
+    real(pr), intent(in)    :: proposed_position(3)
+    real(pr)                :: E_potential
+    integer                 :: kx, ky, kz, k_sqr, i
+    real(pr)                :: kvec_real(3)
+    complex(pr)             :: eikr_old(3), eikr_new(3)
+    complex(pr)             :: kCharge_variation
+    logical                 :: good_kvec
+
+    !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charges, kCharge_variation, k_sqr, eikr_old, eikr_new) &
+    !$omp shared(positions, num_atoms, kfac, charges, kgrid, proposed_position)
+
+    !$omp do schedule(dynamic)
+    do kx = 0, kgrid(1)
+       do ky = 0, kgrid(2)
+            do kz = 0, kgrid(3)
+                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                if (good_kvec) then
+                    eikr_old(:) = cmplx(cos(twoPi*positions(:,index)), sin(twoPi*positions(:,index)), pr)
+                    eikr_new(:) = cmplx(cos(twoPi*proposed_position(:)), sin(twoPi*proposed_position(:)), pr)
+                    reciprocal_charges(k_sqr) = reciprocal_charges(k_sqr) + charges(index) * (product(eikr_new) - product(eikr_old))
+                end if
+            end do
+        end do
+    end do
+    !$omp end do
+
+    !$omp end parallel
+end subroutine update_Ewald
+
+subroutine get_all_expFactors(eikx, eiky, eikz)
     complex(pr), intent(out)    :: eikx(        0:kgrid(1), num_atoms)
     complex(pr), intent(out)    :: eiky(-kgrid(2):kgrid(2), num_atoms)
     complex(pr), intent(out)    :: eikz(-kgrid(3):kgrid(3), num_atoms)
@@ -172,44 +203,35 @@ subroutine get_exponential_factors(eikx, eiky, eikz)
     eiky(-kgrid(2):-1,:) = conjg(eiky(kgrid(2):1:-1,:))
     eikz(-kgrid(3):-1,:) = conjg(eikz(kgrid(3):1:-1,:))
 
-end subroutine get_exponential_factors
+end subroutine get_all_expFactors
 
-subroutine update_Ewald(index, proposed_position)
-    integer, intent(in)     :: index
-    real(pr), intent(in)    :: proposed_position(3)
-    real(pr)                :: E_potential
-    integer                 :: kx, ky, kz, k_sqr, i
-    real(pr)                :: factor, kvec_real(3)
-    complex(pr)             :: eikr_old(3), eikr_new(3)
-    complex(pr)             :: kCharge_variation
-    logical                 :: good_kvec
+subroutine get_octant_expFactors(eikx, eiky, eikz)
+    complex(pr), intent(out)    :: eikx(0:kgrid(1), num_atoms)
+    complex(pr), intent(out)    :: eiky(0:kgrid(2), num_atoms)
+    complex(pr), intent(out)    :: eikz(0:kgrid(3), num_atoms)
+    integer                     :: i
 
-    !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charges, kCharge_variation, k_sqr, factor, eikr_old, eikr_new) &
-    !$omp shared(positions, num_atoms, kfac, charges, kgrid, proposed_position)
+    ! Calculate exponents with kx, ky, kz = {0, 1}
+    eikx(0,:) = (1.0_pr, 0.0_pr)
+    eiky(0,:) = (1.0_pr, 0.0_pr)
+    eikz(0,:) = (1.0_pr, 0.0_pr)
 
-    !$omp do schedule(dynamic)
-    do kx = 0, kgrid(1)
-        if (kx == 0) then
-            factor = 1.0_pr ! No reflection with respect to y-z plane
-        else
-            factor = 2.0_pr ! Reflection symmetry with respect to y-z plane
-        end if
-        ! The same symmetries can be used but might be less efficient (see commented subroutine at the end of this module)
-        do ky = -kgrid(2), kgrid(2)
-            do kz = -kgrid(3), kgrid(3)
-                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
-                if (good_kvec) then
-                    eikr_old(:) = cmplx(cos(twoPi*positions(:,index)), sin(twoPi*positions(:,index)), pr)
-                    eikr_new(:) = cmplx(cos(twoPi*proposed_position(:)), sin(twoPi*proposed_position(:)), pr)
-                    reciprocal_charges(k_sqr) = reciprocal_charges(k_sqr) + charges(index) * (product(eikr_new) - product(eikr_old))
-                end if
-            end do
-        end do
+    eikx(1,:) = cmplx(cos(twoPi*positions(1,:)), sin(twoPi*positions(1,:)), pr)
+    eiky(1,:) = cmplx(cos(twoPi*positions(2,:)), sin(twoPi*positions(2,:)), pr)
+    eikz(1,:) = cmplx(cos(twoPi*positions(3,:)), sin(twoPi*positions(3,:)), pr)
+
+    ! Use recursion to avoid the calculation of exponential by using multiplication instead
+    do i = 2, kgrid(1)
+        eikx(i,:) = eikx(i-1,:)*eikx(1,:)
     end do
-    !$omp end do
+    do i = 2, kgrid(2)
+        eiky(i,:) = eiky(i-1,:)*eiky(1,:)
+    end do
+    do i = 2, kgrid(3)
+        eikz(i,:) = eikz(i-1,:)*eikz(1,:)
+    end do
 
-    !$omp end parallel
-end subroutine update_Ewald
+end subroutine get_octant_expFactors
 
 !##################################################################################################
 !     Not used / Not implemented

@@ -32,7 +32,7 @@
     save_positions           = "true"
     do_pair_correlation      = "true"
     do_structure_factor      = "true"
-    do_mean_sqr_displacement = "false"
+    do_mean_sqr_displacement = "true"
     Miller_index             = "0 -1 0"
 />
 
