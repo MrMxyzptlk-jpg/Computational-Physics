@@ -56,6 +56,7 @@ MODULE variablesMod
     integer                 :: num_kvec         ! Number of allowed reciprocal vectors
     integer                 :: k_sqr_max        ! Maximum reciprocal vector length allowed
     real(pr), allocatable   :: kfac(:)          ! Factors appearing in 'Ewald' summation (avoid recalculation)
+    complex(pr), allocatable    :: reciprocal_charges(:)    ! Fourier transform of the periodic charge distribution (avoid recalculation in MC)
    ! type :: kvector_data       ! UNUSED
    !     real(pr)    :: k_squared, kvec(3),k_factor
    ! end type kvector_data

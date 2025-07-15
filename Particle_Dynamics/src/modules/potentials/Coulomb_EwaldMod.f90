@@ -7,7 +7,6 @@ MODULE Coulomb_EwaldMod
     implicit none
 
     public  Coulomb_Ewald_realSpace, Coulomb_Ewald_reciprocalSpace
-    private get_exponential_factors
 
 CONTAINS
 
@@ -23,22 +22,20 @@ function Coulomb_realSpace(index1, index2, particle_distance_sqr) result(E_poten
 
 end function Coulomb_realSpace
 
-function Coulomb_reciprocalSpace() result(E_potential)  !! Can be made more efficient
-    real(pr)            :: E_potential
-    integer             :: kx, ky, kz, k_sqr, i
-    real(pr)            :: factor, kvec_real(3)
-    complex(pr)         :: eikx(        0:kgrid(1), num_atoms)
-    complex(pr)         :: eiky(-kgrid(2):kgrid(2), num_atoms)
-    complex(pr)         :: eikz(-kgrid(3):kgrid(3), num_atoms)
-    complex(pr)         :: reciprocal_charge, exp_k
-    logical             :: good_kvec
-
-    call get_exponential_factors(eikx, eiky, eikz)
+function Coulomb_reciprocalSpace(index, proposed_position) result(E_potential)  !! Can be made more efficient
+    integer, intent(in)     :: index
+    real(pr), intent(in)    :: proposed_position(3)
+    real(pr)                :: E_potential
+    integer                 :: kx, ky, kz, k_sqr, i
+    real(pr)                :: factor, kvec_real(3)
+    complex(pr)             :: eikr_old(3), eikr_new(3)
+    complex(pr)             :: kCharge_variation
+    logical                 :: good_kvec
 
     E_potential = 0.0_pr
 
-    !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charge, k_sqr, factor) &
-    !$omp shared(positions, num_atoms, eikx, eiky, eikz, kfac, charges, kgrid) &
+    !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charges, kCharge_variation, k_sqr, factor, eikr_old, eikr_new) &
+    !$omp shared(positions, num_atoms, kfac, charges, kgrid, proposed_position) &
     !$omp reduction(+: E_potential)
 
     !$omp do schedule(dynamic)
@@ -53,8 +50,11 @@ function Coulomb_reciprocalSpace() result(E_potential)  !! Can be made more effi
             do kz = -kgrid(3), kgrid(3)
                 call check_kvec(kx, ky, kz, k_sqr, good_kvec)
                 if (good_kvec) then
-                    reciprocal_charge = sum(charges(:)*eikx(kx,:)*eiky(ky,:)*eikz(kz,:))
-                    E_potential  = E_potential + factor * kfac(k_sqr) * real(reciprocal_charge*conjg(reciprocal_charge))
+                    eikr_old(:) = cmplx(cos(twoPi*positions(:,index)), sin(twoPi*positions(:,index)), pr)
+                    eikr_new(:) = cmplx(cos(twoPi*proposed_position(:)), sin(twoPi*proposed_position(:)), pr)
+                    kCharge_variation = charges(index) * (product(eikr_new) - product(eikr_old))
+                    E_potential  = E_potential + factor * kfac(k_sqr) * ( real(kCharge_variation*conjg(kCharge_variation)) + &
+                        2._pr*real(reciprocal_charges(k_sqr)*conjg(kCharge_variation)) )
                 end if
             end do
         end do
@@ -62,8 +62,6 @@ function Coulomb_reciprocalSpace() result(E_potential)  !! Can be made more effi
     !$omp end do
 
     !$omp end parallel
-
-    E_potential = E_potential - Ewald_selfTerm
 
 end function Coulomb_reciprocalSpace
 
@@ -175,6 +173,43 @@ subroutine get_exponential_factors(eikx, eiky, eikz)
     eikz(-kgrid(3):-1,:) = conjg(eikz(kgrid(3):1:-1,:))
 
 end subroutine get_exponential_factors
+
+subroutine update_Ewald(index, proposed_position)
+    integer, intent(in)     :: index
+    real(pr), intent(in)    :: proposed_position(3)
+    real(pr)                :: E_potential
+    integer                 :: kx, ky, kz, k_sqr, i
+    real(pr)                :: factor, kvec_real(3)
+    complex(pr)             :: eikr_old(3), eikr_new(3)
+    complex(pr)             :: kCharge_variation
+    logical                 :: good_kvec
+
+    !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charges, kCharge_variation, k_sqr, factor, eikr_old, eikr_new) &
+    !$omp shared(positions, num_atoms, kfac, charges, kgrid, proposed_position)
+
+    !$omp do schedule(dynamic)
+    do kx = 0, kgrid(1)
+        if (kx == 0) then
+            factor = 1.0_pr ! No reflection with respect to y-z plane
+        else
+            factor = 2.0_pr ! Reflection symmetry with respect to y-z plane
+        end if
+        ! The same symmetries can be used but might be less efficient (see commented subroutine at the end of this module)
+        do ky = -kgrid(2), kgrid(2)
+            do kz = -kgrid(3), kgrid(3)
+                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                if (good_kvec) then
+                    eikr_old(:) = cmplx(cos(twoPi*positions(:,index)), sin(twoPi*positions(:,index)), pr)
+                    eikr_new(:) = cmplx(cos(twoPi*proposed_position(:)), sin(twoPi*proposed_position(:)), pr)
+                    reciprocal_charges(k_sqr) = reciprocal_charges(k_sqr) + charges(index) * (product(eikr_new) - product(eikr_old))
+                end if
+            end do
+        end do
+    end do
+    !$omp end do
+
+    !$omp end parallel
+end subroutine update_Ewald
 
 !##################################################################################################
 !     Not used / Not implemented

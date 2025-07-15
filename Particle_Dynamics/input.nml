@@ -35,10 +35,10 @@
 /
 
 &approximation
-    integrator   = 'Monte-Carlo'    ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
-    interactions = 'lennard_jones'          ! Options: 'lennard_jones', 'Coulomb'
-    sigma        = 1                  ! In Bohr
-    delta      = 1                    ! In hartree
+    integrator   = 'Monte-Carlo'        ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
+    interactions = 'lennard_jones'      ! Options: 'lennard_jones', 'Coulomb'
+    sigma        = 1                    ! In Bohr
+    delta        = 1                    ! In hartree
     kgrid        = 10,10,10             ! Reciprocal space grid
     MC_acceptance_rate  = 0.5
     MC_delta        = 1

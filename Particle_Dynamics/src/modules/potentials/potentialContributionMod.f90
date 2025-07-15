@@ -5,6 +5,7 @@ MODULE potentialContributionMod
     use propertiesMod
     use subroutinesMod
     use potentialPointersMod
+    use Coulomb_EwaldMod
     implicit none
 
 CONTAINS
@@ -58,8 +59,32 @@ subroutine get_E_potential_contribution_Ewald(random_particle_id, proposed_posit
 
     dE = E_potential_new - E_potential_old
 
-    dE = dE + potential_function_reciprocal()
+    dE = dE + potential_function_reciprocal(random_particle_id, proposed_position)
 
 end subroutine get_E_potential_contribution_Ewald
+
+subroutine update_potential_contribution_Ewald(index, proposed_position, E_potential, dE)
+    real(pr), intent(inout) :: E_potential
+    real(pr), intent(in)    :: proposed_position(3), dE
+    integer, intent(in)     :: index
+
+    if (measure .and. save_observables) E_potential = E_potential + dE
+    MC_accepted = MC_accepted + 1
+    positions(:,index) = proposed_position
+
+    call update_Ewald(index, proposed_position)
+
+end subroutine update_potential_contribution_Ewald
+
+subroutine update_potential_contribution_normal(index, proposed_position, E_potential, dE)
+    real(pr), intent(inout) :: E_potential
+    real(pr), intent(in)    :: proposed_position(3), dE
+    integer, intent(in)     :: index
+
+    if (measure .and. save_observables) E_potential = E_potential + dE
+    MC_accepted = MC_accepted + 1
+    positions(:,index) = proposed_position
+
+end subroutine update_potential_contribution_normal
 
 END MODULE potentialContributionMod

@@ -26,16 +26,11 @@ subroutine update_positions_MC(E_potential)
 
         ! Metropolis criterion
         if (dE <= 0._pr ) then
-            if (measure .and. save_observables) E_potential = E_potential + dE
-            MC_accepted = MC_accepted + 1
-            positions(:,random_particle_id) = proposed_position
+            call update_potential_contribution(random_particle_id, proposed_position, E_potential, dE)
         else if ( rmzran() < exp(-dE / ref_Temp)) then
-            if (measure .and. save_observables) E_potential = E_potential + dE
-            MC_accepted = MC_accepted + 1
-            positions(:,random_particle_id) = proposed_position
+            call update_potential_contribution(random_particle_id, proposed_position, E_potential, dE)
         end if
     end do
-
 
 end subroutine update_positions_MC
 

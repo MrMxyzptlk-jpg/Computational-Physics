@@ -157,9 +157,11 @@ subroutine init_integrator()
         case("Monte-Carlo")
             integrator_step => MC_step
             if (summation == "Ewald") then
-                get_E_potential_contribution => get_E_potential_contribution_Ewald
+                get_E_potential_contribution  => get_E_potential_contribution_Ewald
+                update_potential_contribution => update_potential_contribution_Ewald
             else
                 get_E_potential_contribution => get_E_potential_contribution_normal
+                update_potential_contribution => update_potential_contribution_normal
             end if
         case("Brownian")
             integrator_step => Brownian_step
@@ -459,11 +461,43 @@ subroutine init_Ewald()
 
 end subroutine init_Ewald
 
-subroutine init_MonteCarlo()
-    integer     :: i
+subroutine init_reciprocalCharges()
+    integer                 :: kx, ky, kz, k_sqr
+    real(pr)                :: factor
+    complex(pr)             :: eikx(        0:kgrid(1), num_atoms)
+    complex(pr)             :: eiky(-kgrid(2):kgrid(2), num_atoms)
+    complex(pr)             :: eikz(-kgrid(3):kgrid(3), num_atoms)
+    logical                 :: good_kvec
 
+    allocate(reciprocal_charges(size(kfac)))
 
-end subroutine init_MonteCarlo
+    call get_exponential_factors(eikx, eiky, eikz)
+
+    !$omp parallel private(kx, ky, kz, good_kvec, k_sqr, factor) &
+    !$omp shared(eikx, eiky, eikz, kgrid, charges)
+
+    !$omp do schedule(dynamic)
+    do kx = 0, kgrid(1)
+        if (kx == 0) then
+            factor = 1.0_pr ! No reflection with respect to y-z plane
+        else
+            factor = 2.0_pr ! Reflection symmetry with respect to y-z plane
+        end if
+        ! The same symmetries can be used but might be less efficient (see commented subroutine at the end of this module)
+        do ky = -kgrid(2), kgrid(2)
+            do kz = -kgrid(3), kgrid(3)
+                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                if (good_kvec) then
+                    reciprocal_charges(k_sqr) = sum(charges(:)*eikx(kx,:)*eiky(ky,:)*eikz(kz,:))
+                end if
+            end do
+        end do
+    end do
+    !$omp end do
+
+    !$omp end parallel
+
+end subroutine init_reciprocalCharges
 
 !##################################################################################################
 !     Not used / Not implemented

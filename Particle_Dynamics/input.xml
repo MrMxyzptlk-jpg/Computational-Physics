@@ -32,7 +32,7 @@
     save_positions           = "true"
     do_pair_correlation      = "true"
     do_structure_factor      = "true"
-    do_mean_sqr_displacement = "true"
+    do_mean_sqr_displacement = "false"
     Miller_index             = "0 -1 0"
 />
 
@@ -43,7 +43,7 @@
     delta           = "1"
     kgrid           = "6 6 6"
     MC_acceptance_rate  = "0.5"
-    MC_delta        = "0.1"
+    MC_delta        = "5"
 />
 
 <thermostat
