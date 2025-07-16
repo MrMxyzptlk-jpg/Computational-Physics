@@ -8,15 +8,18 @@ $$U^{LJ}(\mathbf{r}) = 4\epsilon \left[\left(\frac{\sigma}{r}\right)^{12} - \lef
 
 ### Potential implementation
 We consider a cut-off radius ($r_{cut}$) to reduce needless calculation of insignificant interactions (due to the short-range nature of the interaction). Thus, the potential is truncated and displaces, resulting in:
+
 $$U = U^{LJ}(\mathbf{r}) - U^{LJ}(\mathbf{r}_{cut}) , \quad \mathbf{r} \leq \mathbf{r}_{cut} \\
 U = 0 \qquad\qquad\qquad\qquad, \quad \mathbf{r} > \mathbf{r}_{cut}$$
 
 ### Forces
 Using the standard force formula $\mathbf{f}_i = -\nabla _{\mathbf{r}_i}U$ one finds the force between two particles is given by:
+
 $$ \mathbf{f}_{ij} = 48\epsilon \left[\left(\frac{\sigma}{r_{ij}}\right)^{12} - \frac{1}{2}\left(\frac{\sigma}{r_{ij}}\right)^6 \right] \frac{\mathbf{r}_{ij}}{r^2_{ij}} $$
 
 ### Pressure
 It can be shown that the potential contribution to the pressure is:
+
 $$P = \delta\cdot K_bT + \frac{1}{3V}\frac{1}{2} \left( \sum_i^N \sum_j^N \mathbf{f}_{ij} \cdot \mathbf{r}_{ij} \right)$$
 
 Notice there is no correction due to the displacement of the potential. The truncation, however, is implicitly considered in the summation, as no forces between particles further than $r_{cut}$ is even calculated.
@@ -25,6 +28,7 @@ Notice there is no correction due to the displacement of the potential. The trun
 
 ### Potential implementation
 We consider the summation of the particles in the reference super-cell to get the real space contribution (short-range contribution) of the potential and forces. The long-range term is taken into account by summing over a ball of k-vectors in reciprocal space. Thus we get:
+
 $$ U = U_r + U_k - U_s + U_0 $$
 
 $$ U_r = \frac{1}{2} \sum_i^N \sum_j^N q_i q_j \left( \sum_{\mathbf{R}} \frac{\text{erfc}(\frac{|\mathbf{r}_{ij}+ \mathbf{R}|}{\sigma})}{|\mathbf{r}_{ij}+ \mathbf{R}|}\right)  $$
@@ -61,7 +65,7 @@ Notice that for the MC run, only the variation of the reciprocal charge ($\Delta
 
 ### Forces
 
-Using the standard force formula $\mathbf{f}^{qq}_i = -\nabla _{\mathbf{r}_i}U^{qq}$ one finds:
+Using the standard force formula $ \mathbf{f}^{qq}_i = -\nabla _{\mathbf{r}_i}U^{qq} $ one finds:
 
 $$ \mathbf{f} = \mathbf{f}_r + \mathbf{f}_k + \mathbf{f}_0 $$
 
