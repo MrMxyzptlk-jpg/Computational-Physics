@@ -8,7 +8,7 @@ CONTAINS
 
 subroutine update_positions_MC(E_potential)
     real(pr), intent(inout)                 :: E_potential
-    real(pr)                                :: proposed_position(3), E_potential_new, E_potential_old, dE
+    real(pr)                                :: proposed_position(3), dE
     integer                                 :: random_particle_id, i, j
 
     do j = 1, num_atoms

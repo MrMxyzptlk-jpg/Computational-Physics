@@ -18,7 +18,7 @@ subroutine get_forces_Ewald(E_potential, pressure_virial, pair_corr)
     real(pr), intent(inout) :: pair_corr(:)
     integer                 :: i, j
     real(pr)                :: box_dipole(3), surface_potential, pressure_reciprocal
-    real(pr)                :: potential_real, potential_reciprocal
+    real(pr)                :: potential_reciprocal
     real(pr)                :: force_contribution(3), particle_distance_sqr
     real(pr)                :: force_reciprocal(3,num_atoms)
 
@@ -30,6 +30,7 @@ subroutine get_forces_Ewald(E_potential, pressure_virial, pair_corr)
 
     !$omp parallel private(j, i, force_contribution, particle_distance_sqr) &
     !$omp shared(positions, num_atoms) &
+    !$omp default(none) &
     !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
 
         !$omp do schedule(dynamic)

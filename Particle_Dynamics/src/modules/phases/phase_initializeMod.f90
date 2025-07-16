@@ -12,7 +12,7 @@ CONTAINS
 subroutine phase_initialize()
 
     !###################################################################################################
-    !   Set default values and parse input file (parsing module)
+    !   Set default values and parse input file (parsing modules)
     !###################################################################################################
 
         call set_defaults()
@@ -31,7 +31,7 @@ subroutine phase_initialize()
         call check_inputValues()
 
     !##################################################################################################
-    !      Necessary definitions, pointers, initializations and conversion factors (initializations module unless specified otherwise)
+    !      Necessary definitions, pointers, initializations and conversion factors (all in initializationsMod module unless specified otherwise)
     !##################################################################################################
 
         call init_structure()
@@ -44,10 +44,17 @@ subroutine phase_initialize()
         call init_integrator()
         call init_summation()
         call init_internal_constants()
-        if (integrator == 'velocity-Verlet' .and. (state == 'fromScratch')) call init_velocities()
-        if (summation == "Ewald") call init_Ewald()
-        if ((summation == "Ewald") .and. (integrator == "Monte-Carlo")) call init_reciprocalCharges()
-        if (integrator == 'velocity-Verlet') call thermostat_rescale()     ! thermostatsMod module
+
+        if (integrator == 'velocity-Verlet') then
+            if (state == 'fromScratch') call init_velocities()
+            call thermostat_rescale()     ! thermostatsMod module
+        end if
+
+        if (summation == "Ewald") then
+            call init_Ewald()
+            if ((integrator == "Monte-Carlo")) call init_reciprocalCharges()
+        end if
+
         call initialize_XYZ_data()                  ! writing2fliesMod module
 
 end subroutine phase_initialize

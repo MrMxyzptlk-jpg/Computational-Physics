@@ -2,25 +2,43 @@
 Currently only one short-range potential (Lennard-Jones) and one long-range potential (Coulomb) are implemented. The former supports three formalisms (MD, MC and BM) while the latter only two (MD and BM).
 
 ## Lennar-Jones potential
+The Lennard-Jones potential is given by:
+$$U^{LJ}(\mathbf{r}) = 4\epsilon \left[\left(\frac{\sigma}{r}\right)^{12} - \left(\frac{\sigma}{r}\right)^6 \right] $$
 
+### Potential implementation
+We consider a cut-off radius ($r_{cut}$) to reduce needless calculation of insignificant interactions (due to the short-range nature of the interaction). Thus, the potential is truncated and displaces, resulting in:
+$$U = U^{LJ}(\mathbf{r}) - U^{LJ}(\mathbf{r}_{cut}) , \quad \mathbf{r} \leq \mathbf{r}_{cut} \\
+U = 0 \qquad\qquad\qquad\qquad, \quad \mathbf{r} > \mathbf{r}_{cut}$$
 
-## Coulomb potential
+### Forces
+Using the standard force formula $\mathbf{f}_i = -\nabla _{\mathbf{r}_i}U$ one finds the force between two particles is given by:
+$$ \mathbf{f}_{ij} = 48\epsilon \left[\left(\frac{\sigma}{r_{ij}}\right)^{12} - \frac{1}{2}\left(\frac{\sigma}{r_{ij}}\right)^6 \right] \frac{\mathbf{r}_{ij}}{r^2_{ij}} $$
+
+### Pressure
+It can be shown that the potential contribution to the pressure is:
+$$P = \delta\cdot K_bT + \frac{1}{3V}\frac{1}{2} \left( \sum_i^N \sum_j^N \mathbf{f}_{ij} \cdot \mathbf{r}_{ij} \right)$$
+
+Notice there is no correction due to the displacement of the potential. The truncation, however, is implicitly considered in the summation, as no forces between particles further than $r_{cut}$ is even calculated.
+
+## Coulomb interactions
+
+### Potential implementation
 We consider the summation of the particles in the reference super-cell to get the real space contribution (short-range contribution) of the potential and forces. The long-range term is taken into account by summing over a ball of k-vectors in reciprocal space. Thus we get:
 $$ U = U_r + U_k - U_s + U_0 $$
 
 $$ U_r = \frac{1}{2} \sum_i^N \sum_j^N q_i q_j \left( \sum_{\mathbf{R}} \frac{\text{erfc}(\frac{|\mathbf{r}_{ij}+ \mathbf{R}|}{\sigma})}{|\mathbf{r}_{ij}+ \mathbf{R}|}\right)  $$
 
-$$ U_k = \frac{2\pi}{V} \sum_{\mathbf{k} \neq 0} \hat{G}(k)\hat{\rho}^q\bf(k) \hat{\rho}^q\bf(-k) $$
+$$ U_k = \frac{2\pi}{V} \sum_{\mathbf{k} \neq 0} G(k) \rho^q\bf(k) \rho^q\bf(-k) $$
 
 $$ U_s = \sum_{i} \frac{q_i^2}{\sqrt{\pi}\sigma} $$
 
 $$ U_0 = \frac{2\pi}{3V} |\sum_i q_i\mathbf{r}_i |^2 $$
 
-$$ \hat{G}(k) = 4\pi e^{-(\frac{k\sigma}{2})^2} $$
+$$ G(k) = 4\pi e^{-(\frac{k\sigma}{2})^2} $$
 
-$$ \hat{\rho}^q(\mathbf{k}) = \sum_i q_i e^{-i\mathbf{k \cdot r_i}}  $$
+$$ \rho^q(\mathbf{k}) = \sum_i q_i e^{-i\mathbf{k \cdot r_i}}  $$
 
-where $U_r$ is calculated in real space, $U_k$ in reciprocal space, $U_s$ is the self interaction term and $U_0$ is a dipole term for charges in a vacuum. $\hat{G}(k)$ and $\hat{\rho}^q\bf(k)$ are used to simplify the equations. Notice the former and the self interaction term need only be calculated once at the beginning of the program. The $U_0$ is needed to go from a conducting medium to a vacuum by the following expression:
+where $U_r$ is calculated in real space, $U_k$ in reciprocal space, $U_s$ is the self interaction term and $U_0$ is a dipole term for charges in a vacuum. $G(k)$ and $\rho^q\bf(k)$ are used to simplify the equations. Notice the former and the self interaction term need only be calculated once at the beginning of the program. The $U_0$ is needed to go from a conducting medium to a vacuum by the following expression:
 
 $$ U^{qq}(\epsilon_s=\infty) = U^{qq}(\epsilon_s=0) - U^{qq}_0 $$
 
@@ -28,15 +46,32 @@ The supra-index qq is used to denote that we are dealing with charge-charge inte
 
 In out implementation, the real space summation is reduced to the reference super-cell specified in the input, thus the summation over all lattice vectors $\mathbf{R}$ is obviated.
 
-Using the standard force formula $f^{qq}_i = -\nabla _{\mathbf{r}_i}U^{qq}$ one finds:
+The potential energy difference due to the translation $\mathbf{r} \rightarrow\widetilde{\mathbf{r}}$ is simply $\Delta U = \Delta U_r + \Delta U_k$, each given by:
 
-$$ f = f_r + f_k + f_0 $$
+$$\Delta U_r = q_i \sum_j^N q_j \left(\frac{\text{erfc}(\frac{\mathbf{\widetilde{r}}_{ij}}{\sigma})}{\widetilde{r}}_{ij} - \frac{\text{erfc}(\frac{\mathbf{r}_{ij}}{\sigma})}{r_{ij}} \right)  $$
 
-$$ f_r = q_i \sum_{j \neq i} q_j \left( \frac{\text{erfc}(\frac{r_{ij}}{\sigma})}{r_{ij}}  +  \frac{2}{\sqrt{\pi}\sigma}e^{-(\frac{r_{ij}}{\sigma})^2}\right) \frac{\mathbf{r}_{ij}}{r^2_{ij}}  $$
 
-$$ f_k = - \frac{q_i}{V} \sum_{\mathbf{k} \neq 0} \hat{G}(k) Im(\hat{\rho}^q\bf(-k) e^{-i\mathbf{k \cdot r_i}}) \mathbf{k}  $$
+$$ U_k = \frac{2\pi}{V} \sum_{\mathbf{k} \neq 0} G(k) \left[2\mathcal{Re}(\rho^q (\mathbf{k}) \Delta\rho^q(\mathbf{-k})) + |\Delta\rho^q(\mathbf{-k})|^2 \right]$$
 
-$$ f_0 = - \frac{4\pi q_i}{3V} \sum_j q_j\mathbf{r}_j  $$
+$$ \Delta\rho^q(\mathbf{k}) = q_i(e^{-i\mathbf{k \cdot \widetilde{r}_i}} - e^{-i\mathbf{k \cdot r_i}}) $$
 
-where the $f_0$ term only applies in the case of a vacuum.
+Notice that for the MC run, only the variation of the reciprocal charge ($\Delta\rho^q(\mathbf{k})$) needs to be calculated, thus we store the full reciprocal charge ($\rho^q(\mathbf{k})$) and update it only if the trial is accepted.
 
+
+### Forces
+
+Using the standard force formula $\mathbf{f}^{qq}_i = -\nabla _{\mathbf{r}_i}U^{qq}$ one finds:
+
+$$ \mathbf{f} = \mathbf{f}_r + \mathbf{f}_k + \mathbf{f}_0 $$
+
+$$ \mathbf{f}_r = q_i \sum_{j \neq i} q_j \left( \frac{\text{erfc}(\frac{r_{ij}}{\sigma})}{r_{ij}}  +  \frac{2}{\sqrt{\pi}\sigma}e^{-(\frac{r_{ij}}{\sigma})^2}\right) \frac{\mathbf{r}_{ij}}{r^2_{ij}}  $$
+
+$$ \mathbf{f}_k = - \frac{q_i}{V} \sum_{\mathbf{k} \neq 0} G(k) \mathcal{Im} (\rho^q\bf(-k) e^{-i\mathbf{k \cdot r_i}}) \mathbf{k}  $$
+
+$$ \mathbf{f}_0 = - \frac{4\pi q_i}{3V} \sum_j q_j\mathbf{r}_j  $$
+
+where the $\mathbf{f}_0$ term only applies in the case of a vacuum.
+
+### Pressure
+It can be shown that the potential contribution to the pressure is simply $\frac{U^{qq}}{3}$. Considering the contribution due to the reference temperature, we get:
+$$P = \delta\cdot K_bT_0 + \frac{1}{3V}\frac{U^{qq}}{3}$$

@@ -29,7 +29,7 @@ MODULE variablesMod
     integer(int_large)      :: thermostat_steps
 
     ! Internal
-    logical                 :: do_linkCell = .False.
+    logical                 :: do_linkCell
     integer(int_large)      :: transitory_minIndex
 
 !######### TASKS variables ###################

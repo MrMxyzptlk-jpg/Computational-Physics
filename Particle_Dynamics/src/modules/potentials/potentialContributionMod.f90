@@ -21,7 +21,8 @@ subroutine get_E_potential_contribution_normal(random_particle_id, proposed_posi
     E_potential_new = 0._pr
 
     !$omp parallel private(particle_distance_sqr, i) &
-    !$omp shared(random_particle_id, num_atoms, positions, radius_cutoff_squared, proposed_position) &
+    !$omp shared(potential_function, random_particle_id, num_atoms, positions, radius_cutoff_squared, proposed_position) &
+    !$omp default(none) &
     !$omp reduction(+: E_potential_old, E_potential_new)
 
     !$omp do schedule(dynamic)
@@ -57,7 +58,8 @@ subroutine get_E_potential_contribution_Ewald(random_particle_id, proposed_posit
     E_potential_new = 0._pr
 
     !$omp parallel private(particle_distance_sqr, i) &
-    !$omp shared(random_particle_id, num_atoms, positions, radius_cutoff_squared, proposed_position) &
+    !$omp shared(potential_function, random_particle_id, num_atoms, positions, radius_cutoff_squared, proposed_position) &
+    !$omp default(none) &
     !$omp reduction(+: E_potential_old, E_potential_new)
 
     !$omp do schedule(dynamic)

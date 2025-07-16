@@ -30,8 +30,6 @@ CONTAINS
 
 subroutine init_structure()
 
-    if (density<=0._pr) print*, "Density <= 0. Stopping..."
-
     select case (structure)
         case ("FCC")
             init_positions =>  init_positions_FCC
@@ -64,6 +62,9 @@ subroutine init_variables()
     periodicity = cell_dim*lattice_constant
     volume = product(periodicity)
 
+    print*, "Periodicity = ", periodicity
+    print*, "Volume", volume
+
     ref_Temp = ref_Temp*conversion_factors(3)    ! Already non-dimensional!!
     radius_cutoff = radius_cutoff/conversion_factors(1)
     dt = dt/conversion_factors(2)
@@ -71,7 +72,7 @@ subroutine init_variables()
     dtdt = dt*dt
     radius_cutoff_squared = radius_cutoff*radius_cutoff
 
-    if (interactions == "lannard_jones") then
+    if (interactions == "lennard-jones") then
         potential_cutoff = 0._pr    ! Must be initialized as 0 because it will be used in the potential_function()
         potential_cutoff = potential_function(0, 0, radius_cutoff_squared) ! the first two arguments are there in case we want to implement non-equivalent particles latter on
     end if
@@ -93,7 +94,7 @@ end subroutine init_variables
 subroutine init_potential()
 
     select case (interactions)
-        case ("lannard_jones")
+        case ("lennard-jones")
             potential =>  Lennard_Jones
             potential_function => Lennard_Jones_potential
         case ("Coulomb")
@@ -104,9 +105,6 @@ subroutine init_potential()
         case ("reaction_field")
             potential =>  reaction_field
             potential_function => reaction_field_potential
-        case default
-            potential =>  Lennard_Jones
-            potential_function => Lennard_Jones_potential
     end select
 
 end subroutine init_potential
@@ -139,11 +137,11 @@ subroutine init_observables()
         allocate(Pressures(0:measuring_steps), Temperatures(0:measuring_steps))
         if (do_structure_factor) allocate(structure_factor(0:measuring_steps))
     end if
-    allocate(forces(3,size(positions,2)))
+    allocate(forces(3,num_atoms))
 
     if (integrator == 'velocity-Verlet') then
-        allocate(previous_forces(3,size(positions,2)))
-        if (state == 'fromScratch') allocate(velocities(3,size(positions,2)))
+        allocate(previous_forces(3,num_atoms))
+        if (state == 'fromScratch') allocate(velocities(3,num_atoms))
     end if
     if (.not. do_structure_factor) allocate(structure_factor(1))
 
@@ -446,10 +444,12 @@ subroutine init_Ewald()
     halfSigma_sqr = sigma*sigma / 4.0_pr
     k_sqr_max = product(kgrid)
     allocate(kfac(k_sqr_max))
+    kfac = 0._pr
 
 
-    !$omp parallel private(kx, ky, kz, good_kvec, k_sqr) &
-    !$omp shared(kgrid, charges, volume, halfSigma_sqr, kr_sqr)
+    !$omp parallel private(kx, ky, kz, good_kvec, k_sqr, kfac) &
+    !$omp shared(kgrid, charges, volume, halfSigma_sqr, kr_sqr) &
+    !$omp default(none)
 
     !$omp do schedule(dynamic)
     do kx = 0, kgrid(1)
@@ -481,8 +481,9 @@ subroutine init_reciprocalCharges()
 
     call get_octant_expFactors(eikx, eiky, eikz)
 
-    !$omp parallel private(kx, ky, kz, good_kvec, k_sqr) &
-    !$omp shared(eikx, eiky, eikz, kgrid, charges)
+    !$omp parallel private(kx, ky, kz, good_kvec, k_sqr, reciprocal_charges) &
+    !$omp shared(eikx, eiky, eikz, kgrid, charges) &
+    !$omp default(none)
 
     !$omp do schedule(dynamic)
     do kx = 0, kgrid(1)

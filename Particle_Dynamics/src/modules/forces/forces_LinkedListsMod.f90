@@ -125,7 +125,8 @@ subroutine get_forces_linkedlist(E_potential, pressure_virial, pair_corr) ! Perf
     if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
     !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell, force_contribution) &
-    !$omp shared(positions, head, map, list, N_linkedCells) &
+    !$omp shared(particle_distance_sqr, positions, head, map, list, N_linkedCells) &
+    !$omp default(none) &
     !$omp schedule(dynamic) reduction(+: forces, E_potential, pressure_virial, pair_corr)
     do icell = 1, N_linkedCells ! Go through all cells
         i = head(icell)
@@ -211,6 +212,7 @@ end subroutine get_forces_linkedlist
 !    if (measure) then
 !        !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell, particle_distance_sqr, force_contribution) &
 !        !$omp shared(positions, head, map, list, N_linkedCells) &
+!        !$omp default(none) &
 !        !$omp schedule(dynamic) reduction(+: pair_corr)
 !        do icell = 1, N_linkedCells ! Go through all cells
 !            i = head(icell)

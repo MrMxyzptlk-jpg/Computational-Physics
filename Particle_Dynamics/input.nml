@@ -2,10 +2,10 @@
     ensemble            = 'NVE'         ! Options: 'NVE', 'NVT'  -- Only 'NVT' in Monte-Carlo
     structure           = 'FCC'         ! Options: 'FCC', 'BCC', 'random', 'fromfile'
     lattice_constant    = 6.8399        ! This parameter is ignored if density is specified
-    cell_dim            = 4,4,4
+    cell_dim            = 5,5,5
     num_atoms           = 256
-    ref_Temp            = 1.0           ! In units of delta/Kb
-    density             = 1.0           ! Number of atoms/volume
+    ref_Temp            = 1.1           ! In units of delta/Kb
+    density             = 0.8           ! Number of atoms/volume
     reduced_viscosity   = 2.87          ! REDUCED viscosity (only for BD)
     mass                = 1             ! In a.m.u.
 /
@@ -17,7 +17,7 @@
     transitory_steps   = 1000
     thermostat_steps   = 50             ! Rescales every 50 steps the thermostat is applied
     radius_cutoff      = 2.5            ! In Bohr
-    summation          = 'linked-lists' ! Options: 'all-vs-all', 'linked-lists', 'Ewald'
+    summation          = 'all-vs-all' ! Options: 'all-vs-all', 'linked-lists', 'Ewald'
     dim_linkCell       = 3,3,3
     measuring_jump     = 10
     initial_velocities = 'Maxwell'       ! Options: 'random', 'Maxwell', 'fromfile'
@@ -28,20 +28,20 @@
     save_transitory          = true
     save_observables         = true
     save_positions           = true
-    do_pair_correlation      = false
+    do_pair_correlation      = true
     do_structure_factor      = true
     do_mean_sqr_displacement = true
     Miller_index             = 0,-1,0
 /
 
 &approximation
-    integrator   = 'Monte-Carlo'        ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
-    interactions = 'lennard_jones'      ! Options: 'lennard_jones', 'Coulomb'
+    integrator   = 'velocity-Verlet'       ! Options: 'velocity-Verlet', 'Brownian', 'Monte-Carlo'
+    interactions = 'lennard-jones'      ! Options: 'lennard-jones', 'Coulomb'
     sigma        = 1                    ! In Bohr
     delta        = 1                    ! In hartree
-    kgrid        = 10,10,10             ! Reciprocal space grid
+    kgrid        = 7,7,7           ! Reciprocal space grid
     MC_acceptance_rate  = 0.5
-    MC_delta        = 1
+    MC_delta        = 0.1
 /
 
 &thermostat

@@ -26,16 +26,17 @@ function Coulomb_reciprocalSpace(index, proposed_position) result(E_potential)  
     integer, intent(in)     :: index
     real(pr), intent(in)    :: proposed_position(3)
     real(pr)                :: E_potential
-    integer                 :: kx, ky, kz, k_sqr, i
-    real(pr)                :: factor, kvec_real(3)
+    integer                 :: kx, ky, kz, k_sqr
+    real(pr)                :: factor
     complex(pr)             :: eikr_old(3), eikr_new(3)
     complex(pr)             :: kCharge_variation
     logical                 :: good_kvec
 
     E_potential = 0.0_pr
 
-    !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charges, kCharge_variation, k_sqr, factor, eikr_old, eikr_new) &
-    !$omp shared(positions, num_atoms, kfac, charges, kgrid, proposed_position) &
+    !$omp parallel private(kx, ky, kz, good_kvec, reciprocal_charges, kCharge_variation, k_sqr, factor, eikr_old, eikr_new) &
+    !$omp shared(positions, index, num_atoms, kfac, charges, kgrid, proposed_position) &
+    !$omp default(none) &
     !$omp reduction(+: E_potential)
 
     !$omp do schedule(dynamic)
@@ -106,6 +107,7 @@ subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potent
 
     !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charge, exp_k, k_sqr, factor, kvec_real) &
     !$omp shared(positions, num_atoms, eikx, eiky, eikz, kgrid, measure, save_observables, kfac, charges, k_periodicity) &
+    !$omp default(none) &
     !$omp reduction(+: force_contribution, E_potential)
 
     !$omp do schedule(dynamic)
@@ -145,15 +147,14 @@ end subroutine Coulomb_Ewald_reciprocalSpace
 subroutine update_Ewald(index, proposed_position)
     integer, intent(in)     :: index
     real(pr), intent(in)    :: proposed_position(3)
-    real(pr)                :: E_potential
-    integer                 :: kx, ky, kz, k_sqr, i
-    real(pr)                :: kvec_real(3)
+    integer                 :: kx, ky, kz, k_sqr
     complex(pr)             :: eikr_old(3), eikr_new(3)
     complex(pr)             :: kCharge_variation
     logical                 :: good_kvec
 
-    !$omp parallel private(kx, ky, kz, i, good_kvec, reciprocal_charges, kCharge_variation, k_sqr, eikr_old, eikr_new) &
-    !$omp shared(positions, num_atoms, kfac, charges, kgrid, proposed_position)
+    !$omp parallel private(kx, ky, kz, good_kvec, reciprocal_charges, kCharge_variation, k_sqr, eikr_old, eikr_new) &
+    !$omp shared(positions, index, num_atoms, kfac, charges, kgrid, proposed_position) &
+    !$omp default(none)
 
     !$omp do schedule(dynamic)
     do kx = 0, kgrid(1)

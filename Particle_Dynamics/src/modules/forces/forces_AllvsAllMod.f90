@@ -24,6 +24,7 @@ subroutine get_forces_allVSall(E_potential, pressure_virial, pair_corr)
 
     !$omp parallel private(j, i, force_contribution, particle_distance_sqr) &
     !$omp shared(positions, num_atoms) &
+    !$omp default(none) &
     !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
 
         !$omp do schedule(dynamic)

@@ -27,12 +27,14 @@ subroutine phase_run()
 
         if (save_transitory) call get_measurements(i_measure)
 
+        print*, "Starting transitory run"
         call run_transitory()
 
         transitory  = .False. ! Flag to avoid calculations and saving variables during the transitory steps. False means the calculations are now NOT transitory
         measure     = .False.
         i_measure   = 0
 
+        print*, "Starting definitive run"
         call run_definitive()
 
     call close_files()
