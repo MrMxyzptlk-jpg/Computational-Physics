@@ -3,6 +3,7 @@ Currently only one short-range potential (Lennard-Jones) and one long-range pote
 
 ## Lennar-Jones potential
 The Lennard-Jones potential is given by:
+
 $$U^{LJ}(\mathbf{r}) = 4\epsilon \left[\left(\frac{\sigma}{r}\right)^{12} - \left(\frac{\sigma}{r}\right)^6 \right] $$
 
 ### Potential implementation
