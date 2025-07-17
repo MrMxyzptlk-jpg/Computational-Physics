@@ -28,17 +28,19 @@ subroutine initialize_XYZ_data()
 
 end subroutine initialize_XYZ_data
 
-subroutine open_files(reciprocal_vec)
-    real (pr), intent (in)  :: reciprocal_vec(3)
-
+subroutine open_XYZ_file()
     if (save_positions)  open(newunit=unit_positions, file=dataDir//"positions.xyz", status="replace")
+end subroutine open_XYZ_file
+
+subroutine open_observables_file(reciprocal_vec)
+    real (pr), intent (in)  :: reciprocal_vec(3)
 
     if (save_observables) then
         open(newunit=unit_observables, file=dataDir//"observables.out", status="replace")
         if (integrator == 'velocity-Verlet') then
-            write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    |   Temperature"
+            write(unit_observables,*) "##    t[s]    |    e_pot    |     e_kin      |   Pressure    |   Temperature"
         else
-            write(unit_observables,*) "##    t[s]    |    E_pot    |     Pressure    "
+            write(unit_observables,*) "##    t[s]    |    e_pot    |     Pressure    "
         end if
     end if
 
@@ -49,22 +51,24 @@ subroutine open_files(reciprocal_vec)
             , " ; l = ", Miller_index(3)
         write(unit_structFact, '(a)') "## t | structure_factor(K,t)"
     end if
-end subroutine open_files
+end subroutine open_observables_file
 
 subroutine write_tasks(time, energies, pressures, temperatures, structure_factor)
     real (pr), intent (in)                  :: time, energies(2), pressures, temperatures, structure_factor
 
-    if (save_positions)      call write_XYZfile(time)
     if (save_observables)    call write_observables(time, energies, pressures, temperatures)
     if (do_structure_factor) call write_structure_factor(time, structure_factor)
 
 end subroutine write_tasks
 
-subroutine close_files()
+subroutine close_XYZ_file()
     if (save_positions)         close (unit_positions)
+end subroutine close_XYZ_file
+
+subroutine close_observables_file()
     if (save_observables)       close (unit_observables)
     if (do_structure_factor)    close (unit_structFact)
-end subroutine close_files
+end subroutine close_observables_file
 
 subroutine write_XYZfile(time)
     real (pr), intent (in)              :: time

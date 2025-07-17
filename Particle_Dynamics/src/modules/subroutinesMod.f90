@@ -42,14 +42,20 @@ subroutine get_stats(measurements, variance, stddev, average, error)
 
 end subroutine get_stats
 
-subroutine check_kvec(kx, ky, kz, k_sqr, kvec_flag) ! Verify the k-vector is inside the 3D ball in reciprocal space
-    integer, intent(in)     :: kx, ky, kz
-    integer, intent(out)    :: k_sqr
+subroutine check_kvec(nx, ny, nz, k_sqr, kvec_flag) ! Verify the k-vector is inside the 3D ellipsoid in reciprocal space
+    integer, intent(in)     :: nx, ny, nz
+    real(pr), intent(out)   :: k_sqr
     logical, intent(out)    :: kvec_flag
+    real(pr)                :: kx, ky, kz
 
     kvec_flag = .False.
+
+    kx = real(nx*kgrid(1),pr)
+    ky = real(ny*kgrid(2),pr)
+    kz = real(nz*kgrid(3),pr)
     k_sqr = kx*kx + ky*ky + kz*kz
-    if ((k_sqr <= k_sqr_max) .and. (k_sqr /= 0)) kvec_flag = .True.
+
+    if ((k_sqr <= 1._pr) .and. (k_sqr /= 0._pr)) kvec_flag = .True.
 
 end subroutine check_kvec
 

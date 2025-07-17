@@ -37,9 +37,9 @@
 />
 
 <approximation
-    integrator      = "velocity-Verlet"
-    interactions    = "lennard-jones"
-    sigma           = "1"
+    integrator      = "Monte-Carlo"
+    interactions    = "Coulomb"
+    sigma           = "0.5"
     delta           = "1"
     kgrid           = "8 8 8"
     MC_delta        = "0.1"

@@ -22,10 +22,13 @@ subroutine phase_run()
 
     print*, "Integrator: ", integrator
 
-    call open_files(reciprocal_vec)
+    call open_XYZ_file()
         call get_forces(Energies(1,i_measure), pressures(i_measure), pair_corr)
 
-        if (save_transitory) call get_measurements(i_measure)
+        if (save_transitory) then
+            call get_measurements(i_measure)
+            if (save_positions) call write_XYZfile(real(i_measure*measuring_jump,pr)*dt)
+        end if
 
         print*, "Starting transitory run"
         call run_transitory()
@@ -37,7 +40,7 @@ subroutine phase_run()
         print*, "Starting definitive run"
         call run_definitive()
 
-    call close_files()
+    call close_XYZ_file()
 
 end subroutine phase_run
 
@@ -50,7 +53,10 @@ subroutine run_transitory()
 
             call integrator_step(i_measure)
 
-            if (measure) call get_measurements(i_measure)
+            if (measure) then
+                call get_measurements(i_measure)
+                if (save_positions) call write_XYZfile(real(i_measure*measuring_jump,pr)*dt)
+            end if
 
         end do
         call thermostat_chosen()
@@ -66,7 +72,10 @@ subroutine run_definitive()
 
         call integrator_step(i_measure)
 
-        if (measure) call get_measurements(i_measure)
+        if (measure) then
+            call get_measurements(i_measure)
+            if (save_positions) call write_XYZfile(real(i_measure*measuring_jump,pr)*dt)
+        end if
 
         if ((ensemble=='NVT').and.(mod(i,thermostat_steps)==0)) call thermostat_chosen()
     end do

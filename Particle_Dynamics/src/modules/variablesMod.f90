@@ -53,14 +53,17 @@ MODULE variablesMod
     ! Internal (Ewald summation)
     real(pr)                :: sigma_sqr, Ewald_realFactor, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr, Ewald_selfTerm ! To avoid recalculation
     real(pr)                :: k_periodicity(3) ! reciprocal lattice periodicity
-    integer                 :: num_kvec         ! Number of allowed reciprocal vectors
-    integer                 :: k_sqr_max        ! Maximum reciprocal vector length allowed
-    real(pr), allocatable   :: kfac(:)          ! Factors appearing in 'Ewald' summation (avoid recalculation)
+    integer                 :: num_kvec, octant_num_kvec         ! Number of allowed reciprocal vectors
+   ! real(pr), allocatable   :: kfac(:)          ! Factors appearing in 'Ewald' summation (avoid recalculation)
     complex(pr), allocatable    :: reciprocal_charges(:)    ! Fourier transform of the periodic charge distribution (avoid recalculation in MC)
-   ! type :: kvector_data       ! UNUSED
-   !     real(pr)    :: k_squared, kvec(3),k_factor
-   ! end type kvector_data
-   ! type(kvector_data), allocatable :: kvectors(:)
+    type :: k_vector_data
+        integer  :: kx, ky, kz
+        real(pr) :: k_sqr
+        real(pr) :: kvector(3)
+        real(pr) :: kfactor
+    end type
+    type(k_vector_data), allocatable :: k_vectors(:)
+
 
 !######### THERMOSTAT variables ##############
     ! Parsed

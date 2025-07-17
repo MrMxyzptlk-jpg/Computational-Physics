@@ -428,8 +428,8 @@ subroutine init_internal_constants()
 end subroutine init_internal_constants
 
 subroutine init_Ewald()
-    real(pr)    :: kr_sqr
-    integer     :: kx, ky, kz, k_sqr
+    integer     :: kx, ky, kz, kvec_count
+    real(pr)    :: k_sqr
     logical     :: good_kvec
 
     ! Set all constants for Ewald summation
@@ -442,59 +442,66 @@ subroutine init_Ewald()
 
     ! Get k-space factors for the force and potential energy contributions
     halfSigma_sqr = sigma*sigma / 4.0_pr
-    k_sqr_max = product(kgrid)
-    allocate(kfac(k_sqr_max))
-    kfac = 0._pr
 
-
-    !$omp parallel private(kx, ky, kz, good_kvec, k_sqr, kfac) &
-    !$omp shared(kgrid, charges, volume, halfSigma_sqr, kr_sqr) &
-    !$omp default(none)
-
-    !$omp do schedule(dynamic)
+    ! Count valid vectors
+    kvec_count = 0
     do kx = 0, kgrid(1)
-        do ky = 0, kgrid(2)
-            do kz = 0, kgrid(3)
-            call check_kvec(kx, ky, kz, k_sqr, good_kvec)
-            if(good_kvec) then
-                kr_sqr      = twoPi_sqr * real( k_sqr )
-                kfac(k_sqr) = fourpi/volume * exp(-halfSigma_sqr * kr_sqr) / kr_sqr
-            end if
+        do ky = -kgrid(2), kgrid(2)
+            do kz = -kgrid(3), kgrid(3)
+                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                if (good_kvec) kvec_count = kvec_count + 1
             end do
         end do
     end do
-    !$omp end do
 
-    !$omp end parallel
+    num_kvec = kvec_count
+    allocate(k_vectors(num_kvec))
+    kvec_count = 0
+
+    ! Note that only 4 octants are considered and the others are accounted by symmetries later on.
+
+    do kx = 0, kgrid(1)
+        do ky = -kgrid(2), kgrid(2)
+            do kz = -kgrid(3), kgrid(3)
+                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                if (good_kvec) then
+                    kvec_count = kvec_count + 1
+                    k_vectors(kvec_count)%kx = kx
+                    k_vectors(kvec_count)%ky = ky
+                    k_vectors(kvec_count)%kz = kz
+                    k_vectors(kvec_count)%k_sqr = k_sqr
+                    k_vectors(kvec_count)%kvector = (/kx, ky, kz/) * k_periodicity
+
+                    k_vectors(kvec_count)%kfactor = fourpi/volume * exp(-halfSigma_sqr * k_sqr) / k_sqr
+                end if
+            end do
+        end do
+    end do
 
 end subroutine init_Ewald
 
 subroutine init_reciprocalCharges()
-    integer                 :: kx, ky, kz, k_sqr
+    integer                 :: kx, ky, kz, i
     complex(pr)             :: eikx(0:kgrid(1), num_atoms)
-    complex(pr)             :: eiky(0:kgrid(2), num_atoms)
-    complex(pr)             :: eikz(0:kgrid(3), num_atoms)
-    logical                 :: good_kvec
+    complex(pr)             :: eiky(-kgrid(2):kgrid(2), num_atoms)
+    complex(pr)             :: eikz(-kgrid(3):kgrid(3), num_atoms)
 
-    allocate(reciprocal_charges(size(kfac)))
+    allocate(reciprocal_charges(num_kvec))
     reciprocal_charges = 0._pr
 
-    call get_octant_expFactors(eikx, eiky, eikz)
+    call get_all_expFactors(eikx, eiky, eikz)
 
-    !$omp parallel private(kx, ky, kz, good_kvec, k_sqr, reciprocal_charges) &
-    !$omp shared(eikx, eiky, eikz, kgrid, charges) &
+    !$omp parallel private(kx, ky, kz, i) &
+    !$omp shared(eikx, eiky, eikz, num_kvec, charges, k_vectors, reciprocal_charges) &
     !$omp default(none)
 
     !$omp do schedule(dynamic)
-    do kx = 0, kgrid(1)
-        do ky = 0, kgrid(2)
-            do kz = 0, kgrid(3)
-                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
-                if (good_kvec) then
-                    reciprocal_charges(k_sqr) = sum(charges(:)*eikx(kx,:)*eiky(ky,:)*eikz(kz,:))
-                end if
-            end do
-        end do
+    do i = 1, num_kvec
+        kx = k_vectors(i)%kx
+        ky = k_vectors(i)%ky
+        kz = k_vectors(i)%kz
+
+        reciprocal_charges(i) = sum(charges(:)*eikx(kx,:)*eiky(ky,:)*eikz(kz,:))
     end do
     !$omp end do
 
