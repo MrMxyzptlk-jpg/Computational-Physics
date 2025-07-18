@@ -47,7 +47,7 @@ subroutine phase_initialize()
 
         if (integrator == 'velocity-Verlet') then
             if (state == 'fromScratch') call init_velocities()
-            call thermostat_rescale()     ! thermostatsMod module
+            call thermostat_rescale()   ! thermostatsMod module
         end if
 
         if (summation == "Ewald") then
@@ -55,7 +55,7 @@ subroutine phase_initialize()
             if ((integrator == "Monte-Carlo")) call init_reciprocalCharges()
         end if
 
-        call initialize_XYZ_data()                  ! writing2fliesMod module
+        call initialize_XYZ_data()  ! writing2fliesMod module
 
 end subroutine phase_initialize
 

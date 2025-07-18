@@ -175,7 +175,7 @@ subroutine init_summation()
             if (do_linkCell) then
                 get_forces =>  get_forces_linkedList
                 call create_maps()
-                call create_links(positions)
+                call create_links()
             else
                 summation = "all-vs-all"
                 get_forces =>  get_forces_allVSall

@@ -27,15 +27,15 @@ subroutine get_forces_allVSall(E_potential, pressure_virial, pair_corr)
     !$omp default(none) &
     !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
 
-        !$omp do schedule(dynamic)
-        do i=1,num_atoms-1
-            do j = i+1, num_atoms
-                call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr &
-                    , particle_distance_sqr)
-                call add_force_contribution(forces(:,i), forces(:,j), force_contribution, particle_distance_sqr)
-            end do
+    !$omp do schedule(dynamic)
+    do i=1,num_atoms-1
+        do j = i+1, num_atoms
+            call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr &
+                , particle_distance_sqr)
+            call add_force_contribution(forces(:,i), forces(:,j), force_contribution, particle_distance_sqr)
         end do
-        !$omp end do
+    end do
+    !$omp end do
 
     !$omp end parallel
 
