@@ -45,8 +45,6 @@ subroutine check_fileXML(filename, fileDoc)
     else if (inException(ex)) then
         print*,"DOM Parse error ", getExceptionCode(ex)
         stop
-    else
-        print*, "Read input.xml file."
     endif
 
 end subroutine check_fileXML

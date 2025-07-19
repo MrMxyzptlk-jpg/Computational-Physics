@@ -242,7 +242,7 @@ subroutine write_pair_corr(pair_corr)
     open(newunit=unitnum, file=dataDir//"pair_correlation.out", status="replace")
         write(unitnum, '(a)') "## r | pair_correlation(r)"
         do i = 1, pair_corr_bins
-            bin_center = (real(i-1,pr) + 0.5_pr)*dr
+            bin_center = (real(i-1,pr) + 0.5_pr)*dr*conversion_factors(1)
             write(unitnum, format_style0) bin_center, pair_corr(i)
         end do
     close(unitnum)
@@ -260,7 +260,9 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
         write(unit_info,'(a24,14x,a)')      "Initial structure:     ", structure
         write(unit_info,'(a24,6x,E11.5)')   "Lattice constant:      ", lattice_constant*conversion_factors(1)
         write(unit_info,'(a24,5x,3(x,E11.5))')   "Super-cell dimensions: ", periodicity*conversion_factors(1)
-        write(unit_info,'(a24,6x,E11.5)')   "Density:               ", density
+        write(unit_info,'(a24,6x,E11.5)')   "Density:               ", density/conversion_factors(1)**3
+        if (interactions == 'Coulomb') write(unit_info,'(a24,6x,E11.5)')   "Gamma:                 " &
+            , (fourPi/3._pr*density/conversion_factors(1)**3)**(1._pr/3._pr)/(ref_Temp*conversion_factors(3))
         write(unit_info,'(a24,4x,a)')       "Summation:             ", summation
         write(unit_info,'(a24,4x,a)')       "Initial velocities:    ", initial_velocities
         write(unit_info,'(a24,4x,a)')       "Potential:             ", interactions

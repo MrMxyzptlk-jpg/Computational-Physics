@@ -25,7 +25,7 @@ subroutine phase_initialize()
             case("XML")
                 call parse_inputXML()
             case default
-                print*, "ERROR: invalid parser" ; STOP
+                STOP "ERROR: invalid parser"
         end select
 
         call check_inputValues()

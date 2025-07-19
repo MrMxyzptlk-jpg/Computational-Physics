@@ -131,6 +131,7 @@ subroutine parse_inputXML()
     list => getElementsByTagName(inputDoc, "calculation")
     inputNode => item(list, 0)
 
+    call get_parsed_value(inputNode, "state", state)
     call get_parsed_value(inputNode, "dt", dt)
     call get_parsed_value(inputNode, "real_steps", real_steps)
     call get_parsed_value(inputNode, "transitory_steps", transitory_steps)

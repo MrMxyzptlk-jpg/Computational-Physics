@@ -51,19 +51,20 @@ end subroutine init_structure
 subroutine init_variables()
 
     ! Define conversion factors to adimensionalize the variables
-    conversion_factors(1) = sigma                           ! Distance      [Bohr = a₀]
+    conversion_factors(1) = sigma                         ! Distance      [Bohr = a₀]
     conversion_factors(2) = sigma*sqrt(mass/delta)        ! Time          [ℏ/Eh = tₐ]
-    conversion_factors(3) = 1._pr                           ! Temperature   [delta / kB]
+    conversion_factors(3) = 1._pr                         ! Temperature   [delta / kB]
     conversion_factors(4) = delta                         ! Energy        [hartree = Eh]
     conversion_factors(5) = sqrt(delta/mass)              ! Velocity      [a₀ / tₐ]
     conversion_factors(6) = delta/(sigma*sigma*sigma)     ! Pressure      [hartree / bohr³]
 
+    density = density*conversion_factors(1)**3
     lattice_constant = lattice_constant/conversion_factors(1)
     periodicity = cell_dim*lattice_constant
     volume = product(periodicity)
 
-    print*, "Periodicity = ", periodicity
-    print*, "Volume", volume
+    print*, "Periodicity = ", periodicity*conversion_factors(1)
+    print*, "Volume", volume*conversion_factors(1)**3
 
     ref_Temp = ref_Temp*conversion_factors(3)    ! Already non-dimensional!!
     radius_cutoff = radius_cutoff/conversion_factors(1)
@@ -80,6 +81,7 @@ subroutine init_variables()
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
 
     if(do_pair_correlation) then
+        pair_corr_cutoff = pair_corr_cutoff/conversion_factors(1)
         pair_corr_cutoff_sqr = pair_corr_cutoff*pair_corr_cutoff
         dr = pair_corr_cutoff/real(pair_corr_bins,pr)
     end if
