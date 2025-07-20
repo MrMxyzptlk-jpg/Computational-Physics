@@ -207,9 +207,12 @@ subroutine check_parsed_approximation()
         if (MC_delta <= 0._pr)   STOP "ERROR: MC_delta <= 0._pr"
     end if
 
-    if  ((interactions == 'Coulomb') .and. (summation /= 'Ewald')) then
-        print*, "WARNING: unavailable summation for Coulomb interactions. Switching to 'Ewald' summation"
-        summation = 'Ewald'
+    if  ((interactions == 'Coulomb')) then
+        delta = delta/sigma     ! This is due to the fact that the potential energy will have to be re-dimentionalized in the code and a factor of sigma will be missing
+        if (summation /= 'Ewald') then
+            print*, "WARNING: unavailable summation for Coulomb interactions. Switching to 'Ewald' summation"
+            summation = 'Ewald'
+        end if
     end if
 
     if ((integrator == 'velocity-Verlet') .and. (summation == 'Ewald')) then

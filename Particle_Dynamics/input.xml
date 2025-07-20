@@ -4,10 +4,10 @@
     ensemble            = "NVE"
     structure           = "FCC"
     lattice_constant    = "6.8399"
-    cell_dim            = "5 5 5"
+    cell_dim            = "3 3 3"
     num_atoms           = "256"
     ref_Temp            = "0.035"
-    density             = "10"
+    density             = "20"
     reduced_viscosity   = "2.87"
     mass                = "1"
 />
@@ -15,13 +15,13 @@
 <calculation
     state              = "fromScratch"
     dt                 = "0.005"
-    real_steps         = "3000"
-    transitory_steps   = "1000"
-    thermostat_steps   = "50"
+    real_steps         = "10000"
+    transitory_steps   = "10000"
+    thermostat_steps   = "100"
     radius_cutoff      = "2.5"
     summation          = 'linked-lists'
     dim_linkCell       = "3 3 3"
-    measuring_jump     = "10"
+    measuring_jump     = "50"
     initial_velocities = 'Maxwell'
 />
 

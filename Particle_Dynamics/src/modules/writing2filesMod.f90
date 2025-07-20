@@ -262,7 +262,7 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
         write(unit_info,'(a24,5x,3(x,E11.5))')   "Super-cell dimensions: ", periodicity*conversion_factors(1)
         write(unit_info,'(a24,6x,E11.5)')   "Density:               ", density/conversion_factors(1)**3
         if (interactions == 'Coulomb') write(unit_info,'(a24,6x,E11.5)')   "Gamma:                 " &
-            , (fourPi/3._pr*density/conversion_factors(1)**3)**(1._pr/3._pr)/(ref_Temp*conversion_factors(3))
+            , ((fourPi/3._pr)*density/conversion_factors(1)**3)**(1._pr/3._pr)/(ref_Temp*conversion_factors(3))
         write(unit_info,'(a24,4x,a)')       "Summation:             ", summation
         write(unit_info,'(a24,4x,a)')       "Initial velocities:    ", initial_velocities
         write(unit_info,'(a24,4x,a)')       "Potential:             ", interactions

@@ -33,15 +33,14 @@ subroutine init_structure()
     select case (structure)
         case ("FCC")
             init_positions =>  init_positions_FCC
-            if (density > 0._pr) lattice_constant = (4._pr/density)**(1._pr/3._pr)
+            lattice_constant = (4._pr/density)**(1._pr/3._pr)
         case ("BCC")
             init_positions =>  init_positions_BCC
-            if (density > 0._pr) lattice_constant = (2._pr/density)**(1._pr/3._pr)
+            lattice_constant = (2._pr/density)**(1._pr/3._pr)
         case ("random")
             init_positions =>  init_positions_random
             cell_dim = 1_int_medium
-            if (density >  0._pr) lattice_constant = (1._pr/density)**(1._pr/3._pr)
-            if (density <= 0._pr) density = num_atoms / lattice_constant**3._pr
+            lattice_constant = (1._pr/density)**(1._pr/3._pr)
     end select
 
     if (state == 'fromFile') init_positions =>  init_positions_fromFile
@@ -51,12 +50,12 @@ end subroutine init_structure
 subroutine init_variables()
 
     ! Define conversion factors to adimensionalize the variables
-    conversion_factors(1) = sigma                         ! Distance      [Bohr = a₀]
-    conversion_factors(2) = sigma*sqrt(mass/delta)        ! Time          [ℏ/Eh = tₐ]
-    conversion_factors(3) = 1._pr                         ! Temperature   [delta / kB]
-    conversion_factors(4) = delta                         ! Energy        [hartree = Eh]
-    conversion_factors(5) = sqrt(delta/mass)              ! Velocity      [a₀ / tₐ]
-    conversion_factors(6) = delta/(sigma*sigma*sigma)     ! Pressure      [hartree / bohr³]
+    conversion_factors(1) = sigma                   ! Distance      [Bohr = a₀]
+    conversion_factors(2) = sigma*sqrt(mass/delta)  ! Time          [ℏ/Eh = tₐ]
+    conversion_factors(3) = 1._pr                   ! Temperature   [Eh / kB]
+    conversion_factors(4) = delta                   ! Energy        [hartree = Eh]
+    conversion_factors(5) = sqrt(delta/mass)        ! Velocity      [a₀ / tₐ]
+    conversion_factors(6) = delta/(sigma**3)        ! Pressure      [hartree / bohr³]
 
     density = density*conversion_factors(1)**3
     lattice_constant = lattice_constant/conversion_factors(1)
