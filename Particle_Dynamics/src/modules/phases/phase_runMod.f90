@@ -40,15 +40,17 @@ subroutine phase_run()
         print*, "Starting definitive run"
         call run_definitive()
 
-        print*, "σ =", sigma
-        print*, "Potential Contribution (Real)          :", E_potential_real/real(measuring_steps*num_atoms,pr)
-        print*, "Potential Contribution (Reciprocal)    :", E_potential_reciprocal/real(measuring_steps*num_atoms,pr)
-        print*, "Potential Contribution (Self Term)     :", Ewald_selfTerm/real(num_atoms,pr)
-        print*, "Potential Contribution (Jelium Term)   :", Ewald_jeliumTerm/real(num_atoms,pr)
-        print*, "Potential Contribution (Total)         :"&
-            , ((E_potential_real + E_potential_reciprocal)/real(measuring_steps,pr) - Ewald_selfTerm - Ewald_jeliumTerm) &
-            /real(num_atoms,pr)
-        print*, "Net charge =", sum(charges(:))
+        if (debugg .and. interactions == "Coulomb") then
+            print*, "σ =", sigma
+            print*, "Potential Contribution (Real)          :", E_potential_real/real(measuring_steps*num_atoms,pr)
+            print*, "Potential Contribution (Reciprocal)    :", E_potential_reciprocal/real(measuring_steps*num_atoms,pr)
+            print*, "Potential Contribution (Self Term)     :", Ewald_selfTerm/real(num_atoms,pr)
+            print*, "Potential Contribution (Jelium Term)   :", Ewald_jeliumTerm/real(num_atoms,pr)
+            print*, "Potential Contribution (Total)         :"&
+                , ((E_potential_real + E_potential_reciprocal)/real(measuring_steps,pr) - Ewald_selfTerm - Ewald_jeliumTerm) &
+                /real(num_atoms,pr)
+            print*, "Net charge =", sum(charges(:))
+        end if
 
     call close_XYZ_file()
 

@@ -31,34 +31,32 @@ function Coulomb_reciprocalSpace(index, proposed_position) result(E_potential)  
     real(pr), intent(in)    :: proposed_position(3)
     real(pr)                :: E_potential
     integer                 :: kx, ky, kz, i
-    real(pr)                :: factor, kfactor
+    real(pr)                :: kfactor
     complex(pr)             :: eikr_old(3), eikr_new(3)
     complex(pr)             :: kCharge_variation
 
     E_potential = 0.0_pr
 
-    !$omp parallel private(kx, ky, kz, kfactor, reciprocal_charges, kCharge_variation, factor, eikr_old, eikr_new) &
-    !$omp shared(positions, k_vectors, k_periodicity, index, num_atoms, charges, kgrid, proposed_position) &
+    !$omp parallel private(kx, ky, kz, kfactor, kCharge_variation, eikr_old, eikr_new) &
+    !$omp shared(positions, num_kvec, periodicity, k_periodicity, k_vectors, index, num_atoms, charges, reciprocal_charges) &
+    !$omp shared(kgrid, proposed_position) &
     !$omp default(none) &
     !$omp reduction(+: E_potential)
 
     !$omp do schedule(dynamic)
-    do i = 1, size(k_vectors)
+    do i = 1, num_kvec
         kfactor = k_vectors(i)%kfactor
         kx = k_vectors(i)%kx
         ky = k_vectors(i)%ky
         kz = k_vectors(i)%kz
 
-        if (kx == 0) then
-            factor = 1.0_pr ! No reflection with respect to y-z plane
-        else
-            factor = 2.0_pr ! Reflection symmetry with respect to y-z plane
-        end if  ! The same symmetries can be used but might be less efficient (see commented subroutine at the end of this module)
+        eikr_old(:) = cmplx(cos(k_periodicity*(positions(:,index)-0.5_pr*periodicity)) &
+                    , sin(k_periodicity*positions(:,index)), pr)
+        eikr_new(:) = cmplx(cos(k_periodicity*(proposed_position(:)-0.5_pr*periodicity)) &
+                    , sin(k_periodicity*(proposed_position(:)-0.5_pr*periodicity)), pr)
 
-        eikr_old(:) = cmplx(cos(k_periodicity*positions(:,index)), sin(k_periodicity*positions(:,index)), pr)
-        eikr_new(:) = cmplx(cos(k_periodicity*proposed_position(:)), sin(k_periodicity*proposed_position(:)), pr)
         kCharge_variation = charges(index) * (product(eikr_new) - product(eikr_old))
-        E_potential  = E_potential + factor * kfactor * ( real(kCharge_variation*conjg(kCharge_variation)) + &
+        E_potential  = E_potential + 0.5_pr * kfactor * ( real(kCharge_variation*conjg(kCharge_variation)) + &
             2._pr*real(reciprocal_charges(i)*conjg(kCharge_variation)) )
     end do
     !$omp end do
@@ -78,7 +76,7 @@ subroutine Coulomb_Ewald_realSpace(index1, index2, particle_distance_sqr, partic
 
     particle_distance = sqrt(particle_distance_sqr)
 
-    term1 = ERFC(particle_distance/sigma) * charges(index1) * charges(index2)/ particle_distance ! Screened Coulomb term
+    term1 = ERFC(particle_distance/sigma) * charges(index1) * charges(index2) / particle_distance ! Screened Coulomb term
     term2 = Ewald_realFactor*exp(-particle_distance_sqr/sigma_sqr) * charges(index1) * charges(index2)
 
     force_magnitude = term1 + term2
@@ -144,6 +142,7 @@ subroutine get_all_expFactors(eikx, eiky, eikz)
     eiky(0,:) = (1.0_pr, 0.0_pr)
     eikz(0,:) = (1.0_pr, 0.0_pr)
 
+    ! The shift in positions is done to center the box (code already uses a corner-centered box)
     eikx(1,:) = cmplx(cos(k_periodicity(1)*(positions(1,:)-0.5_pr*periodicity(1))) &
                 , sin(k_periodicity(1)*(positions(1,:)-0.5_pr*periodicity(1))), pr)
     eiky(1,:) = cmplx(cos(k_periodicity(2)*(positions(2,:)-0.5_pr*periodicity(2))) &
@@ -175,14 +174,16 @@ subroutine update_Ewald(index, proposed_position)
     integer                 :: i
     complex(pr)             :: eikr_old(3), eikr_new(3)
 
-    !$omp parallel private(reciprocal_charges, eikr_old, eikr_new) &
-    !$omp shared(positions, k_periodicity, index, num_kvec, charges, proposed_position) &
+    !$omp parallel private(eikr_old, eikr_new) &
+    !$omp shared(positions, proposed_position, periodicity, k_periodicity, index, num_kvec, charges, reciprocal_charges) &
     !$omp default(none)
 
     !$omp do schedule(dynamic)
     do i = 1, num_kvec
-        eikr_old(:) = cmplx(cos(k_periodicity*positions(:,index)), sin(k_periodicity*positions(:,index)), pr)
-        eikr_new(:) = cmplx(cos(k_periodicity*proposed_position(:)), sin(k_periodicity*proposed_position(:)), pr)
+        eikr_old(:) = cmplx(cos(k_periodicity*(positions(:,index)-0.5_pr*periodicity)) &
+                    , sin(k_periodicity*(positions(:,index)-0.5_pr*periodicity)), pr)
+        eikr_new(:) = cmplx(cos(k_periodicity*(proposed_position(:)-0.5_pr*periodicity)) &
+                    , sin(k_periodicity*(proposed_position(:)-0.5_pr*periodicity)), pr)
         reciprocal_charges(i) = reciprocal_charges(i) + charges(index) * (product(eikr_new) - product(eikr_old))
     end do
     !$omp end do

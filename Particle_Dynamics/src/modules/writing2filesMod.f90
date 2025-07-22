@@ -1,3 +1,4 @@
+! Module with all subroutines to write to files. Should be separated to different modules for easier maintenance.
 MODULE writing2filesMod
     use precisionMod
     use dimensionsMod
@@ -200,13 +201,13 @@ subroutine write_observables(time, energies, pressures, temperatures)
             write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies, "energy") &
                 , redimensionalize(pressures, "pressure"), temperatures
         case('Monte-Carlo')
-            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies, "energy") &
+            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies(1), "energy") &
                 , redimensionalize(pressures, "pressure")
         case('Brownian')
-            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies, "energy") &
+            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies(1), "energy") &
                 , redimensionalize(pressures, "pressure")
         case default
-            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies, "energy") &
+            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies(1), "energy") &
                 , redimensionalize(pressures, "pressure")
     end select
 

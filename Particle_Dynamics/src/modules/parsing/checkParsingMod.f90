@@ -179,10 +179,6 @@ subroutine check_parsed_tasks()
     if ((save_state .neqv. .True.) .and. (save_state .neqv. .False.)) STOP "ERROR: invalid save_state"
     if ((do_pair_correlation .neqv. .True.) .and. (do_pair_correlation .neqv. .False.)) &
         STOP "ERROR: invalid do_pair_correlation"
-    if (pair_corr_cutoff > radius_cutoff) then
-        print*, "WARNING: pair_corr_cutoff > radius_cutoff, changing to pair_corr_cutoff = radius_cutoff"
-        pair_corr_cutoff = radius_cutoff
-    end if
     if ((do_mean_sqr_displacement .neqv. .True.) .and. (do_mean_sqr_displacement .neqv. .False.)) &
         STOP "ERROR: invalid do_mean_sqr_displacement"
     if ((do_structure_factor .neqv. .True.) .and. (do_structure_factor .neqv. .False.)) &
