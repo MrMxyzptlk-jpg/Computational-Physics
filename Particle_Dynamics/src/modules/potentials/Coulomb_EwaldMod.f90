@@ -79,68 +79,95 @@ subroutine Coulomb_Ewald_realSpace(index1, index2, particle_distance_sqr, partic
     particle_distance = sqrt(particle_distance_sqr)
 
     term1 = ERFC(particle_distance/sigma) * charges(index1) * charges(index2)/ particle_distance ! Screened Coulomb term
-    term2 = Ewald_realFactor*exp(-particle_distance_sqr/sigma_sqr)
+    term2 = Ewald_realFactor*exp(-particle_distance_sqr/sigma_sqr) * charges(index1) * charges(index2)
 
     force_magnitude = term1 + term2
     force_contribution = force_magnitude * particle_separation / particle_distance_sqr
 
     if (measure .and. save_observables) then
         E_potential = E_potential + term1
+        if (debugg .and. (.not. transitory)) E_potential_real = E_potential_real + term1
     end if
 
 end subroutine Coulomb_Ewald_realSpace
 
-subroutine Coulomb_Ewald_reciprocalSpace(positions, force_contribution, E_potential) ! Coulomb potential contribution from other cells in the lattice
+subroutine Coulomb_Ewald_reciprocalSpace(force_contribution, E_potential) ! Coulomb potential contribution from other cells in the lattice
     real(pr), intent(out)   :: E_potential, force_contribution(3,num_atoms)
-    real(pr), intent(in)    :: positions(3,num_atoms)
     integer                 :: kx, ky, kz, i, j
     real(pr)                :: factor, kvector(3), kfactor
-    complex(pr)             :: eikx(        0:kgrid(1), num_atoms)
+    complex(pr)             :: eikx(-kgrid(1):kgrid(1), num_atoms)
     complex(pr)             :: eiky(-kgrid(2):kgrid(2), num_atoms)
     complex(pr)             :: eikz(-kgrid(3):kgrid(3), num_atoms)
-    complex(pr)             :: kCharge, kCharge_sum, exp_k
+    complex(pr)             :: kCharge, exp_k
 
     call get_all_expFactors(eikx, eiky, eikz)
 
     E_potential = 0.0_pr
     force_contribution = 0._pr
 
-    !$omp parallel private(kx, ky, kz, i, kCharge, kCharge_sum, kfactor, exp_k, factor, kvector) &
-    !$omp shared(positions, k_vectors, num_atoms, eikx, eiky, eikz, kgrid, measure, save_observables, charges, k_periodicity) &
+    !$omp parallel private(kx, ky, kz, i, j, kCharge, kfactor, exp_k, kvector) &
+    !$omp shared(positions, num_atoms, charges, k_vectors, num_kvec, eikx, eiky, eikz, kgrid, k_periodicity) &
+    !$omp shared(measure, save_observables) &
     !$omp default(none) &
     !$omp reduction(+: force_contribution, E_potential)
 
     !$omp do schedule(dynamic)
-    do j = 1, size(k_vectors)
+    do j = 1, num_kvec
         kvector = k_vectors(j)%kvector
         kfactor = k_vectors(j)%kfactor
         kx = k_vectors(j)%kx
         ky = k_vectors(j)%ky
         kz = k_vectors(j)%kz
 
-        if (kx == 0) then
-            factor = 1.0_pr ! No reflection with respect to y-z plane
-        else
-            factor = 2.0_pr ! Reflection symmetry with respect to y-z plane
-        end if  ! The same symmetries can be used but might be less efficient (see commented subroutine at the end of this module)
-
         kCharge = sum(charges(:)*eikx(kx,:)*eiky(ky,:)*eikz(kz,:))
         do i = 1, num_atoms
             exp_k = eikx(kx,i) * eiky(ky,i) * eikz(kz,i)
-            force_contribution(:,i) = force_contribution(:,i) &
-                - charges(i) * factor * kfactor * kvector * aimag(conjg(kCharge*exp_k))
+            force_contribution(:,i) = force_contribution(:,i) - charges(i) * kfactor * kvector * aimag(kCharge*conjg(exp_k))
         end do
-        if (measure .and. save_observables) then
-            E_potential  = E_potential + factor * kfactor * real(kCharge*conjg(kCharge))
-        end if
+        if (measure .and. save_observables) E_potential  = E_potential + 0.5_pr * kfactor * real(kCharge*conjg(kCharge))
     end do
     !$omp end do
 
     !$omp end parallel
-
-    if (measure .and. save_observables) E_potential = E_potential - Ewald_selfTerm
+    if (debugg .and. (.not. transitory)) E_potential_reciprocal = E_potential_reciprocal + E_potential
 
 end subroutine Coulomb_Ewald_reciprocalSpace
+
+subroutine get_all_expFactors(eikx, eiky, eikz)
+    complex(pr), intent(out)    :: eikx(-kgrid(1):kgrid(1), num_atoms)
+    complex(pr), intent(out)    :: eiky(-kgrid(2):kgrid(2), num_atoms)
+    complex(pr), intent(out)    :: eikz(-kgrid(3):kgrid(3), num_atoms)
+    integer                     :: i
+
+    ! Calculate exponents with kx, ky, kz = {0, 1}
+    eikx(0,:) = (1.0_pr, 0.0_pr)
+    eiky(0,:) = (1.0_pr, 0.0_pr)
+    eikz(0,:) = (1.0_pr, 0.0_pr)
+
+    eikx(1,:) = cmplx(cos(k_periodicity(1)*(positions(1,:)-0.5_pr*periodicity(1))) &
+                , sin(k_periodicity(1)*(positions(1,:)-0.5_pr*periodicity(1))), pr)
+    eiky(1,:) = cmplx(cos(k_periodicity(2)*(positions(2,:)-0.5_pr*periodicity(2))) &
+                , sin(k_periodicity(2)*(positions(2,:)-0.5_pr*periodicity(2))), pr)
+    eikz(1,:) = cmplx(cos(k_periodicity(3)*(positions(3,:)-0.5_pr*periodicity(3))) &
+                , sin(k_periodicity(3)*(positions(3,:)-0.5_pr*periodicity(3))), pr)
+
+    ! Use recursion to avoid the calculation of exponential by using multiplication instead
+    do i = 2, kgrid(1)
+        eikx(i,:) = eikx(i-1,:)*eikx(1,:)
+    end do
+    do i = 2, kgrid(2)
+        eiky(i,:) = eiky(i-1,:)*eiky(1,:)
+    end do
+    do i = 2, kgrid(3)
+        eikz(i,:) = eikz(i-1,:)*eikz(1,:)
+    end do
+
+    ! Use conjugation symmetry
+    eikx(-kgrid(1):-1,:) = conjg(eikx(kgrid(2):1:-1,:))
+    eiky(-kgrid(2):-1,:) = conjg(eiky(kgrid(2):1:-1,:))
+    eikz(-kgrid(3):-1,:) = conjg(eikz(kgrid(3):1:-1,:))
+
+end subroutine get_all_expFactors
 
 subroutine update_Ewald(index, proposed_position)
     integer, intent(in)     :: index
@@ -162,38 +189,6 @@ subroutine update_Ewald(index, proposed_position)
 
     !$omp end parallel
 end subroutine update_Ewald
-
-subroutine get_all_expFactors(eikx, eiky, eikz)
-    complex(pr), intent(out)    :: eikx(        0:kgrid(1), num_atoms)
-    complex(pr), intent(out)    :: eiky(-kgrid(2):kgrid(2), num_atoms)
-    complex(pr), intent(out)    :: eikz(-kgrid(3):kgrid(3), num_atoms)
-    integer                     :: i
-
-    ! Calculate exponents with kx, ky, kz = {0, 1}
-    eikx(0,:) = (1.0_pr, 0.0_pr)
-    eiky(0,:) = (1.0_pr, 0.0_pr)
-    eikz(0,:) = (1.0_pr, 0.0_pr)
-
-    eikx(1,:) = cmplx(cos(k_periodicity(1)*positions(1,:)), sin(k_periodicity(1)*positions(1,:)), pr)
-    eiky(1,:) = cmplx(cos(k_periodicity(2)*positions(2,:)), sin(k_periodicity(2)*positions(2,:)), pr)
-    eikz(1,:) = cmplx(cos(k_periodicity(3)*positions(3,:)), sin(k_periodicity(3)*positions(3,:)), pr)
-
-    ! Use recursion to avoid the calculation of exponential by using multiplication instead
-    do i = 2, kgrid(1)
-        eikx(i,:) = eikx(i-1,:)*eikx(1,:)
-    end do
-    do i = 2, kgrid(2)
-        eiky(i,:) = eiky(i-1,:)*eiky(1,:)
-    end do
-    do i = 2, kgrid(3)
-        eikz(i,:) = eikz(i-1,:)*eikz(1,:)
-    end do
-
-    ! Use conjugation symmetry
-    eiky(-kgrid(2):-1,:) = conjg(eiky(kgrid(2):1:-1,:))
-    eikz(-kgrid(3):-1,:) = conjg(eikz(kgrid(3):1:-1,:))
-
-end subroutine get_all_expFactors
 
 !##################################################################################################
 !     Not used / Not implemented

@@ -208,7 +208,7 @@ subroutine check_parsed_approximation()
     end if
 
     if  ((interactions == 'Coulomb')) then
-        delta = delta/sigma     ! This is due to the fact that the potential energy will have to be re-dimentionalized in the code and a factor of sigma will be missing
+        delta = delta!/sigma     ! This is due to the fact that the potential energy will have to be re-dimentionalized in the code and a factor of sigma will be missing
         if (summation /= 'Ewald') then
             print*, "WARNING: unavailable summation for Coulomb interactions. Switching to 'Ewald' summation"
             summation = 'Ewald'

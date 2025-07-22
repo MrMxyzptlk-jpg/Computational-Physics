@@ -14,7 +14,7 @@ MODULE variablesMod
     real(pr)                :: reduced_viscosity, viscosity ! Only for Brownian Dynamics
 
     ! Internal
-    real(pr)                :: conversion_factors(6), periodicity(3)
+    real(pr)                :: conversion_factors(8), periodicity(3)
     real(pr)                :: reduced_viscosity_inv        ! Only for Brownian Dynamics
 
 !######### CALCULATION variables #############
@@ -51,7 +51,8 @@ MODULE variablesMod
     real(pr)                :: MC_delta         ! ('Monte-Carlo' integrator)
 
     ! Internal (Ewald summation)
-    real(pr)                :: sigma_sqr, Ewald_realFactor, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr, Ewald_selfTerm ! To avoid recalculation
+    real(pr)                :: sigma_sqr, Ewald_realFactor, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr
+    real(pr)                :: Ewald_jeliumTerm, Ewald_selfTerm ! To avoid recalculation
     real(pr)                :: k_periodicity(3) ! reciprocal lattice periodicity
     integer                 :: num_kvec, octant_num_kvec         ! Number of allowed reciprocal vectors
    ! real(pr), allocatable   :: kfac(:)          ! Factors appearing in 'Ewald' summation (avoid recalculation)
@@ -92,5 +93,10 @@ MODULE variablesMod
 
     ! Brownian Dynamics specific variables and internal variables
     real(pr)                :: diffusion_coeff, brownian_stddev  ! Internal variables
+
+!######### Debugging variables ###############
+
+    real(pr)                :: E_potential_real = 0._pr , E_potential_reciprocal = 0._pr
+    logical                 :: debugg = .True.
 
 END MODULE variablesMod

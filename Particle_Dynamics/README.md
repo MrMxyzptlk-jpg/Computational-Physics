@@ -39,7 +39,7 @@ U = U_r + U_k - U_s + U_0
 $$
 $$ U_r = \epsilon \frac{1}{2} \sum_i^N \sum_j^N q_i q_j \left( \sum_{\mathbf{R}} \frac{\text{erfc}(\frac{|\mathbf{r}_{ij}+ \mathbf{R}|}{\sigma})}{|\mathbf{r}_{ij}+ \mathbf{R}|}\right)  $$
 
-$$ U_k = \epsilon  \frac{2\pi}{V} \sum_{\mathbf{k} \neq 0} G(k) \rho^q\bf(k) \rho^q\bf(-k) $$
+$$ U_k = \epsilon  \frac{1}{2V} \sum_{\mathbf{k} \neq 0} G(k) \rho^q\bf(k) \rho^q\bf(-k) $$
 
 $$ U_s = \epsilon \sum_{i} \frac{q_i^2}{\sqrt{\pi}\sigma} $$
 

@@ -37,6 +37,7 @@ SRC =  	parameters/precisionMod.f90 \
         RNGs/mzran_threadsafeMod.f90 \
         RNGs/randomMod.f90 \
         variablesMod.f90 \
+		parameters/dimensionsMod.f90 \
         properties/propertiesDeclarationMod.f90 \
         subroutinesMod.f90 \
         potentials/potentialPointersMod.f90 \

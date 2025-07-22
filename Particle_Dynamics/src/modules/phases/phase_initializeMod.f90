@@ -34,6 +34,7 @@ subroutine phase_initialize()
     !      Necessary definitions, pointers, initializations and conversion factors (all in initializationsMod module unless specified otherwise)
     !##################################################################################################
 
+        call init_dimensions()
         call init_structure()
         call init_potential()
         call init_variables()

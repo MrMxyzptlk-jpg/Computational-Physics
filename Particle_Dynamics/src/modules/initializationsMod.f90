@@ -11,6 +11,7 @@ MODULE initializationsMod
     use observablesMod
     use propertiesMod
     use integratorsMod
+    use dimensionsMod
     implicit none
 
     abstract interface
@@ -27,6 +28,20 @@ MODULE initializationsMod
     procedure(init_pos), pointer     :: init_positions      => null()
 
 CONTAINS
+
+subroutine init_dimensions()
+    ! Define conversion factors to adimensionalize the variables
+    conversion_factors(1) = sigma                   ! Distance      [Bohr = a₀]
+    conversion_factors(2) = sigma*sqrt(mass/delta)  ! Time          [ℏ/Eh = tₐ]
+    conversion_factors(3) = 1._pr                   ! Temperature   [Eh / kB]
+    conversion_factors(4) = delta                   ! Energy        [hartree = Eh]
+    conversion_factors(5) = sqrt(delta/mass)        ! Velocity      [a₀ / tₐ]
+    conversion_factors(6) = delta/(sigma**3)        ! Pressure      [hartree / Bohr³]
+    conversion_factors(7) = sigma**3                ! Volume        [Bohr³]
+    conversion_factors(8) = 1._pr/(sigma**3)        ! Density       [1/Bohr³]
+
+    conversion_factors = 1._pr
+end subroutine init_dimensions
 
 subroutine init_structure()
 
@@ -49,25 +64,17 @@ end subroutine init_structure
 
 subroutine init_variables()
 
-    ! Define conversion factors to adimensionalize the variables
-    conversion_factors(1) = sigma                   ! Distance      [Bohr = a₀]
-    conversion_factors(2) = sigma*sqrt(mass/delta)  ! Time          [ℏ/Eh = tₐ]
-    conversion_factors(3) = 1._pr                   ! Temperature   [Eh / kB]
-    conversion_factors(4) = delta                   ! Energy        [hartree = Eh]
-    conversion_factors(5) = sqrt(delta/mass)        ! Velocity      [a₀ / tₐ]
-    conversion_factors(6) = delta/(sigma**3)        ! Pressure      [hartree / bohr³]
-
-    density = density*conversion_factors(1)**3
-    lattice_constant = lattice_constant/conversion_factors(1)
+    density = adimensionalize(density, "density")
+    lattice_constant = adimensionalize(lattice_constant, "distance")
     periodicity = cell_dim*lattice_constant
     volume = product(periodicity)
 
-    print*, "Periodicity = ", periodicity*conversion_factors(1)
-    print*, "Volume", volume*conversion_factors(1)**3
+    print*, "Periodicity = ", redimensionalize(periodicity, "distance")
+    print*, "Volume", redimensionalize(volume, "volume")
 
-    ref_Temp = ref_Temp*conversion_factors(3)    ! Already non-dimensional!!
-    radius_cutoff = radius_cutoff/conversion_factors(1)
-    dt = dt/conversion_factors(2)
+    ref_Temp = adimensionalize(ref_Temp, "temperature")    ! Already non-dimensional!!
+    radius_cutoff = adimensionalize(radius_cutoff, "distance")
+    dt = adimensionalize(dt, "time")
 
     dtdt = dt*dt
     radius_cutoff_squared = radius_cutoff*radius_cutoff
@@ -80,7 +87,7 @@ subroutine init_variables()
     transitory = .True.    ! Flag to avoid calculations and saving variables during the transitory steps
 
     if(do_pair_correlation) then
-        pair_corr_cutoff = pair_corr_cutoff/conversion_factors(1)
+        pair_corr_cutoff = adimensionalize(pair_corr_cutoff, "distance")
         pair_corr_cutoff_sqr = pair_corr_cutoff*pair_corr_cutoff
         dr = pair_corr_cutoff/real(pair_corr_bins,pr)
     end if
@@ -99,7 +106,6 @@ subroutine init_potential()
             potential =>  Lennard_Jones
             potential_function => Lennard_Jones_potential
         case ("Coulomb")
-            sigma_sqr  = sigma*sigma
             potential =>  Coulomb_Ewald_realSpace
             potential_function =>  Coulomb_realSpace
             potential_function_reciprocal =>  Coulomb_reciprocalSpace
@@ -335,9 +341,10 @@ subroutine init_positions_fromFile()
     real(pr)    :: scaling_factor_vec(3), scaling_factor, scaling_tol
 
     call parse_stateXML(parsed_periodicity)   ! Getting the positions, num_atoms and periodicity from STATE.xml file
+    parsed_periodicity = adimensionalize(parsed_periodicity, "distance")
 
     ! Check consistent super-cell dimensions for re-scaling
-    scaling_tol = 10._pr * epsilon(minval(periodicity) * conversion_factors(1))    ! Getting a tolerance base on the values of periodicity we are dealing with
+    scaling_tol = 10._pr * epsilon(minval(periodicity))     ! Getting a tolerance base on the values of periodicity we are dealing with
     scaling_factor_vec = periodicity / parsed_periodicity   ! Note no re-dimensionalization of the periodicity to avoid another multiplication for the position re-scaling
     do i = 1, 3
         j = mod(i,3) + 1
@@ -349,7 +356,7 @@ subroutine init_positions_fromFile()
     ! Re-scale positions to meet the new density from input.xml file. Note this does not propagate error after consecutive runs fromFile, because parameters remain unchanged
     scaling_factor = scaling_factor_vec(1)
     do i = 1, num_atoms
-        positions(:,i) = positions(:,i) * scaling_factor
+        positions(:,i) = adimensionalize(positions(:,i), "distance") * scaling_factor
     end do
 
 end subroutine init_positions_fromFile
@@ -430,26 +437,30 @@ end subroutine init_internal_constants
 
 subroutine init_Ewald()
     integer     :: kx, ky, kz, kvec_count
-    real(pr)    :: k_sqr
+    real(pr)    :: k_sqr, kvec(3)
     logical     :: good_kvec
 
     ! Set all constants for Ewald summation
     k_periodicity = twoPi/periodicity
-    Ewald_realFactor    = 2._pr  / (sigma * sqrt(pi))
     eightPi_over_volume = 8._pr*pi/volume
     twoPi_over_volume   = twoPi/volume
-    radius_cutoff = 0.5_pr*minval(periodicity)  ! Set to half the minimum box width
-    Ewald_selfTerm = sum(charges*charges)/ (sqrt(pi)*sigma)
+    radius_cutoff = minval(periodicity)*0.5_pr  ! Set to half the minimum box width
+
+    sigma_sqr  = sigma*sigma
+    halfSigma_sqr = sigma_sqr * 0.25_pr
+
+    Ewald_realFactor    = 2._pr  / (sigma * sqrt(pi))   ! For the forces
+    Ewald_selfTerm = sum(charges*charges)/ (sqrt(pi)*sigma)         ! Self term contribution to the potential
+    Ewald_jeliumTerm = pi*sigma_sqr*0.5_pr*sum(charges)**2 /volume  ! To neutralize the net charge of the system
 
     ! Get k-space factors for the force and potential energy contributions
-    halfSigma_sqr = sigma*sigma / 4.0_pr
 
     ! Count valid vectors
     kvec_count = 0
-    do kx = 0, kgrid(1)
+    do kx = -kgrid(1), kgrid(1)
         do ky = -kgrid(2), kgrid(2)
             do kz = -kgrid(3), kgrid(3)
-                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                call check_kvec(kx, ky, kz, good_kvec)
                 if (good_kvec) kvec_count = kvec_count + 1
             end do
         end do
@@ -459,19 +470,22 @@ subroutine init_Ewald()
     allocate(k_vectors(num_kvec))
     kvec_count = 0
 
-    ! Note that only 4 octants are considered and the others are accounted by symmetries later on.
-
-    do kx = 0, kgrid(1)
+    ! All reciprocal vectors are considered. Symmetries could be implemented to improve calculations
+    do kx = -kgrid(1), kgrid(1)
         do ky = -kgrid(2), kgrid(2)
             do kz = -kgrid(3), kgrid(3)
-                call check_kvec(kx, ky, kz, k_sqr, good_kvec)
+                call check_kvec(kx, ky, kz, good_kvec)
                 if (good_kvec) then
                     kvec_count = kvec_count + 1
                     k_vectors(kvec_count)%kx = kx
                     k_vectors(kvec_count)%ky = ky
                     k_vectors(kvec_count)%kz = kz
+
+                    kvec = (/real(kx,pr), real(ky,pr), real(kz,pr)/) * k_periodicity
+                    k_vectors(kvec_count)%kvector = kvec
+
+                    k_sqr = dot_product(kvec, kvec)
                     k_vectors(kvec_count)%k_sqr = k_sqr
-                    k_vectors(kvec_count)%kvector = (/kx, ky, kz/) * k_periodicity
 
                     k_vectors(kvec_count)%kfactor = fourpi/volume * exp(-halfSigma_sqr * k_sqr) / k_sqr
                 end if
@@ -479,11 +493,13 @@ subroutine init_Ewald()
         end do
     end do
 
+    print*, "Total reciprocal vectors considered = ", num_kvec
+
 end subroutine init_Ewald
 
 subroutine init_reciprocalCharges()
     integer                 :: kx, ky, kz, i
-    complex(pr)             :: eikx(0:kgrid(1), num_atoms)
+    complex(pr)             :: eikx(-kgrid(1):kgrid(1), num_atoms)
     complex(pr)             :: eiky(-kgrid(2):kgrid(2), num_atoms)
     complex(pr)             :: eikz(-kgrid(3):kgrid(3), num_atoms)
 

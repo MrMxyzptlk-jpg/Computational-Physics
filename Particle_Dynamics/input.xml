@@ -6,7 +6,7 @@
     lattice_constant    = "6.8399"
     cell_dim            = "3 3 3"
     num_atoms           = "256"
-    ref_Temp            = "0.035"
+    ref_Temp            = "0.044"
     density             = "20"
     reduced_viscosity   = "2.87"
     mass                = "1"
@@ -15,8 +15,8 @@
 <calculation
     state              = "fromScratch"
     dt                 = "0.005"
-    real_steps         = "10000"
-    transitory_steps   = "10000"
+    real_steps         = "5000"
+    transitory_steps   = "5000"
     thermostat_steps   = "100"
     radius_cutoff      = "2.5"
     summation          = 'linked-lists'
@@ -31,17 +31,17 @@
     save_observables         = "true"
     save_positions           = "true"
     do_pair_correlation      = "true"
-    do_structure_factor      = "true"
-    do_mean_sqr_displacement = "true"
+    do_structure_factor      = "false"
+    do_mean_sqr_displacement = "false"
     Miller_index             = "0 -1 0"
 />
 
 <approximation
     integrator      = "velocity-Verlet"
     interactions    = "Coulomb"
-    sigma           = "0.5"
+    sigma           = "0.175"
     delta           = "1"
-    kgrid           = "8 8 8"
+    kgrid           = "14 14 14"
     MC_delta        = "0.1"
     MC_acceptance_rate  = "0.5"
 />
