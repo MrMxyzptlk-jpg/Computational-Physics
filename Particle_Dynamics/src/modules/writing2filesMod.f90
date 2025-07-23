@@ -1,5 +1,7 @@
+! Module with all subroutines to write to files. Should be separated to different modules for easier maintenance.
 MODULE writing2filesMod
     use precisionMod
+    use dimensionsMod
     use subroutinesMod
     use formatsMod
     use parsingMod
@@ -18,9 +20,9 @@ contains
 
 subroutine initialize_XYZ_data()
 
-    write (size_x,'(E11.5)') periodicity(1)*conversion_factors(1)
-    write (size_y,'(E11.5)') periodicity(2)*conversion_factors(1)
-    write (size_z,'(E11.5)') periodicity(3)*conversion_factors(1)
+    write (size_x,'(E11.5)') redimensionalize(periodicity(1), "distance")
+    write (size_y,'(E11.5)') redimensionalize(periodicity(2), "distance")
+    write (size_z,'(E11.5)') redimensionalize(periodicity(3), "distance")
 
     size_x = adjustl(trim(size_x))
     size_y = adjustl(trim(size_y))
@@ -28,17 +30,19 @@ subroutine initialize_XYZ_data()
 
 end subroutine initialize_XYZ_data
 
-subroutine open_files(reciprocal_vec)
-    real (pr), intent (in)  :: reciprocal_vec(3)
-
+subroutine open_XYZ_file()
     if (save_positions)  open(newunit=unit_positions, file=dataDir//"positions.xyz", status="replace")
+end subroutine open_XYZ_file
+
+subroutine open_observables_file(reciprocal_vec)
+    real (pr), intent (in)  :: reciprocal_vec(3)
 
     if (save_observables) then
         open(newunit=unit_observables, file=dataDir//"observables.out", status="replace")
         if (integrator == 'velocity-Verlet') then
-            write(unit_observables,*) "##    t[s]    |    E_pot    |     E_kin      |   Pressure    |   Temperature"
+            write(unit_observables,*) "##    t[s]    |    e_pot    |     e_kin      |   Pressure    |   Temperature"
         else
-            write(unit_observables,*) "##    t[s]    |    E_pot    |     Pressure    "
+            write(unit_observables,*) "##    t[s]    |    e_pot    |     Pressure    "
         end if
     end if
 
@@ -49,22 +53,24 @@ subroutine open_files(reciprocal_vec)
             , " ; l = ", Miller_index(3)
         write(unit_structFact, '(a)') "## t | structure_factor(K,t)"
     end if
-end subroutine open_files
+end subroutine open_observables_file
 
 subroutine write_tasks(time, energies, pressures, temperatures, structure_factor)
     real (pr), intent (in)                  :: time, energies(2), pressures, temperatures, structure_factor
 
-    if (save_positions)      call write_XYZfile(time)
     if (save_observables)    call write_observables(time, energies, pressures, temperatures)
     if (do_structure_factor) call write_structure_factor(time, structure_factor)
 
 end subroutine write_tasks
 
-subroutine close_files()
+subroutine close_XYZ_file()
     if (save_positions)         close (unit_positions)
+end subroutine close_XYZ_file
+
+subroutine close_observables_file()
     if (save_observables)       close (unit_observables)
     if (do_structure_factor)    close (unit_structFact)
-end subroutine close_files
+end subroutine close_observables_file
 
 subroutine write_XYZfile(time)
     real (pr), intent (in)              :: time
@@ -74,7 +80,7 @@ subroutine write_XYZfile(time)
     symbol = 'X'      ! Change to real element if needed
 
     ! Write time in string format
-    write(time_tmp,'(E11.5)') time*conversion_factors(2)
+    write(time_tmp,'(E11.5)') redimensionalize(time, "time")
     time_tmp = adjustl(trim(time_tmp))
 
     ! Line 1: number of particles
@@ -90,9 +96,9 @@ subroutine write_XYZfile(time)
 
         do i = 1, num_atoms
             if (allocated(symbols)) then
-                write(unit_positions, fmt=format_XYZ) symbols(i), positions(:,i)*conversion_factors(1)
+                write(unit_positions, fmt=format_XYZ) symbols(i), redimensionalize(positions(:,i), "distance")
             else
-                write(unit_positions, fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1)
+                write(unit_positions, fmt=format_XYZ) symbol, redimensionalize(positions(:,i), "distance")
             end if
         end do
     else if (integrator == 'velocity-Verlet') then
@@ -105,11 +111,11 @@ subroutine write_XYZfile(time)
 
         do i = 1, num_atoms
             if (allocated(symbols)) then
-                write(unit_positions,fmt=format_XYZ) symbols(i), positions(:,i)*conversion_factors(1) &
-                    , velocities(:,i)*conversion_factors(5)
+                write(unit_positions,fmt=format_XYZ) symbols(i), redimensionalize(positions(:,i), "distance") &
+                    , redimensionalize(velocities(:,i), "velocity")
             else
-                write(unit_positions,fmt=format_XYZ) symbol, positions(:,i)*conversion_factors(1) &
-                    , velocities(:,i)*conversion_factors(5)
+                write(unit_positions,fmt=format_XYZ) symbol, redimensionalize(positions(:,i), "distance") &
+                    , redimensionalize(velocities(:,i), "velocity")
             end if
         end do
     end if
@@ -133,7 +139,7 @@ subroutine write_stateXML()
     write(attr_string, '(I6)') num_atoms
     call setAttribute(physicalNode, "num_atoms", trim(adjustl(attr_string)))
 
-    write(attr_string, format_state) periodicity*conversion_factors(1)
+    write(attr_string, format_state) redimensionalize(periodicity, "distance")
     call setAttribute(physicalNode, "periodicity", trim(adjustl(attr_string)))
 
     write(attr_string, '(a)') structure
@@ -154,12 +160,12 @@ subroutine write_stateXML()
         end if
 
         ! Position
-        write(attr_string, format_state) positions(:,i)*conversion_factors(1)
+        write(attr_string, format_state) redimensionalize(positions(:,i), "distance")
         call setAttribute(atomNode, "position", trim(adjustl(attr_string)))
 
         ! Velocity (optional)
         if (allocated(velocities)) then
-            write(attr_string, format_state) velocities(:,i)*conversion_factors(5)
+            write(attr_string, format_state) redimensionalize(velocities(:,i), "velocity")
             call setAttribute(atomNode, "velocity", trim(adjustl(attr_string)))
         end if
 
@@ -192,17 +198,17 @@ subroutine write_observables(time, energies, pressures, temperatures)
 
     select case(integrator)
         case ('velocity-Verlet')
-            write(unit_observables, format_style0) time*conversion_factors(2), energies*conversion_factors(4) &
-                , pressures*conversion_factors(6), temperatures
+            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies, "energy") &
+                , redimensionalize(pressures, "pressure"), temperatures
         case('Monte-Carlo')
-            write(unit_observables, format_style0) time*conversion_factors(2), energies(1)*conversion_factors(4) &
-                , pressures*conversion_factors(6)
+            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies(1), "energy") &
+                , redimensionalize(pressures, "pressure")
         case('Brownian')
-            write(unit_observables, format_style0) time*conversion_factors(2), energies(1)*conversion_factors(4) &
-                , pressures*conversion_factors(6)
+            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies(1), "energy") &
+                , redimensionalize(pressures, "pressure")
         case default
-            write(unit_observables, format_style0) time*conversion_factors(2), energies(1)*conversion_factors(4) &
-                , pressures*conversion_factors(6)
+            write(unit_observables, format_style0) redimensionalize(time, "time"), redimensionalize(energies(1), "energy") &
+                , redimensionalize(pressures, "pressure")
     end select
 
 end subroutine write_observables
@@ -210,7 +216,7 @@ end subroutine write_observables
 subroutine write_structure_factor(time, structure_factor)
     real (pr), intent (in)  :: structure_factor, time
 
-    write(unit_structFact, format_style0) time*conversion_factors(2), structure_factor
+    write(unit_structFact, format_style0) redimensionalize(time, "time"), structure_factor
 
 end subroutine write_structure_factor
 
@@ -219,12 +225,12 @@ subroutine write_msd(msd)
     real (pr)               :: time_jump
     integer                 :: unitnum, i
 
-    time_jump = dt*conversion_factors(2)*measuring_jump
+    time_jump = redimensionalize(dt, "time")*measuring_jump
 
     open(newunit=unitnum, file=dataDir//"mean_sqr_displacement.out", status="replace")
         write(unitnum, '(a)') "## Δt | ⟨Δr(t)^2⟩"
         do i = 0, size(msd) - 1
-            write(unitnum, format_style0) real(i,pr)*time_jump, msd(i)*conversion_factors(1)
+            write(unitnum, format_style0) real(i,pr)*time_jump, redimensionalize(msd(i), "distance")
         end do
     close(unitnum)
 
@@ -238,7 +244,7 @@ subroutine write_pair_corr(pair_corr)
     open(newunit=unitnum, file=dataDir//"pair_correlation.out", status="replace")
         write(unitnum, '(a)') "## r | pair_correlation(r)"
         do i = 1, pair_corr_bins
-            bin_center = (real(i-1,pr) + 0.5_pr)*dr
+            bin_center = (real(i-1,pr) + 0.5_pr)*redimensionalize(dr, "distance")
             write(unitnum, format_style0) bin_center, pair_corr(i)
         end do
     close(unitnum)
@@ -254,9 +260,11 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
     open(newunit=unit_info, file=dataDir//"INFO.out", status="replace")
         write(unit_info,'(a24,13x,I4)')     "Number of atoms:       ", num_atoms
         write(unit_info,'(a24,14x,a)')      "Initial structure:     ", structure
-        write(unit_info,'(a24,6x,E11.5)')   "Lattice constant:      ", lattice_constant*conversion_factors(1)
-        write(unit_info,'(a24,5x,3(x,E11.5))')   "Super-cell dimensions: ", periodicity*conversion_factors(1)
-        write(unit_info,'(a24,6x,E11.5)')   "Density:               ", density
+        write(unit_info,'(a24,6x,E11.5)')   "Lattice constant:      ", redimensionalize(lattice_constant, "distance")
+        write(unit_info,'(a24,5x,3(x,E11.5))')   "Super-cell dimensions: ", redimensionalize(periodicity, "distance")
+        write(unit_info,'(a24,6x,E11.5)')   "Density:               ", redimensionalize(density, "density")
+        if (interactions == 'Coulomb') write(unit_info,'(a24,6x,E11.5)')   "Gamma:                 " &
+            , ((fourPi/3._pr)*redimensionalize(density, "density"))**(1._pr/3._pr)/(redimensionalize(ref_Temp, "temperature"))
         write(unit_info,'(a24,4x,a)')       "Summation:             ", summation
         write(unit_info,'(a24,4x,a)')       "Initial velocities:    ", initial_velocities
         write(unit_info,'(a24,4x,a)')       "Potential:             ", interactions
@@ -264,25 +272,25 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
         write(unit_info,'(a24,11x,I6)')     "Transitory steps:      ", transitory_steps
         write(unit_info,'(a24,11x,I6)')     "Run steps:             ", real_steps
         write(unit_info,'(a24,11x,I6)')     "Measuring steps:       ", measuring_steps
-        write(unit_info,'(a24,6x,E11.5)')   "Simulated time:        ", real(real_steps,pr)*dt*conversion_factors(2)
+        write(unit_info,'(a24,6x,E11.5)')   "Simulated time:        ", real(real_steps,pr)*redimensionalize(dt, "time")
 
         if (save_observables) then
             select case(integrator)
             case ('velocity-Verlet')
-                call get_stats(pressures(1:)*conversion_factors(6), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(pressures(1:), "pressure"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Pressure:          ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
-                call get_stats(temperatures(1:)*conversion_factors(3), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(temperatures(1:), "temperature"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Temperature:       ", " Average = ",avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
-                call get_stats(energies(1,1:)*conversion_factors(4), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(energies(1,1:), "energy"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
-                call get_stats(energies(2,1:)*conversion_factors(4), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(energies(2,1:), "energy"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Kinetic Energy:    ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
                 E_total = energies(1,:) + energies(2,:)
-                call get_stats(E_total*conversion_factors(4), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(E_total, "energy"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Total Energy:      ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
 
@@ -293,10 +301,10 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
                 end if
 
             case('Monte-Carlo')
-                call get_stats(energies(1,1:)*conversion_factors(4), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(energies(1,1:), "energy"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
-                call get_stats(pressures(1:)*conversion_factors(6), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(pressures(1:), "pressure"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Pressure:          ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
                 if (do_structure_factor) then
@@ -306,10 +314,10 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
                 end if
 
             case('Brownian')
-                call get_stats(energies(1,1:)*conversion_factors(4), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(energies(1,1:), "energy"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
-                call get_stats(pressures(1:)*conversion_factors(6), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(pressures(1:), "pressure"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Pressure:          ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
                 if (do_structure_factor) then
@@ -319,10 +327,10 @@ subroutine write_output(CPU_elapsed_time, energies, pressures, temperatures, str
                 end if
 
             case default
-                call get_stats(energies(1,1:)*conversion_factors(4), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(energies(1,1:), "energy"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Potential Energy:  ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
-                call get_stats(pressures(1:)*conversion_factors(6), average = avg, stddev = stddev, error = error)
+                call get_stats(redimensionalize(pressures(1:), "pressure"), average = avg, stddev = stddev, error = error)
                 write(unit_info,format_observables)     "Pressure:          ", " Average = ", avg &
                     , " Standard deviation = ", stddev, " Standard error = ", error
                 if (do_structure_factor) then

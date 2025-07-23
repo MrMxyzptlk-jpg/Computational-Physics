@@ -15,7 +15,7 @@ subroutine velVerlet_step(i_measure)
 
     call update_positions_velVer()
     previous_forces = forces
-    if (do_linkCell) call create_links(positions)
+    if (do_linkCell) call create_links()
     call get_forces(Energies(1,i_measure), pressures(i_measure), pair_corr)  ! If measure = .False. the observables are ignored
 
     call update_velocities_velVer()

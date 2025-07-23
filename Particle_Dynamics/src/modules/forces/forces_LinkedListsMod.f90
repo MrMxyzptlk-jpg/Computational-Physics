@@ -2,7 +2,7 @@ MODULE forces_LinkedListsMod
     use precisionMod
     use constantsMod
     use subroutinesMod
-    use parsingMod, only : dim_linkCell, integrator
+    use parsingMod
     use omp_lib
     use variablesMod
     use observablesMod
@@ -80,8 +80,7 @@ subroutine create_maps()
 
 end subroutine create_maps
 
-subroutine create_links(positions)
-    real(pr), intent(in)    :: positions(:,:)
+subroutine create_links()
     integer                 :: position_index(3),  i, j, jcell
 
     ! Initialize
@@ -124,10 +123,12 @@ subroutine get_forces_linkedlist(E_potential, pressure_virial, pair_corr) ! Perf
     forces = 0._pr
     if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; end if
 
-    !$omp parallel do private(neighbor, j, jcell, jcell0, i, icell, force_contribution) &
-    !$omp shared(particle_distance_sqr, positions, head, map, list, N_linkedCells) &
+    !$omp parallel private(neighbor, j, jcell, jcell0, i, icell, particle_distance_sqr, force_contribution) &
+    !$omp shared(positions, head, map, list, N_linkedCells) &
     !$omp default(none) &
-    !$omp schedule(dynamic) reduction(+: forces, E_potential, pressure_virial, pair_corr)
+    !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
+
+    !$omp do schedule(dynamic)
     do icell = 1, N_linkedCells ! Go through all cells
         i = head(icell)
         do while (i /= 0)
@@ -146,16 +147,18 @@ subroutine get_forces_linkedlist(E_potential, pressure_virial, pair_corr) ! Perf
                 j = head(jcell)
 
                 do while (j /= 0) ! For all particles in a neighbor cell
-                call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr &
-                    , particle_distance_sqr)
-                call add_force_contribution(forces(:,i), forces(:,j), force_contribution, particle_distance_sqr)
+                    call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr &
+                        , particle_distance_sqr)
+                    call add_force_contribution(forces(:,i), forces(:,j), force_contribution, particle_distance_sqr)
                     j = list(j)
                 end do
             end do
             i = list(i)
         end do
     end do
-    !$omp end parallel do
+    !$omp end do
+
+    !$omp end parallel
 
 end subroutine get_forces_linkedlist
 

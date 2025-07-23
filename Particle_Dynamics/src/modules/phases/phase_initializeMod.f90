@@ -25,7 +25,7 @@ subroutine phase_initialize()
             case("XML")
                 call parse_inputXML()
             case default
-                print*, "ERROR: invalid parser" ; STOP
+                STOP "ERROR: invalid parser"
         end select
 
         call check_inputValues()
@@ -34,6 +34,7 @@ subroutine phase_initialize()
     !      Necessary definitions, pointers, initializations and conversion factors (all in initializationsMod module unless specified otherwise)
     !##################################################################################################
 
+        call init_dimensions()
         call init_structure()
         call init_potential()
         call init_variables()
@@ -47,7 +48,7 @@ subroutine phase_initialize()
 
         if (integrator == 'velocity-Verlet') then
             if (state == 'fromScratch') call init_velocities()
-            call thermostat_rescale()     ! thermostatsMod module
+            call thermostat_rescale()   ! thermostatsMod module
         end if
 
         if (summation == "Ewald") then
@@ -55,7 +56,7 @@ subroutine phase_initialize()
             if ((integrator == "Monte-Carlo")) call init_reciprocalCharges()
         end if
 
-        call initialize_XYZ_data()                  ! writing2fliesMod module
+        call initialize_XYZ_data()  ! writing2fliesMod module
 
 end subroutine phase_initialize
 

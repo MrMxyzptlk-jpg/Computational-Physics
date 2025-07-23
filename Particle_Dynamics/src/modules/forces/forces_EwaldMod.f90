@@ -18,25 +18,26 @@ subroutine get_forces_Ewald(E_potential, pressure_virial, pair_corr)
     real(pr), intent(inout) :: pair_corr(:)
     integer                 :: i, j
     real(pr)                :: box_dipole(3), surface_potential, pressure_reciprocal
-    real(pr)                :: potential_reciprocal
+    real(pr)                :: potential_reciprocal, potential_real
     real(pr)                :: force_contribution(3), particle_distance_sqr
     real(pr)                :: force_reciprocal(3,num_atoms)
 
     force_reciprocal = 0._pr
     potential_reciprocal = 0._pr
+    potential_real = 0._pr
 
     forces = 0._pr
-    if (measure .and. save_observables) then; E_potential = 0.0; pressure_virial = 0.0 ; pressure_reciprocal = 0._pr; end if
+    if (measure .and. save_observables) pressure_virial = 0.0
 
     !$omp parallel private(j, i, force_contribution, particle_distance_sqr) &
-    !$omp shared(positions, num_atoms) &
+    !$omp shared(num_atoms) &
     !$omp default(none) &
-    !$omp reduction(+: forces, E_potential, pressure_virial, pair_corr)
+    !$omp reduction(+: forces, potential_real, pressure_virial, pair_corr)
 
         !$omp do schedule(dynamic)
         do i=1,num_atoms-1
             do j = i+1, num_atoms
-                call get_force_contribution(i, j, force_contribution, E_potential, pressure_virial, pair_corr &
+                call get_force_contribution(i, j, force_contribution, potential_real, pressure_virial, pair_corr &
                     , particle_distance_sqr)
                 call add_force_contribution(forces(:,i), forces(:,j), force_contribution, particle_distance_sqr)
             end do
@@ -45,7 +46,7 @@ subroutine get_forces_Ewald(E_potential, pressure_virial, pair_corr)
 
     !$omp end parallel
 
-    call Coulomb_Ewald_reciprocalSpace(positions, force_reciprocal, potential_reciprocal)
+    call Coulomb_Ewald_reciprocalSpace(force_reciprocal, potential_reciprocal)
     forces = forces + force_reciprocal
 
     ! Correction if there's a net charge (vacuum)
@@ -59,8 +60,9 @@ subroutine get_forces_Ewald(E_potential, pressure_virial, pair_corr)
     end if
 
     if (measure .and. save_observables) then
-        E_potential = E_potential + potential_reciprocal
+        E_potential = potential_real + potential_reciprocal - Ewald_selfTerm - Ewald_jeliumTerm
         pressure_virial = E_potential
+        !if (debugg) print*, "Force contribution", sum(force_reciprocal,2)/real(num_atoms,pr)
     end if
 
 end subroutine get_forces_Ewald

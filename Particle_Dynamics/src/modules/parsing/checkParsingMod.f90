@@ -45,8 +45,6 @@ subroutine check_fileXML(filename, fileDoc)
     else if (inException(ex)) then
         print*,"DOM Parse error ", getExceptionCode(ex)
         stop
-    else
-        print*, "Read input.xml file."
     endif
 
 end subroutine check_fileXML
@@ -181,10 +179,6 @@ subroutine check_parsed_tasks()
     if ((save_state .neqv. .True.) .and. (save_state .neqv. .False.)) STOP "ERROR: invalid save_state"
     if ((do_pair_correlation .neqv. .True.) .and. (do_pair_correlation .neqv. .False.)) &
         STOP "ERROR: invalid do_pair_correlation"
-    if (pair_corr_cutoff > radius_cutoff) then
-        print*, "WARNING: pair_corr_cutoff > radius_cutoff, changing to pair_corr_cutoff = radius_cutoff"
-        pair_corr_cutoff = radius_cutoff
-    end if
     if ((do_mean_sqr_displacement .neqv. .True.) .and. (do_mean_sqr_displacement .neqv. .False.)) &
         STOP "ERROR: invalid do_mean_sqr_displacement"
     if ((do_structure_factor .neqv. .True.) .and. (do_structure_factor .neqv. .False.)) &
@@ -207,11 +201,17 @@ subroutine check_parsed_approximation()
         if (MC_acceptance_rate <= 0) STOP "ERROR: MC_acceptance_rate <= 0"
         if (MC_acceptance_rate >= 1) STOP "ERROR: MC_acceptance_rate >= 1"
         if (MC_delta <= 0._pr)   STOP "ERROR: MC_delta <= 0._pr"
+        if (MC_deltaMin <= 0._pr)   STOP "ERROR: MC_deltaMin <= 0._pr"
+        if (MC_deltaMax <= 0._pr)   STOP "ERROR: MC_deltaMax <= 0._pr"
+        if (MC_deltaMax <= MC_deltaMin)   STOP "ERROR: MC_deltaMax <= MC_deltaMin"
     end if
 
-    if  ((interactions == 'Coulomb') .and. (summation /= 'Ewald')) then
-        print*, "WARNING: unavailable summation for Coulomb interactions. Switching to 'Ewald' summation"
-        summation = 'Ewald'
+    if  ((interactions == 'Coulomb')) then
+        delta = delta!/sigma     ! This is due to the fact that the potential energy will have to be re-dimentionalized in the code and a factor of sigma will be missing
+        if (summation /= 'Ewald') then
+            print*, "WARNING: unavailable summation for Coulomb interactions. Switching to 'Ewald' summation"
+            summation = 'Ewald'
+        end if
     end if
 
     if ((integrator == 'velocity-Verlet') .and. (summation == 'Ewald')) then

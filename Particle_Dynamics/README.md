@@ -9,8 +9,15 @@ $$U^{LJ}(\mathbf{r}) = 4\epsilon \left[\left(\frac{\sigma}{r}\right)^{12} - \lef
 ### Potential implementation
 We consider a cut-off radius ($r_{cut}$) to reduce needless calculation of insignificant interactions (due to the short-range nature of the interaction). Thus, the potential is truncated and displaces, resulting in:
 
-$$U = U^{LJ}(\mathbf{r}) - U^{LJ}(\mathbf{r}_{cut}) , \quad \mathbf{r} \leq \mathbf{r}_{cut} \\
-U = 0 \qquad\qquad\qquad\qquad, \quad \mathbf{r} > \mathbf{r}_{cut}$$
+optimize_kSpace
+
+$$
+U(r) =
+\begin{cases}
+    U^{LJ}(r) - U^{LJ}(r_\text{cut}) & r \le r_\text{cut} \\
+    0 & r > r_\text{cut}
+\end{cases}
+$$
 
 ### Forces
 Using the standard force formula $\mathbf{f}_i = -\nabla _{\mathbf{r}_i}U$ one finds the force between two particles is given by:
@@ -27,19 +34,20 @@ Notice there is no correction due to the displacement of the potential. The trun
 ## Coulomb interactions
 
 ### Potential implementation
-We consider the summation of the particles in the reference super-cell to get the real space contribution (short-range contribution) of the potential and forces. The long-range term is taken into account by summing over a ball of k-vectors in reciprocal space. Thus we get:
 
-$$ U = U_r + U_k - U_s + U_0 $$
+We consider the summation of the particles in the reference super-cell to get the real space contribution (short-range contribution) of the potential and forces. The long-range term is taken into account by summing over a ball of k-vectors in reciprocal space. Thus, setting $\epsilon=4\pi\epsilon_0$, we get:
+$$
+U = U_r + U_k - U_s + U_0
+$$
+$$ U_r = \epsilon \frac{1}{2} \sum_i^N \sum_j^N q_i q_j \left( \sum_{\mathbf{R}} \frac{\text{erfc}(\frac{|\mathbf{r}_{ij}+ \mathbf{R}|}{\sigma})}{|\mathbf{r}_{ij}+ \mathbf{R}|}\right)  $$
 
-$$ U_r = \frac{1}{2} \sum_i^N \sum_j^N q_i q_j \left( \sum_{\mathbf{R}} \frac{\text{erfc}(\frac{|\mathbf{r}_{ij}+ \mathbf{R}|}{\sigma})}{|\mathbf{r}_{ij}+ \mathbf{R}|}\right)  $$
+$$ U_k = \epsilon  \frac{1}{2V} \sum_{\mathbf{k} \neq 0} G(k) \rho^q\bf(k) \rho^q\bf(-k) $$
 
-$$ U_k = \frac{2\pi}{V} \sum_{\mathbf{k} \neq 0} G(k) \rho^q\bf(k) \rho^q\bf(-k) $$
+$$ U_s = \epsilon \sum_{i} \frac{q_i^2}{\sqrt{\pi}\sigma} $$
 
-$$ U_s = \sum_{i} \frac{q_i^2}{\sqrt{\pi}\sigma} $$
+$$ U_0 = \epsilon \frac{2\pi}{3V} |\sum_i q_i\mathbf{r}_i |^2 $$
 
-$$ U_0 = \frac{2\pi}{3V} |\sum_i q_i\mathbf{r}_i |^2 $$
-
-$$ G(k) = 4\pi e^{-(\frac{k\sigma}{2})^2} $$
+$$ G(k) = 4\pi \frac{e^{-(\frac{k\sigma}{2})^2}}{k^2} $$
 
 $$ \rho^q(\mathbf{k}) = \sum_i q_i e^{-i\mathbf{k \cdot r_i}}  $$
 
@@ -53,10 +61,10 @@ In out implementation, the real space summation is reduced to the reference supe
 
 The potential energy difference due to the translation $\mathbf{r} \rightarrow\widetilde{\mathbf{r}}$ is simply $\Delta U = \Delta U_r + \Delta U_k$, each given by:
 
-$$\Delta U_r = q_i \sum_j^N q_j \left(\frac{\text{erfc}(\frac{\mathbf{\widetilde{r}}_{ij}}{\sigma})}{\widetilde{r}}_{ij} - \frac{\text{erfc}(\frac{\mathbf{r}_{ij}}{\sigma})}{r_{ij}} \right)  $$
+$$\Delta U_r = \epsilon q_i \sum_j^N q_j \left(\frac{\text{erfc}(\frac{\mathbf{\widetilde{r}}_{ij}}{\sigma})}{\widetilde{r}}_{ij} - \frac{\text{erfc}(\frac{\mathbf{r}_{ij}}{\sigma})}{r_{ij}} \right)  $$
 
 
-$$ U_k = \frac{2\pi}{V} \sum_{\mathbf{k} \neq 0} G(k) \left[2\mathcal{Re}(\rho^q (\mathbf{k}) \Delta\rho^q(\mathbf{-k})) + |\Delta\rho^q(\mathbf{-k})|^2 \right]$$
+$$\Delta  U_k = \epsilon \frac{1}{2V} \sum_{\mathbf{k} \neq 0} G(k) \left[2\mathcal{Re}(\rho^q (\mathbf{k}) \Delta\rho^q(\mathbf{-k})) + |\Delta\rho^q(\mathbf{-k})|^2 \right]$$
 
 $$ \Delta\rho^q(\mathbf{k}) = q_i(e^{-i\mathbf{k \cdot \widetilde{r}_i}} - e^{-i\mathbf{k \cdot r_i}}) $$
 

@@ -12,7 +12,7 @@ contains
 subroutine Brownian_step(i_measure)
     integer(int_large), intent(in) :: i_measure
 
-    if (do_linkCell) call create_links(positions)
+    if (do_linkCell) call create_links()
     call get_forces(Energies(1, i_measure), pressures(i_measure), pair_corr)
 
     call update_positions_Brownian()

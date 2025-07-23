@@ -16,7 +16,7 @@ subroutine update_positions_MC(E_potential)
         random_particle_id = int(rmzran()*num_atoms) + 1
 
         ! Propose a displacement
-        proposed_position = positions(:,random_particle_id) + (/(MC_delta*(rmzran() - 0.5_pr), i = 1, 3)/)
+        proposed_position = positions(:,random_particle_id) + (/(MC_delta*2._pr*(rmzran() - 0.5_pr), i = 1, 3)/)
 
         ! Apply periodic boundary conditions
         proposed_position = modulo(proposed_position, periodicity(:))

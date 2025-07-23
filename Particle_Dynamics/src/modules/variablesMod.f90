@@ -14,7 +14,7 @@ MODULE variablesMod
     real(pr)                :: reduced_viscosity, viscosity ! Only for Brownian Dynamics
 
     ! Internal
-    real(pr)                :: conversion_factors(6), periodicity(3)
+    real(pr)                :: conversion_factors(8), periodicity(3)
     real(pr)                :: reduced_viscosity_inv        ! Only for Brownian Dynamics
 
 !######### CALCULATION variables #############
@@ -48,19 +48,23 @@ MODULE variablesMod
     real(pr)                :: sigma, delta   ! Variables for the potential defining the interactions
     integer                 :: kgrid(3)         ! Partition of reciprocal space ('Ewald' summation)
     real(pr)                :: MC_acceptance_rate   ! ('Monte-Carlo' integrator)
-    real(pr)                :: MC_delta         ! ('Monte-Carlo' integrator)
+    real(pr)                :: MC_delta, MC_deltaMax, MC_deltaMin         ! ('Monte-Carlo' integrator)
 
     ! Internal (Ewald summation)
-    real(pr)                :: sigma_sqr, Ewald_realFactor, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr, Ewald_selfTerm ! To avoid recalculation
+    real(pr)                :: sigma_sqr, Ewald_realFactor, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr
+    real(pr)                :: Ewald_jeliumTerm, Ewald_selfTerm ! To avoid recalculation
     real(pr)                :: k_periodicity(3) ! reciprocal lattice periodicity
-    integer                 :: num_kvec         ! Number of allowed reciprocal vectors
-    integer                 :: k_sqr_max        ! Maximum reciprocal vector length allowed
-    real(pr), allocatable   :: kfac(:)          ! Factors appearing in 'Ewald' summation (avoid recalculation)
+    integer                 :: num_kvec, octant_num_kvec         ! Number of allowed reciprocal vectors
+   ! real(pr), allocatable   :: kfac(:)          ! Factors appearing in 'Ewald' summation (avoid recalculation)
     complex(pr), allocatable    :: reciprocal_charges(:)    ! Fourier transform of the periodic charge distribution (avoid recalculation in MC)
-   ! type :: kvector_data       ! UNUSED
-   !     real(pr)    :: k_squared, kvec(3),k_factor
-   ! end type kvector_data
-   ! type(kvector_data), allocatable :: kvectors(:)
+    type :: k_vector_data
+        integer  :: kx, ky, kz
+        real(pr) :: k_sqr
+        real(pr) :: kvector(3)
+        real(pr) :: kfactor
+    end type
+    type(k_vector_data), allocatable :: k_vectors(:)
+
 
 !######### THERMOSTAT variables ##############
     ! Parsed
@@ -89,5 +93,10 @@ MODULE variablesMod
 
     ! Brownian Dynamics specific variables and internal variables
     real(pr)                :: diffusion_coeff, brownian_stddev  ! Internal variables
+
+!######### Debugging variables ###############
+
+    real(pr)                :: E_potential_real = 0._pr , E_potential_reciprocal = 0._pr
+    logical                 :: debugg = .True.
 
 END MODULE variablesMod
