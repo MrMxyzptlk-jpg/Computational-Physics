@@ -5,8 +5,8 @@
     structure           = "FCC"
     lattice_constant    = "6.8399"
     cell_dim            = "3 3 3"
-    num_atoms           = "108"
-    ref_Temp            = "1.612"
+    num_atoms           = "36"
+    ref_Temp            = "0.0074"
     density             = "1"
     reduced_viscosity   = "2.87"
     mass                = "1"
@@ -14,7 +14,7 @@
 
 <calculation
     state              = "fromScratch"
-    dt                 = "0.005"
+    dt                 = "0.05"
     real_steps         = "5000"
     transitory_steps   = "5000"
     thermostat_steps   = "50"
@@ -37,12 +37,14 @@
 />
 
 <approximation
-    integrator      = "Monte-Carlo"
+    integrator      = "velocity-Verlet"
     interactions    = "Coulomb"
     sigma           = "0.5"
     delta           = "1"
     kgrid           = "6 6 6"
     MC_delta        = "0.1"
+    MC_deltaMax     = "0.25"
+    MC_deltaMin     = "0.01"
     MC_acceptance_rate  = "0.5"
 />
 

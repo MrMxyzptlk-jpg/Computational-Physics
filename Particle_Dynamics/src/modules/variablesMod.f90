@@ -48,7 +48,7 @@ MODULE variablesMod
     real(pr)                :: sigma, delta   ! Variables for the potential defining the interactions
     integer                 :: kgrid(3)         ! Partition of reciprocal space ('Ewald' summation)
     real(pr)                :: MC_acceptance_rate   ! ('Monte-Carlo' integrator)
-    real(pr)                :: MC_delta         ! ('Monte-Carlo' integrator)
+    real(pr)                :: MC_delta, MC_deltaMax, MC_deltaMin         ! ('Monte-Carlo' integrator)
 
     ! Internal (Ewald summation)
     real(pr)                :: sigma_sqr, Ewald_realFactor, twoPi_over_volume, eightPi_over_volume, halfSigma_sqr

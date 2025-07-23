@@ -62,7 +62,7 @@ The potential energy difference due to the translation $\mathbf{r} \rightarrow\w
 $$\Delta U_r = \epsilon q_i \sum_j^N q_j \left(\frac{\text{erfc}(\frac{\mathbf{\widetilde{r}}_{ij}}{\sigma})}{\widetilde{r}}_{ij} - \frac{\text{erfc}(\frac{\mathbf{r}_{ij}}{\sigma})}{r_{ij}} \right)  $$
 
 
-$$ U_k = \epsilon \frac{1}{2V} \sum_{\mathbf{k} \neq 0} G(k) \left[2\mathcal{Re}(\rho^q (\mathbf{k}) \Delta\rho^q(\mathbf{-k})) + |\Delta\rho^q(\mathbf{-k})|^2 \right]$$
+$$\Delta  U_k = \epsilon \frac{1}{2V} \sum_{\mathbf{k} \neq 0} G(k) \left[2\mathcal{Re}(\rho^q (\mathbf{k}) \Delta\rho^q(\mathbf{-k})) + |\Delta\rho^q(\mathbf{-k})|^2 \right]$$
 
 $$ \Delta\rho^q(\mathbf{k}) = q_i(e^{-i\mathbf{k \cdot \widetilde{r}_i}} - e^{-i\mathbf{k \cdot r_i}}) $$
 

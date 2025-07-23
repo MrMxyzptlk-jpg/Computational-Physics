@@ -56,7 +56,7 @@ function Coulomb_reciprocalSpace(index, proposed_position) result(E_potential)  
                     , sin(k_periodicity*(proposed_position(:)-0.5_pr*periodicity)), pr)
 
         kCharge_variation = charges(index) * (product(eikr_new) - product(eikr_old))
-        E_potential  = E_potential + 0.5_pr * kfactor * ( real(kCharge_variation*conjg(kCharge_variation)) + &
+        E_potential  = E_potential + 0.5 * kfactor * ( real(kCharge_variation*conjg(kCharge_variation)) + &
             2._pr*real(reciprocal_charges(i)*conjg(kCharge_variation)) )
     end do
     !$omp end do

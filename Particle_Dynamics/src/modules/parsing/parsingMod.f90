@@ -16,7 +16,7 @@ MODULE parsingMod
         , measuring_jump, initial_velocities, state
     namelist /tasks/ save_transitory, save_positions, save_observables, do_pair_correlation, do_mean_sqr_displacement &
         , do_structure_factor, Miller_index, save_state
-    namelist /approximation/ integrator, interactions, sigma, delta, kgrid, MC_acceptance_rate, MC_delta
+    namelist /approximation/ integrator, interactions, sigma, delta, kgrid, MC_acceptance_rate, MC_delta, MC_deltaMin, MC_deltaMax
     namelist /thermostat/ thermostat_type, Berendsen_time
     namelist /MSD/ max_correlation
     namelist /pair_correlation/pair_corr_cutoff, pair_corr_bins
@@ -63,8 +63,10 @@ subroutine set_defaults()
         sigma   = 1._pr
         delta = 1._pr
         kgrid   = (/5, 5, 5/)
-        MC_acceptance_rate  = 0.5
-        MC_delta        = 0.01
+        MC_acceptance_rate  = 0.5_pr
+        MC_delta        = 0.01_pr
+        MC_deltaMin     = 0.001_pr
+        MC_delta        = 0.5_pr
 
         ! Thermostat parameters
         thermostat_type      = 'rescale'
@@ -166,6 +168,8 @@ subroutine parse_inputXML()
     call get_parsed_value(inputNode, "kgrid", kgrid)
     call get_parsed_value(inputNode, "MC_acceptance_rate", MC_acceptance_rate)
     call get_parsed_value(inputNode, "MC_delta", MC_delta)
+    call get_parsed_value(inputNode, "MC_deltaMin", MC_deltaMin)
+    call get_parsed_value(inputNode, "MC_deltaMax", MC_deltaMax)
 
     !####### THERMOSTAT node #######
     if(ensemble=="NVT") then

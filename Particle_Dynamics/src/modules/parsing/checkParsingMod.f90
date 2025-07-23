@@ -201,6 +201,9 @@ subroutine check_parsed_approximation()
         if (MC_acceptance_rate <= 0) STOP "ERROR: MC_acceptance_rate <= 0"
         if (MC_acceptance_rate >= 1) STOP "ERROR: MC_acceptance_rate >= 1"
         if (MC_delta <= 0._pr)   STOP "ERROR: MC_delta <= 0._pr"
+        if (MC_deltaMin <= 0._pr)   STOP "ERROR: MC_deltaMin <= 0._pr"
+        if (MC_deltaMax <= 0._pr)   STOP "ERROR: MC_deltaMax <= 0._pr"
+        if (MC_deltaMax <= MC_deltaMin)   STOP "ERROR: MC_deltaMax <= MC_deltaMin"
     end if
 
     if  ((interactions == 'Coulomb')) then
