@@ -9,6 +9,7 @@ $$U^{LJ}(\mathbf{r}) = 4\epsilon \left[\left(\frac{\sigma}{r}\right)^{12} - \lef
 ### Potential implementation
 We consider a cut-off radius ($r_{cut}$) to reduce needless calculation of insignificant interactions (due to the short-range nature of the interaction). Thus, the potential is truncated and displaces, resulting in:
 
+optimize_kSpace
 
 $$
 U(r) =
@@ -33,6 +34,7 @@ Notice there is no correction due to the displacement of the potential. The trun
 ## Coulomb interactions
 
 ### Potential implementation
+
 We consider the summation of the particles in the reference super-cell to get the real space contribution (short-range contribution) of the potential and forces. The long-range term is taken into account by summing over a ball of k-vectors in reciprocal space. Thus, setting $\epsilon=4\pi\epsilon_0$, we get:
 $$
 U = U_r + U_k - U_s + U_0
@@ -71,7 +73,7 @@ Notice that for the MC run, only the variation of the reciprocal charge ($\Delta
 
 ### Forces
 
-Using the standard force formula $\mathbf{f}^{qq}_i = -\nabla _{\mathbf{r}_i}U^{qq}$ one finds:
+Using the standard force formula $ \mathbf{f}^{qq}_i = -\nabla _{\mathbf{r}_i}U^{qq} $ one finds:
 
 $$ \mathbf{f} = \mathbf{f}_r + \mathbf{f}_k + \mathbf{f}_0 $$
 
