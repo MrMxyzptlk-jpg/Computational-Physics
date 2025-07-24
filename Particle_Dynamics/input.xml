@@ -6,7 +6,7 @@
     lattice_constant    = "6.8399"
     cell_dim            = "3 3 3"
     num_atoms           = "108"
-    ref_Temp            = "0.3224"
+    ref_Temp            = "0.03224"
     density             = "1"
     reduced_viscosity   = "2.87"
     mass                = "1"
@@ -15,7 +15,7 @@
 <calculation
     state              = "fromScratch"
     dt                 = "0.001"
-    real_steps         = "5000"
+    real_steps         = "2000"
     transitory_steps   = "2000"
     thermostat_steps   = "50"
     radius_cutoff      = "2.5"

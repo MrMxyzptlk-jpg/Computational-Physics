@@ -31,13 +31,13 @@ function Coulomb_reciprocalSpace(index, proposed_position) result(E_potential)  
     real(pr), intent(in)    :: proposed_position(3)
     real(pr)                :: E_potential
     integer                 :: i
-    real(pr)                :: kfactor, kvector(3)
+    real(pr)                :: kfactor, kvector(3), k_dot_r_old, k_dot_r_new
     complex(pr)             :: eikr_old, eikr_new
     complex(pr)             :: kCharge_variation
 
     E_potential = 0.0_pr
 
-    !$omp parallel private(kvector, kfactor, kCharge_variation, eikr_old, eikr_new) &
+    !$omp parallel private(kvector, kfactor, kCharge_variation, eikr_old, eikr_new, k_dot_r_old, k_dot_r_new) &
     !$omp shared(positions, num_kvec, periodicity, k_vectors, index, charges, reciprocal_charges, proposed_position)&
     !$omp default(none) &
     !$omp reduction(+: E_potential)
@@ -47,13 +47,16 @@ function Coulomb_reciprocalSpace(index, proposed_position) result(E_potential)  
         kvector = k_vectors(i)%kvector
         kfactor = k_vectors(i)%kfactor
 
-        eikr_old = cmplx(cos(sum(kvector*positions(:,index))), sin(sum(kvector*positions(:,index))), pr)
-        eikr_new = cmplx(cos(sum(kvector*proposed_position(:))), sin(sum(kvector*proposed_position(:))), pr)
+        k_dot_r_old = dot_product(kvector, positions(:,index))
+        k_dot_r_new = dot_product(kvector, proposed_position(:))
 
-        kCharge_variation = charges(index) * (eikr_new - eikr_old)
+        eikr_old = cmplx(cos(k_dot_r_old), sin(k_dot_r_old), pr)
+        eikr_new = cmplx(cos(k_dot_r_new), sin(k_dot_r_new), pr)
 
-        E_potential  = E_potential + 0.5_pr * kfactor * ( real(kCharge_variation*conjg(kCharge_variation)) + &
-            2._pr*real(reciprocal_charges(i)*conjg(kCharge_variation)) )
+        kCharge_variation = charges(index) * conjg(eikr_new - eikr_old)
+
+        E_potential  = E_potential + 0.5_pr * kfactor * ( real(kCharge_variation*conjg(kCharge_variation),pr) + &
+            2._pr*real(reciprocal_charges(i)*conjg(kCharge_variation), pr) )
     end do
     !$omp end do
 
@@ -118,7 +121,7 @@ subroutine Coulomb_Ewald_reciprocalSpace(force_contribution, E_potential) ! Coul
             exp_k = eikx(kx,i) * eiky(ky,i) * eikz(kz,i)
             force_contribution(:,i) = force_contribution(:,i) - charges(i) * kfactor * kvector * aimag(kCharge*conjg(exp_k))
         end do
-        if (measure .and. save_observables) E_potential  = E_potential + 0.5_pr * kfactor * real(kCharge*conjg(kCharge))
+        if (measure .and. save_observables) E_potential  = E_potential + 0.5_pr * kfactor * real(kCharge*conjg(kCharge),pr)
     end do
     !$omp end do
 
@@ -138,13 +141,9 @@ subroutine get_all_expFactors(eikx, eiky, eikz)
     eiky(0,:) = (1.0_pr, 0.0_pr)
     eikz(0,:) = (1.0_pr, 0.0_pr)
 
-    ! The shift in positions is done to center the box (code already uses a corner-centered box)
-    eikx(1,:) = cmplx(cos(k_periodicity(1)*(positions(1,:))) &
-                , sin(k_periodicity(1)*(positions(1,:))), pr)
-    eiky(1,:) = cmplx(cos(k_periodicity(2)*(positions(2,:))) &
-                , sin(k_periodicity(2)*(positions(2,:))), pr)
-    eikz(1,:) = cmplx(cos(k_periodicity(3)*(positions(3,:))) &
-                , sin(k_periodicity(3)*(positions(3,:))), pr)
+    eikx(1,:) = cmplx(cos(k_periodicity(1)*(positions(1,:))), sin(k_periodicity(1)*(positions(1,:))), pr)
+    eiky(1,:) = cmplx(cos(k_periodicity(2)*(positions(2,:))), sin(k_periodicity(2)*(positions(2,:))), pr)
+    eikz(1,:) = cmplx(cos(k_periodicity(3)*(positions(3,:))), sin(k_periodicity(3)*(positions(3,:))), pr)
 
     ! Use recursion to avoid the calculation of exponential by using multiplication instead
     do i = 2, kgrid(1)
@@ -164,14 +163,47 @@ subroutine get_all_expFactors(eikx, eiky, eikz)
 
 end subroutine get_all_expFactors
 
-subroutine update_Ewald(index, proposed_position)
+subroutine update_reciprocalCharges()
+    integer                 :: kx, ky, kz, i
+    complex(pr)             :: eikx(-kgrid(1):kgrid(1), num_atoms)
+    complex(pr)             :: eiky(-kgrid(2):kgrid(2), num_atoms)
+    complex(pr)             :: eikz(-kgrid(3):kgrid(3), num_atoms)
+
+    if (.not.allocated(reciprocal_charges)) allocate(reciprocal_charges(num_kvec))
+    reciprocal_charges = 0._pr
+
+    call get_all_expFactors(eikx, eiky, eikz)
+
+    !$omp parallel private(kx, ky, kz, i) &
+    !$omp shared(eikx, eiky, eikz, num_kvec, charges, k_vectors, reciprocal_charges) &
+    !$omp default(none)
+
+    !$omp do schedule(dynamic)
+    do i = 1, num_kvec
+        kx = k_vectors(i)%kx
+        ky = k_vectors(i)%ky
+        kz = k_vectors(i)%kz
+
+        reciprocal_charges(i) = sum(charges(:)*eikx(-kx,:)*eiky(-ky,:)*eikz(-kz,:))
+    end do
+    !$omp end do
+
+    !$omp end parallel
+
+end subroutine update_reciprocalCharges
+
+!##################################################################################################
+!     Not used / Not implemented
+!##################################################################################################
+
+subroutine update_Ewald(index, proposed_position)   ! Does not fare well due to the accumulated errors. Implemented update_reciprocalCharges() instead
     integer, intent(in)     :: index
     real(pr), intent(in)    :: proposed_position(3)
-    real(pr)                :: kvector(3)
+    real(pr)                :: kvector(3), k_dot_r_old, k_dot_r_new
     integer                 :: i
     complex(pr)             :: eikr_old, eikr_new
 
-    !$omp parallel private(eikr_old, eikr_new, kvector) &
+    !$omp parallel private(eikr_old, eikr_new, kvector, k_dot_r_old, k_dot_r_new) &
     !$omp shared(positions, proposed_position, periodicity, index, num_kvec, charges, reciprocal_charges, k_vectors) &
     !$omp default(none)
 
@@ -179,19 +211,19 @@ subroutine update_Ewald(index, proposed_position)
     do i = 1, num_kvec
         kvector = k_vectors(i)%kvector
 
-        eikr_old = cmplx(cos(sum(kvector*positions(:,index))), sin(sum(kvector*positions(:,index))), pr)
-        eikr_new = cmplx(cos(sum(kvector*proposed_position(:))), sin(sum(kvector*proposed_position(:))), pr)
+        k_dot_r_old = dot_product(kvector, positions(:,index))
+        k_dot_r_new = dot_product(kvector, proposed_position(:))
 
-        reciprocal_charges(i) = reciprocal_charges(i) + charges(index) * (eikr_new - eikr_old)
+        eikr_old = cmplx(cos(k_dot_r_old), sin(k_dot_r_old), pr)
+        eikr_new = cmplx(cos(k_dot_r_new), sin(k_dot_r_new), pr)
+
+
+        reciprocal_charges(i) = reciprocal_charges(i) + charges(index) * conjg(eikr_new - eikr_old)
     end do
     !$omp end do
 
     !$omp end parallel
 end subroutine update_Ewald
-
-!##################################################################################################
-!     Not used / Not implemented
-!##################################################################################################
 
 subroutine get_octant_expFactors(eikx, eiky, eikz)
     complex(pr), intent(out)    :: eikx(0:kgrid(1), num_atoms)

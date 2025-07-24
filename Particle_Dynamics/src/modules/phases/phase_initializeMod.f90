@@ -53,7 +53,7 @@ subroutine phase_initialize()
 
         if (summation == "Ewald") then
             call init_Ewald()
-            if ((integrator == "Monte-Carlo")) call init_reciprocalCharges()
+            if ((integrator == "Monte-Carlo")) call update_reciprocalCharges()
         end if
 
         call initialize_XYZ_data()  ! writing2fliesMod module

@@ -497,35 +497,6 @@ subroutine init_Ewald()
 
 end subroutine init_Ewald
 
-subroutine init_reciprocalCharges()
-    integer                 :: kx, ky, kz, i
-    complex(pr)             :: eikx(-kgrid(1):kgrid(1), num_atoms)
-    complex(pr)             :: eiky(-kgrid(2):kgrid(2), num_atoms)
-    complex(pr)             :: eikz(-kgrid(3):kgrid(3), num_atoms)
-
-    allocate(reciprocal_charges(num_kvec))
-    reciprocal_charges = 0._pr
-
-    call get_all_expFactors(eikx, eiky, eikz)
-
-    !$omp parallel private(kx, ky, kz, i) &
-    !$omp shared(eikx, eiky, eikz, num_kvec, charges, k_vectors, reciprocal_charges) &
-    !$omp default(none)
-
-    !$omp do schedule(dynamic)
-    do i = 1, num_kvec
-        kx = k_vectors(i)%kx
-        ky = k_vectors(i)%ky
-        kz = k_vectors(i)%kz
-
-        reciprocal_charges(i) = sum(charges(:)*eikx(kx,:)*eiky(ky,:)*eikz(kz,:))
-    end do
-    !$omp end do
-
-    !$omp end parallel
-
-end subroutine init_reciprocalCharges
-
 !##################################################################################################
 !     Not used / Not implemented
 !##################################################################################################

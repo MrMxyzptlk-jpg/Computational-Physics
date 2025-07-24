@@ -81,7 +81,7 @@ subroutine get_E_potential_contribution_Ewald(random_particle_id, proposed_posit
 
     dE = E_potential_new - E_potential_old
 
-    dE = dE*0.5_pr + potential_function_reciprocal(random_particle_id, proposed_position)
+    dE = dE + potential_function_reciprocal(random_particle_id, proposed_position)
 
 end subroutine get_E_potential_contribution_Ewald
 
@@ -94,7 +94,7 @@ subroutine update_potential_contribution_Ewald(index, proposed_position, E_poten
     MC_accepted = MC_accepted + 1
     positions(:,index) = proposed_position
 
-    call update_Ewald(index, proposed_position)
+    call update_reciprocalCharges() ! Must be recalculated after
 
 end subroutine update_potential_contribution_Ewald
 
