@@ -61,7 +61,7 @@ In out implementation, the real space summation is reduced to the reference supe
 
 The potential energy difference due to the translation $\mathbf{r} \rightarrow\widetilde{\mathbf{r}}$ is simply $\Delta U = \Delta U_r + \Delta U_k$, each given by:
 
-$$\Delta U_r = \epsilon q_i \sum_j^N q_j \left(\frac{\text{erfc}(\frac{\mathbf{\widetilde{r}}_{ij}}{\sigma})}{\widetilde{r}}_{ij} - \frac{\text{erfc}(\frac{\mathbf{r}_{ij}}{\sigma})}{r_{ij}} \right)  $$
+$$\Delta U_r = \epsilon \frac{q_i}{2} \sum_j^N q_j \left(\frac{\text{erfc}(\frac{\mathbf{\widetilde{r}}_{ij}}{\sigma})}{\widetilde{r}}_{ij} - \frac{\text{erfc}(\frac{\mathbf{r}_{ij}}{\sigma})}{r_{ij}} \right)  $$
 
 
 $$\Delta  U_k = \epsilon \frac{1}{2V} \sum_{\mathbf{k} \neq 0} G(k) \left[2\mathcal{Re}(\rho^q (\mathbf{k}) \Delta\rho^q(\mathbf{-k})) + |\Delta\rho^q(\mathbf{-k})|^2 \right]$$

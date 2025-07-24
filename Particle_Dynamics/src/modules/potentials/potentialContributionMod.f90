@@ -81,7 +81,7 @@ subroutine get_E_potential_contribution_Ewald(random_particle_id, proposed_posit
 
     dE = E_potential_new - E_potential_old
 
-    dE = dE + potential_function_reciprocal(random_particle_id, proposed_position)
+    dE = dE*0.5_pr + potential_function_reciprocal(random_particle_id, proposed_position)
 
 end subroutine get_E_potential_contribution_Ewald
 
