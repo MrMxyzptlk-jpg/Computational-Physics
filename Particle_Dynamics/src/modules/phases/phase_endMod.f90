@@ -50,12 +50,14 @@ subroutine end_transitory()
         do j = 1, thermostat_steps
             if (save_transitory) call check_measuring(i*thermostat_steps + j, i_measure)    ! Checks if there will be measurements in this iteration
 
-            if (do_structure_factor) then
-                call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure)/real(num_atoms,pr) &
-                    , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
-            else
-                call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure)/real(num_atoms,pr) &
-                    , pressures(i_measure), temperatures(i_measure), structure_factor(1))
+            if (measure) then
+                if (do_structure_factor) then
+                    call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure)/real(num_atoms,pr) &
+                        , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
+                else
+                    call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure)/real(num_atoms,pr) &
+                        , pressures(i_measure), temperatures(i_measure), structure_factor(1))
+                end if
             end if
 
         end do
@@ -72,12 +74,14 @@ subroutine end_definitive()
     do i = 1 , real_steps
         call check_measuring(i, i_measure)    ! Checks if there will be measurements in this iteration
 
-        if (do_structure_factor) then
-            call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure)/real(num_atoms,pr) &
-                , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
-        else
-            call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure)/real(num_atoms,pr) &
-                , pressures(i_measure), temperatures(i_measure), structure_factor(1))
+        if (measure) then
+            if (do_structure_factor) then
+                call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure)/real(num_atoms,pr) &
+                    , pressures(i_measure), temperatures(i_measure), structure_factor(i_measure))
+            else
+                call write_tasks(real(i_measure*measuring_jump,pr)*dt, energies(:,i_measure)/real(num_atoms,pr) &
+                    , pressures(i_measure), temperatures(i_measure), structure_factor(1))
+            end if
         end if
     end do
 
